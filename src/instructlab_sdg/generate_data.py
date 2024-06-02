@@ -19,16 +19,17 @@ from rouge_score import rouge_scorer
 import click
 import tqdm
 
-# Local
-from ..config import DEFAULT_MULTIPROCESSING_START_METHOD, get_model_family
-from ..utils import (
+# instructlab - All of these need to go away - issue #6
+from instructlab.config import DEFAULT_MULTIPROCESSING_START_METHOD, get_model_family
+from instructlab.utils import (
     chunk_document,
     max_seed_example_tokens,
     num_chars_from_tokens,
     read_taxonomy,
 )
-from . import utils
-from .utils import GenerateException
+
+# Local
+from instructlab_sdg import utils
 
 DEFAULT_PROMPT_TEMPLATE_MERLINITE = """\
 You are asked to come up with a set of 5 diverse task instructions under {{taxonomy}}{{" for the task \\"%s\\""|format(task_description)  if task_description}}. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
@@ -286,7 +287,7 @@ def get_instructions_from_model(
                 instruction_data_pool, num_prompt_instructions
             )
         except ValueError as exc:
-            raise GenerateException(
+            raise utils.GenerateException(
                 f"There was a problem with the new data, please make sure the "
                 f"yaml is formatted correctly, and there is enough "
                 f"new data({num_prompt_instructions}+ Q&A))"
@@ -316,7 +317,7 @@ def get_instructions_from_model(
             batch_size=request_batch_size,
             decoding_args=decoding_args,
         )
-    except GenerateException as exc:
+    except utils.GenerateException as exc:
         # Attempt to log and gracefully recover from exceeding the server's
         # maximum context length. This won't work for all servers.
         #

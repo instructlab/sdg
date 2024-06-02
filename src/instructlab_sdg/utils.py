@@ -15,9 +15,9 @@ import sys
 from openai import OpenAI, OpenAIError
 import httpx
 
-# Local
-from ..config import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
-from ..utils import get_sysprompt
+# instructlab - TODO these need to go away, issue #6
+from instructlab.config import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
+from instructlab.utils import get_sysprompt
 
 StrOrOpenAIObject = Union[str, object]
 
