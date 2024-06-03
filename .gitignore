@@ -132,6 +132,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+dictionary.dic
 
 # Spyder project settings
 .spyderproject
