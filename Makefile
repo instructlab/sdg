@@ -18,6 +18,22 @@ endif
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+.PHONY: action-lint actionlint
+action-lint: actionlint
+actionlint: ## Lint GitHub Action workflows
+	$(ECHO_PREFIX) printf "  %-12s .github/...\n" "[ACTION LINT]"
+	$(CMD_PREFIX) if ! command -v actionlint $(PIPE_DEV_NULL) ; then \
+		echo "Please install actionlint." ; \
+		echo "go install github.com/rhysd/actionlint/cmd/actionlint@latest" ; \
+		exit 1 ; \
+	fi
+	$(CMD_PREFIX) if ! command -v shellcheck $(PIPE_DEV_NULL) ; then \
+		echo "Please install shellcheck." ; \
+		echo "https://github.com/koalaman/shellcheck#user-content-installing" ; \
+		exit 1 ; \
+	fi
+	$(CMD_PREFIX) actionlint -color
+
 .PHONY:check
 check: ## check git diff between this repo and the CLI generator directory
 	@(git remote | grep -q "^instructlab_repo") || git remote add instructlab_repo https://github.com/instructlab/instructlab
