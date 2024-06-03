@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
 SDG_IMPORT_REF:=d9e7bf2f59819fcd42d9648b0ebbb81b6d2bf893
 
 #
@@ -43,6 +45,10 @@ check: ## check git diff between this repo and the CLI generator directory
 	@echo "==="
 	@git diff $(SDG_IMPORT_REF)..origin/main -- src/instructlab/generator/ | cat
 
+.PHONY: check-tox
+check-tox:
+	@command -v tox &> /dev/null || (echo "'tox' is not installed" && exit 1)
+
 .PHONY: md-lint
 md-lint: ## Lint markdown files
 	$(ECHO_PREFIX) printf "  %-12s ./...\n" "[MD LINT]"
@@ -50,8 +56,12 @@ md-lint: ## Lint markdown files
 
 .PHONY: spellcheck
 spellcheck: ## Spellcheck markdown files
-	$(CMD_PREFIX) python -m pyspelling --config .spellcheck.yml --spellchecker aspell
+	tox p -e spellcheck
 
 .PHONY: spellcheck-sort
 spellcheck-sort: .spellcheck-en-custom.txt ## Sort spellcheck directory
 	sort -d -f -o $< $<
+
+.PHONY: verify
+verify: check-tox ## Run tox -e ruff,fastlint,spellcheck against code
+	tox p -e ruff,fastlint,spellcheck

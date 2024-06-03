@@ -1,10 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from datetime import datetime
-from functools import partial
-from pathlib import Path
-from typing import Optional
 import json
 import multiprocessing
 import os
@@ -12,21 +8,21 @@ import random
 import re
 import string
 import time
+from datetime import datetime
+from functools import partial
+from pathlib import Path
+from typing import Optional
 
+import click
+import tqdm
+# instructlab - All of these need to go away - issue #6
+from instructlab.config import (DEFAULT_MULTIPROCESSING_START_METHOD,
+                                get_model_family)
+from instructlab.utils import (chunk_document, max_seed_example_tokens,
+                               num_chars_from_tokens, read_taxonomy)
 # Third Party
 from jinja2 import Template
 from rouge_score import rouge_scorer
-import click
-import tqdm
-
-# instructlab - All of these need to go away - issue #6
-from instructlab.config import DEFAULT_MULTIPROCESSING_START_METHOD, get_model_family
-from instructlab.utils import (
-    chunk_document,
-    max_seed_example_tokens,
-    num_chars_from_tokens,
-    read_taxonomy,
-)
 
 # Local
 from instructlab_sdg import utils
