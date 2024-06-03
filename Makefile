@@ -43,7 +43,7 @@ check: ## Check git diff between this repo and the CLI generator directory
 	@echo "==="
 	@echo "=== CHANGES SINCE LAST IMPORT FROM instructlab/instructlab repo:"
 	@echo "==="
-	@git diff $(SDG_IMPORT_REF)..origin/main -- src/instructlab/generator/ | cat
+	@git diff $(SDG_IMPORT_REF)..instructlab_repo/main -- src/instructlab/generator/ | cat
 
 .PHONY: check-tox
 check-tox:
