@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-SDG_IMPORT_REF:=d9e7bf2f59819fcd42d9648b0ebbb81b6d2bf893
+SDG_IMPORT_REF:=e5368f0b0a2d019f6aa56837f9a3c6ee6ba72197
 
 #
 # If you want to see the full commands, run:
