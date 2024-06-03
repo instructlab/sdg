@@ -26,3 +26,8 @@ check: ## check git diff between this repo and the CLI generator directory
 	@echo "=== CHANGES SINCE LAST IMPORT FROM instructlab/instructlab repo:"
 	@echo "==="
 	@git diff $(SDG_IMPORT_REF)..origin/main -- src/instructlab/generator/ | cat
+
+.PHONY: md-lint
+md-lint: ## Lint markdown files
+	$(ECHO_PREFIX) printf "  %-12s ./...\n" "[MD LINT]"
+	$(CMD_PREFIX) podman run --rm -v $(CURDIR):/workdir --security-opt label=disable docker.io/davidanson/markdownlint-cli2:latest > /dev/null
