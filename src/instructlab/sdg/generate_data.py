@@ -29,7 +29,7 @@ from instructlab.utils import (
 )
 
 # Local
-from instructlab_sdg import utils
+from instructlab.sdg import utils
 
 DEFAULT_PROMPT_TEMPLATE_MERLINITE = """\
 You are asked to come up with a set of 5 diverse task instructions under {{taxonomy}}{{" for the task \\"%s\\""|format(task_description)  if task_description}}. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.

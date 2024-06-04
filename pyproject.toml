@@ -38,7 +38,7 @@ source = "https://github.com/instructlab/sdg"
 issues = "https://github.com/instructlab/sdg/issues"
 
 [tool.setuptools_scm]
-version_file = "src/sdg/_version.py"
+version_file = "src/instructlab/sdg/_version.py"
 # do not include +gREV local version, required for Test PyPI upload
 local_scheme = "no-local-version"
 
@@ -50,7 +50,7 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["sdg"]
+include = ["instructlab.sdg"]
 
 [tool.setuptools.package-data]
 "instructlab.schema.v1" = ["*.json"]
