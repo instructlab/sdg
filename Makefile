@@ -37,7 +37,7 @@ actionlint: ## Lint GitHub Action workflows
 	$(CMD_PREFIX) actionlint -color
 
 .PHONY:check
-check: ## check git diff between this repo and the CLI generator directory
+check: ## Check git diff between this repo and the CLI generator directory
 	@(git remote | grep -q "^instructlab_repo") || git remote add instructlab_repo https://github.com/instructlab/instructlab
 	@git fetch instructlab_repo
 	@echo "==="
@@ -63,5 +63,5 @@ spellcheck-sort: .spellcheck-en-custom.txt ## Sort spellcheck directory
 	sort -d -f -o $< $<
 
 .PHONY: verify
-verify: check-tox ## Run tox -e ruff,fastlint,spellcheck against code
+verify: check-tox ## Run linting and formatting checks via tox
 	tox p -e ruff,fastlint,spellcheck
