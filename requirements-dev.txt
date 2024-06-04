@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # TODO: Uncomment below line once requirements.txt is created
-# -r requirements.txt
+-r requirements.txt
 
 pre-commit>=3.0.4,<4.0
 pylint>=2.16.2,<4.0

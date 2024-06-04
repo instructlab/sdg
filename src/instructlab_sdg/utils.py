@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from typing import Optional, Sequence, Union
 import copy
 import dataclasses
 import io
@@ -9,14 +10,13 @@ import logging
 import math
 import os
 import sys
-from typing import Optional, Sequence, Union
 
-import httpx
+# Third Party
 # instructlab - TODO these need to go away, issue #6
 from instructlab.config import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
 from instructlab.utils import get_sysprompt
-# Third Party
 from openai import OpenAI, OpenAIError
+import httpx
 
 StrOrOpenAIObject = Union[str, object]
 
