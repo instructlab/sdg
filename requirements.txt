@@ -5,3 +5,5 @@ jinja2
 openai>=1.13.3,<2.0.0
 rouge_score
 tqdm>=4.66.2,<5.0.0
+# TODO: remove 'instructlab' once https://github.com/instructlab/sdg/issues/6 is resolved
+instructlab
