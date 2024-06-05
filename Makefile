@@ -63,5 +63,5 @@ spellcheck-sort: .spellcheck-en-custom.txt ## Sort spellcheck directory
 	sort -d -f -o $< $<
 
 .PHONY: verify
-verify: check-tox ## Run linting and formatting checks via tox
-	tox p -e ruff,fastlint,spellcheck
+verify: check-tox ## Run linting, typing, and formatting checks via tox
+	tox p -e fastlint,mypy,ruff
