@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
-SDG_IMPORT_REF:=d9e7bf2f59819fcd42d9648b0ebbb81b6d2bf893
+SDG_IMPORT_REF:=e5368f0b0a2d019f6aa56837f9a3c6ee6ba72197
 
 #
 # If you want to see the full commands, run:
@@ -43,7 +43,7 @@ check: ## Check git diff between this repo and the CLI generator directory
 	@echo "==="
 	@echo "=== CHANGES SINCE LAST IMPORT FROM instructlab/instructlab repo:"
 	@echo "==="
-	@git diff $(SDG_IMPORT_REF)..origin/main -- src/instructlab/generator/ | cat
+	@git diff $(SDG_IMPORT_REF)..instructlab_repo/main -- src/instructlab/generator/ | cat
 
 .PHONY: check-tox
 check-tox:
