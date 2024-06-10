@@ -14,7 +14,7 @@ import string
 import time
 
 # Third Party
-# instructlab - All of these need to go away - issue #6
+# instructlab - All of these need to go away (other than sdg) - issue #6
 from instructlab.config import get_model_family
 from instructlab.utils import (
     chunk_document,
@@ -28,7 +28,8 @@ import click
 import tqdm
 
 # First Party
-from instructlab_sdg import utils
+# pylint: disable=ungrouped-imports
+from instructlab.sdg import utils
 
 DEFAULT_PROMPT_TEMPLATE_MERLINITE = """\
 You are asked to come up with a set of 5 diverse task instructions under {{taxonomy}}{{" for the task \\"%s\\""|format(task_description)  if task_description}}. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
