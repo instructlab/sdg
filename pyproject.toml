@@ -33,7 +33,7 @@ dynamic = ["dependencies", "optional-dependencies", "version"]
 [project.scripts]
 
 [project.urls]
-homepage = "https://instructlab.io"
+homepage = "https://instructlab.ai"
 source = "https://github.com/instructlab/sdg"
 issues = "https://github.com/instructlab/sdg/issues"
 
@@ -51,16 +51,6 @@ dependencies = {file = ["requirements.txt"]}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["instructlab.sdg"]
-
-[tool.setuptools.package-data]
-"instructlab.schema.v1" = ["*.json"]
-"instructlab.schema.v2" = ["*.json"]
-
-[tool.check-wheel-contents]
-# W002 - Wheel contains duplicate files:
-#  instructlab/mlx_explore/LICENSE
-#  instructlab/train/lora_mlx/LICENSE
-ignore = ["W002"]
 
 [tool.ruff]
 target-version = "py39"
@@ -89,9 +79,6 @@ ignore = [
     "E501",  # line too long
     "TID252",  # Prefer absolute imports over relative imports from parent modules
 ]
-
-[tool.ruff.lint.flake8-tidy-imports.banned-api]
-"yamllint".msg = "yamllint is for CLI usage only."
 
 [tool.ruff.lint.isort]
 # same as .isort.cfg
