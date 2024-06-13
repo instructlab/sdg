@@ -20,11 +20,11 @@ from instructlab.utils import (
     chunk_document,
     max_seed_example_tokens,
     num_chars_from_tokens,
-    read_taxonomy,
 )
 from jinja2 import Template
 from rouge_score import rouge_scorer
 import click
+import instructlab.utils
 import tqdm
 
 # First Party
@@ -356,6 +356,10 @@ def get_instructions_from_model(
     )
 
     return instruction_data, discarded
+
+
+def read_taxonomy(*args, **kwargs):
+    return instructlab.utils.read_taxonomy(*args, **kwargs)
 
 
 def generate_data(
