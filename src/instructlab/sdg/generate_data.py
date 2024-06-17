@@ -15,7 +15,7 @@ import time
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
-from instructlab.config import get_model_family
+from instructlab.configuration import get_model_family
 from instructlab.utils import (
     chunk_document,
     max_seed_example_tokens,
