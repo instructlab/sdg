@@ -13,7 +13,7 @@ import sys
 
 # Third Party
 # instructlab - TODO these need to go away, issue #6
-from instructlab.config import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
+from instructlab.configuration import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
 from instructlab.utils import get_sysprompt
 from openai import OpenAI, OpenAIError
 import httpx
