@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 click>=8.1.7,<9.0.0
 httpx>=0.25.0,<1.0.0
-jinja2
+jinja2>=3.1.5,<4.0.0
 openai>=1.13.3,<2.0.0
-rouge_score
+rouge_score>=0.1.2,<1.0.0
 tqdm>=4.66.2,<5.0.0
 # TODO: remove 'instructlab' once https://github.com/instructlab/sdg/issues/6 is resolved
 instructlab>=0.17.0
