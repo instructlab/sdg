@@ -427,6 +427,26 @@ def _gen_test_data(
             outfile.write("\n")
 
 
+def _gen_train_data(machine_instruction_data, output_file_train):
+    train_data = []
+    for synth_example in machine_instruction_data:
+        user = synth_example["instruction"]
+        if len(synth_example["input"]) > 0:
+            user += "\n" + synth_example["input"]
+        train_data.append(
+            {
+                "system": utils.get_sysprompt(),
+                "user": unescape(user),
+                "assistant": unescape(synth_example["output"]),
+            }
+        )
+    # utils.jdump(train_data, output_file_train)
+    with open(output_file_train, "w", encoding="utf-8") as outfile:
+        for entry in train_data:
+            json.dump(entry, outfile, ensure_ascii=False)
+            outfile.write("\n")
+
+
 def generate_data(
     logger,
     api_base,
@@ -606,25 +626,9 @@ def generate_data(
             f"Generated {total} instructions(discarded {discarded}), rouged {total - keep}, kept {keep} instructions"
         )
         utils.jdump(machine_instruction_data, os.path.join(output_dir, output_file))
-        train_data = []
-        for synth_example in machine_instruction_data:
-            user = synth_example["instruction"]
-            if len(synth_example["input"]) > 0:
-                user += "\n" + synth_example["input"]
-            train_data.append(
-                {
-                    "system": utils.get_sysprompt(),
-                    "user": unescape(user),
-                    "assistant": unescape(synth_example["output"]),
-                }
-            )
-        # utils.jdump(train_data, os.path.join(output_dir, output_file_train))
-        with open(
-            os.path.join(output_dir, output_file_train), "w", encoding="utf-8"
-        ) as outfile:
-            for entry in train_data:
-                json.dump(entry, outfile, ensure_ascii=False)
-                outfile.write("\n")
+        _gen_train_data(
+            machine_instruction_data, os.path.join(output_dir, output_file_train)
+        )
 
     progress_bar.close()
 
