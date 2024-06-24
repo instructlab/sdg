@@ -16,11 +16,6 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from instructlab.configuration import get_model_family
-from instructlab.utils import (
-    chunk_document,
-    max_seed_example_tokens,
-    num_chars_from_tokens,
-)
 from jinja2 import Template
 from rouge_score import rouge_scorer
 import click
@@ -375,7 +370,7 @@ def _gen_test_data(
     server_ctx_size,
     output_file_test,
 ):
-    max_seed_chars = num_chars_from_tokens(max_seed_tokens)
+    max_seed_chars = utils.num_chars_from_tokens(max_seed_tokens)
     for seed_example in seed_instruction_data:
         if (
             len(seed_example["instruction"])
@@ -398,7 +393,7 @@ def _gen_test_data(
 
         documents = seed_example["document"]
         if documents:
-            seed_example["document"] = chunk_document(
+            seed_example["document"] = utils.chunk_document(
                 documents=documents,
                 server_ctx_size=server_ctx_size,
                 chunk_word_count=chunk_word_count,
@@ -493,7 +488,9 @@ def generate_data(
     prompt_template = check_prompt_file(
         prompt_file_path, get_model_family(model_family, model_name)
     )
-    max_seed_tokens = max_seed_example_tokens(server_ctx_size, len(prompt_template))
+    max_seed_tokens = utils.max_seed_example_tokens(
+        server_ctx_size, len(prompt_template)
+    )
 
     name = Path(model_name).stem  # Just in case it is a file path
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
