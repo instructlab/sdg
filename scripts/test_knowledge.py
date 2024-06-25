@@ -21,7 +21,6 @@ client = OpenAI(
 
 models = client.models.list()
 teacher_model = models.data[0].id
-router_model = models.data[1].id
 
 samples = [
     {
