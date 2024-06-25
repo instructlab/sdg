@@ -1,5 +1,10 @@
+# SPDX-License-Identifier: Apache-2.0
+# Standard
 import logging
+
+# Third Party
 from rich.logging import RichHandler
+
 
 def setup_logger(name):
     # Set up the logger
@@ -7,7 +12,7 @@ def setup_logger(name):
         level=logging.INFO,
         format="%(message)s",
         datefmt="[%X]",
-        handlers=[RichHandler()]
+        handlers=[RichHandler()],
     )
     logger = logging.getLogger(name)
     return logger

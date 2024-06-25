@@ -1,10 +1,15 @@
-from .pipeline import Pipeline
+# SPDX-License-Identifier: Apache-2.0
+# Third Party
 from datasets import Dataset
+
+# Local
+from .pipeline import Pipeline
+
 
 class SDG:
     def __init__(self, pipelines: list[Pipeline]) -> None:
         self.pipelines = pipelines
-          
+
     def generate(self, dataset: Dataset):
         """
         Generate the dataset by running the chained pipeline steps.
