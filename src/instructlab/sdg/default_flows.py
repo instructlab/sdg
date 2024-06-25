@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
 from abc import ABC, abstractmethod
+from importlib import resources
 import operator
+import os
 
 # Local
 from .filterblock import FilterByValueBlock
@@ -21,12 +23,15 @@ class Flow(ABC):
 
 class MMLUBenchFlow(Flow):
     def get_flow(self) -> list:
+        sdg_base = resources.files(__package__)
         return [
             {
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_mmlu_knowledge",
-                    "config_path": "src/instructlab/sdg/configs/knowledge/mcq_generation.yaml",
+                    "config_path": os.path.join(
+                        sdg_base, "configs/knowledge/mcq_generation.yaml"
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": "<s> [INST] {prompt} [/INST]",
@@ -47,12 +52,15 @@ class MMLUBenchFlow(Flow):
 
 class SynthKnowledgeFlow(Flow):
     def get_flow(self) -> list:
+        sdg_base = resources.files(__package__)
         return [
             {
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_knowledge",
-                    "config_path": "src/instructlab/sdg/configs/knowledge/generate_questions_responses.yaml",
+                    "config_path": os.path.join(
+                        sdg_base, "configs/knowledge/generate_questions_responses.yaml"
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": "<s> [INST] {prompt} [/INST]",
@@ -71,7 +79,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_faithfulness_qa_pair",
-                    "config_path": "src/instructlab/sdg/configs/knowledge/evaluate_faithfulness.yaml",
+                    "config_path": os.path.join(
+                        sdg_base, "/configs/knowledge/evaluate_faithfulness.yaml"
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": "<s> [INST] {prompt} [/INST]",
@@ -102,7 +112,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_relevancy_qa_pair",
-                    "config_path": "src/instructlab/sdg/configs/knowledge/evaluate_relevancy.yaml",
+                    "config_path": os.path.join(
+                        sdg_base, "configs/knowledge/evaluate_relevancy.yaml"
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": "<s> [INST] {prompt} [/INST]",
@@ -133,7 +145,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_verify_question",
-                    "config_path": "src/instructlab/sdg/configs/knowledge/evaluate_question.yaml",
+                    "config_path": os.path.join(
+                        sdg_base, "configs/knowledge/evaluate_question.yaml"
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": "<s> [INST] {prompt} [/INST]",
