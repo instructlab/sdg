@@ -590,6 +590,8 @@ def generate_data(
             )
             with mpctx.Pool(num_cpus) as pool:
                 rouge_scores = pool.map(
+                    # Computes LCS (Longest Common Subsequence) rouge scores.
+                    # https://github.com/google-research/google-research/blob/master/rouge/rouge_scorer.py#L186
                     partial(rouge_scorer._score_lcs, new_instruction_tokens),
                     all_instruction_tokens,
                 )
