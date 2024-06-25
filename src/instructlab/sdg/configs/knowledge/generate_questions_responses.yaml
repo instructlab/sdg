@@ -1,0 +1,78 @@
+system: You are a very knowledgeable AI Assistant that will faithfully assist the user with their task.
+
+introduction: Develop a series of educational question and answer pairs from a chapter in a {domain} textbook. 
+
+principles: |
+  The questions should:
+  * Be self-contained, not requiring references to tables, figures, or specific sections in the text for understanding.
+  * Focus on teaching and reinforcing the key knowledge and concepts presented in the chapter.
+  * Avoid sections with minimal educational content like index pages or prefaces. In such cases, respond with [UNANSWERABLE].
+  * Be directly relevant to the textbook's domain. For instance, in a science textbook, questions should revolve around scientific terms, definitions, and practical applications, while in a legal textbook, they should cover legal principles, case law, and precedents.
+  * Be formulated to allow for independent answers, avoiding direct references to specific theorems or text sections. For example, rather than asking 'Under what conditions is the fixed point of a function unique according to Theorem 3.1.5?', ask 'How does the Fixed Point Iteration method contribute to understanding function uniqueness?'
+  * Span a range of difficulty levels to accommodate a diverse student audience, from basic understanding to advanced comprehension.
+  * Include a variety of question types such as multiple-choice for basic recall, short answer for deeper understanding, and essay or problem-solving questions to test application and analysis skills.
+  * Align closely with the learning objectives of the textbook or the specific chapter, ensuring that the questions test the fundamental concepts and skills that the chapter aims to impart.
+
+  Strictly follow this format for each question answer pair your generate while responding
+
+  [Start of Question]
+  ...
+  [End of Question]
+  [Start of Response]
+  ...
+  [End of Response]
+
+  Each question and answer pair should stand alone as a mini-lesson, encapsulating a key concept or idea from the chapter in a way that is accessible and informative without requiring the reader to refer back to the textbook.
+
+examples: |
+  Here are some examples of questions:
+
+  [Start of Question]
+  Explain the process of photosynthesis in plants. Include in your answer the roles of chlorophyll, light, water, and carbon dioxide, and describe how oxygen and glucose are produced.
+  [End of Question]
+  [Start of Response]
+  Photosynthesis is the process by which plants, algae, and some bacteria use sunlight to synthesize food from carbon dioxide and water. Photosynthesis in plants primarily occurs in the leaves, specifically in the chloroplasts. Chlorophyll, the green pigment in chloroplasts, absorbs light energy, which is then used to convert carbon dioxide (from the air) and water (from the soil) into glucose, a simple sugar. This process also releases oxygen as a byproduct. Light energy splits water molecules, releasing electrons and hydrogen ions and forming oxygen. The light-dependent reactions convert light energy into chemical energy (ATP and NADPH), which is used in the light-independent reactions (Calvin cycle) to convert carbon dioxide into glucose. The overall result is the conversion of solar energy into chemical energy in the form of glucose, which plants use for growth and development.
+  [End of Response]
+
+  [Start of Question]
+  In a study on the effects of temperature on enzyme activity, an enzyme exhibited its highest activity at 37°C. At both higher and lower temperatures, its activity decreased. Based on this information, which of the following best explains the enzyme's behavior?
+  Options:
+  a) Enzymes are temperature-sensitive and can denature at high temperatures, losing their functional shape, while at low temperatures, their reaction rates decrease due to reduced molecular motion.
+  b) Enzymes are more effective at higher temperatures as increased heat provides more energy for reactions, and lower temperatures cause enzymes to become more active due to enhanced molecular stability.
+  c) The enzyme's behavior is unrelated to temperature; instead, it is likely due to changes in pH levels, which affect enzyme activity.
+  d) All enzymes universally work best at exactly 37°C, as this is the standard temperature for all biochemical reactions in nature.
+  [End of Question]
+  [Start of Response]
+  a) Enzymes are temperature-sensitive and can denature at high temperatures, losing their functional shape, while at low temperatures, their reaction rates decrease due to reduced molecular motion.
+  [End of Response]
+
+  For this {domain} domain here are some sample questions:
+  [Start of Question]
+  {question_1}
+  [End of Question]
+  [Start of Response]
+  {response_1}
+  [End of Response]
+
+  [Start of Question]
+  {question_2}
+  [End of Question]
+  [Start of Response]
+  {response_2}
+  [End of Response]
+
+  [Start of Question]
+  {question_3}
+  [End of Question]
+  [Start of Response]
+  {response_3}
+  [End of Response]
+
+  Here is the document:
+  {document}
+
+generation: |
+  Now generate the question and answer pairs, remember to follow the principles mentioned above and use the same format as the examples. Remember to use the same style and format as the example above. Return each question between [Start of Question] and [End of Question] tags and answer between [Start of Response] and [End of Response] tags.
+
+start_tags: ["[Start of Question]", "[Start of Response]"]
+end_tags: ["[End of Question]", "[End of Response]"]
