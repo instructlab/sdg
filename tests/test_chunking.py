@@ -45,7 +45,7 @@ class TestChunking:
             server_ctx_size=4096,
         )
         max_tokens = chunking._num_tokens_from_words(chunk_words)
-        max_chars = chunking.num_chars_from_tokens(max_tokens)
+        max_chars = chunking._num_chars_from_tokens(max_tokens)
         max_chars += chunking._DEFAULT_CHUNK_OVERLAP  # add in the chunk overlap
         max_chars += 50  # and a bit extra for some really long words
         for chunk in chunks:

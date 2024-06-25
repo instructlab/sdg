@@ -444,7 +444,6 @@ disable=raw-checker-failed,
         logging-too-many-args,
         attribute-defined-outside-init,
         abstract-method,
-        pointless-statement,
         wrong-import-order,
         line-too-long,
         logging-fstring-interpolation
