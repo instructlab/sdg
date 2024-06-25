@@ -13,10 +13,9 @@ import sys
 
 # Third Party
 # instructlab - TODO these need to go away, issue #6
-from instructlab.configuration import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
+from instructlab.configuration import DEFAULT_MODEL_OLD
 from instructlab.utils import get_sysprompt
-from openai import OpenAI, OpenAIError
-import httpx
+from openai import OpenAIError
 
 StrOrOpenAIObject = Union[str, object]
 
@@ -40,11 +39,7 @@ class OpenAIDecodingArguments:
 
 
 def openai_completion(
-    api_base,
-    tls_insecure,
-    tls_client_cert,
-    tls_client_key,
-    tls_client_passwd,
+    client,
     prompts: Union[str, Sequence[str], Sequence[dict[str, str]], dict[str, str]],
     decoding_args: OpenAIDecodingArguments,
     model_name="ggml-merlinite-7b-lab-Q4_K_M",
@@ -52,7 +47,6 @@ def openai_completion(
     max_instances=sys.maxsize,
     max_batches=sys.maxsize,
     return_text=False,
-    api_key=DEFAULT_API_KEY,
     **decoding_kwargs,
 ) -> Union[
     Union[StrOrOpenAIObject],
@@ -62,11 +56,6 @@ def openai_completion(
     """Decode with OpenAI API.
 
     Args:
-        api_base: Endpoint URL where model is hosted
-        tls_insecure: Disable TLS verification
-        tls_client_cert: Path to the TLS client certificate to use
-        tls_client_key: Path to the TLS client key to use
-        tls_client_passwd: TLS client certificate password
         prompts: A string or a list of strings to complete. If it is a chat model the strings
             should be formatted as explained here:
             https://github.com/openai/openai-python/blob/main/chatml.md.
@@ -78,7 +67,6 @@ def openai_completion(
         max_instances: Maximum number of prompts to decode.
         max_batches: Maximum number of batches to decode. This will be deprecated in the future.
         return_text: If True, return text instead of full completion object (e.g. includes logprob).
-        api_key: API key API key for API endpoint where model is hosted
         decoding_kwargs: Extra decoding arguments. Pass in `best_of` and `logit_bias` if needed.
 
     Returns:
@@ -116,22 +104,8 @@ def openai_completion(
             **decoding_kwargs,
         }
 
-        if not api_key:
-            # we need to explicitly set non-empty api-key, to ensure generate
-            # connects to our local server
-            api_key = "no_api_key"
-
         # do not pass a lower timeout to this client since generating a dataset takes some time
         # pylint: disable=R0801
-        orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
-        cert = tuple(item for item in orig_cert if item)
-        verify = not tls_insecure
-        client = OpenAI(
-            base_url=api_base,
-            api_key=api_key,
-            http_client=httpx.Client(cert=cert, verify=verify),
-        )
-
         # ensure the model specified exists on the server. with backends like vllm, this is crucial.
         model_list = client.models.list().data
         model_ids = []

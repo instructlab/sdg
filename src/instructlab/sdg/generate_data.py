@@ -22,8 +22,10 @@ from instructlab.utils import (
     num_chars_from_tokens,
 )
 from jinja2 import Template
+from openai import OpenAI
 from rouge_score import rouge_scorer
 import click
+import httpx
 import instructlab.utils
 import tqdm
 
@@ -266,18 +268,13 @@ def get_instructions_from_model(
     request_idx,
     instruction_data_pool,
     prompt_template,
-    api_base,
-    api_key,
+    client,
     model_name,
     num_prompt_instructions,
     request_batch_size,
     temperature,
     top_p,
     output_file_discarded,
-    tls_insecure,
-    tls_client_cert,
-    tls_client_key,
-    tls_client_passwd,
 ):
     batch_inputs = []
     for _ in range(request_batch_size):
@@ -306,14 +303,9 @@ def get_instructions_from_model(
     request_start = time.time()
     try:
         results = utils.openai_completion(
-            api_base=api_base,
-            api_key=api_key,
+            client,
             prompts=batch_inputs,
             model_name=model_name,
-            tls_insecure=tls_insecure,
-            tls_client_cert=tls_client_cert,
-            tls_client_key=tls_client_key,
-            tls_client_passwd=tls_client_passwd,
             batch_size=request_batch_size,
             decoding_args=decoding_args,
         )
@@ -473,6 +465,15 @@ def generate_data(
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
 ):
+    cert = tuple(
+        item for item in (tls_client_cert, tls_client_key, tls_client_passwd) if item
+    )
+    client = OpenAI(
+        base_url=api_base,
+        api_key=api_key,
+        http_client=httpx.Client(cert=cert, verify=not tls_insecure),
+    )
+
     seed_instruction_data = []
     machine_seed_instruction_data = []
     generate_start = time.time()
@@ -566,18 +567,13 @@ def generate_data(
             request_idx,
             instruction_data_pool,
             prompt_template,
-            api_base,
-            api_key,
+            client,
             model_name,
             num_prompt_instructions,
             request_batch_size,
             temperature,
             top_p,
             output_file_discarded,
-            tls_insecure,
-            tls_client_cert,
-            tls_client_key,
-            tls_client_passwd,
         )
         total_discarded += discarded
         total = len(instruction_data)
