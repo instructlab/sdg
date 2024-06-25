@@ -9,15 +9,14 @@ import json
 import logging
 import math
 import os
-import sys
 import re
+import sys
 
 # Third Party
 # instructlab - TODO these need to go away, issue #6
 from instructlab.configuration import DEFAULT_API_KEY, DEFAULT_MODEL_OLD
 from instructlab.utils import get_sysprompt
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
-from langchain_text_splitters import MarkdownHeaderTextSplitter
 from magika import Magika
 from openai import OpenAI, OpenAIError
 import httpx
@@ -295,47 +294,27 @@ def chunk_document(documents: List, server_ctx_size, chunk_word_count) -> List[s
                 )
             )
         )
+    # Placeholder for params
     content = []
-    text_splitter = RecursiveCharacterTextSplitter(
-        separators=["\n\n", "\n", " "],
-        chunk_size=num_chars_from_tokens(no_tokens_per_doc),
-        chunk_overlap=DEFAULT_CHUNK_OVERLAP,
-    )
-
-    headers_to_split_on = [
-        ("#", "Header 1"),
-        ("##", "Header 2"),
-    ]
-
-    markdown_splitter = MarkdownHeaderTextSplitter(
-        headers_to_split_on=headers_to_split_on,
-        strip_headers=False
-    )
-
+    chunk_size = num_chars_from_tokens(no_tokens_per_doc)
+    chunk_overlap = DEFAULT_CHUNK_OVERLAP
     text_splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.MARKDOWN,
         chunk_size=num_chars_from_tokens(no_tokens_per_doc),
         chunk_overlap=DEFAULT_CHUNK_OVERLAP,
     )
 
-    # Placeholder for params
-    content = []
-    chunk_size = num_chars_from_tokens(no_tokens_per_doc)
-    chunk_overlap = DEFAULT_CHUNK_OVERLAP
-    text_splitter = None
-
     # Determine file type for heuristics, default with markdown
     for docs in documents:
         # Try Except Block if Magika fails
         try:
             m = Magika()
-            docs_bytes = docs.encode('utf-8')
+            docs_bytes = docs.encode("utf-8")
             res = m.identify_bytes(docs_bytes)
             file_type = res.output.ct_label.lower()
 
             # Full list of supported languages of Langchain
-            supported_types = [e.value for e in Language]
-
+            # supported_types = [e.value for e in Language]
             # Checks for file types:
             file_type_to_language = {
                 "go": Language.GO,
@@ -351,9 +330,6 @@ def chunk_document(documents: List, server_ctx_size, chunk_word_count) -> List[s
                 "c": Language.C,
                 "perl": Language.PERL,
             }
-
-            print(file_type)
-            
             if file_type in file_type_to_language:
                 language = file_type_to_language[file_type]
                 text_splitter = RecursiveCharacterTextSplitter.from_language(
@@ -373,23 +349,26 @@ def chunk_document(documents: List, server_ctx_size, chunk_word_count) -> List[s
                     chunk_overlap=chunk_overlap,
                 )
                 # Use regex to remove unnecessary dashes in front of pipe characters in a markdown table.
-                docs = re.sub(r'-{2,}\|', '-|', docs)
+                docs = re.sub(r"-{2,}\|", "-|", docs)
                 # Remove unnecessary spaces in front of pipe characters in a markdown table.
-                docs = re.sub(r'\  +\|', ' |', docs)
+                docs = re.sub(r"\  +\|", " |", docs)
                 temp = text_splitter.create_documents([docs])
                 content.extend([item.page_content for item in temp])
 
-        except Exception as e:
-            content = []
-            text_splitter = RecursiveCharacterTextSplitter(
-                separators=["\n\n", "\n", " "],
-                chunk_size=num_chars_from_tokens(no_tokens_per_doc),
-                chunk_overlap=DEFAULT_CHUNK_OVERLAP,
-            )
-
+        except UnicodeDecodeError as e:
             for docs in documents:
                 temp = text_splitter.create_documents([docs])
                 content.extend([item.page_content for item in temp])
-            print("Error {}".format(e))
+            print("Using naive method instead. UnicodeDecode Error: {}".format(e))
+        except AttributeError as e:
+            for docs in documents:
+                temp = text_splitter.create_documents([docs])
+                content.extend([item.page_content for item in temp])
+            print("Using naive method instead. Attribute Error: {}".format(e))
+        except ValueError as e:
+            for docs in documents:
+                temp = text_splitter.create_documents([docs])
+                content.extend([item.page_content for item in temp])
+            print("Using naive method instead. Value Error: {}".format(e))
 
     return content
