@@ -185,6 +185,7 @@ def post_process_gpt3_response(num_prompt_instructions, response, discarded_file
     if response is None:
         return [], 0
     raw_instructions = (
+        # https://platform.openai.com/docs/api-reference/chat/object#chat/object-choices
         f"* Task {num_prompt_instructions + 1}\n" + response.message.content
     )
     raw_instructions = re.split(r"\* Task \d+", raw_instructions)
@@ -524,6 +525,9 @@ def generate_data(
         )
 
     # similarities = {}
+    # Calculate rouges scores between two blobs of text.
+    # rougeL: Longest common subsequence based scoring.
+    # https://github.com/google-research/google-research/blob/master/rouge/rouge_scorer.py#L50
     scorer = rouge_scorer.RougeScorer(["rougeL"], use_stemmer=False)
 
     # now let's generate new instructions!
@@ -536,7 +540,9 @@ def generate_data(
         d["instruction"] for d in machine_instruction_data
     ]
     all_instruction_tokens = [
-        scorer._tokenizer.tokenize(inst) for inst in all_instructions
+        # https://github.com/google-research/google-research/blob/master/rouge/tokenize.py
+        scorer._tokenizer.tokenize(inst)
+        for inst in all_instructions
     ]
 
     if console_output:
@@ -585,6 +591,7 @@ def generate_data(
         assess_start = time.time()
         for instruction_data_entry in instruction_data:
             # computing similarity with the pre-tokenized instructions
+            # https://github.com/google-research/google-research/blob/master/rouge/tokenize.py
             new_instruction_tokens = scorer._tokenizer.tokenize(
                 instruction_data_entry["instruction"]
             )
