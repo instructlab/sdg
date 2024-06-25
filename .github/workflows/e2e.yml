@@ -31,10 +31,17 @@ jobs:
 
     steps:
       # No step-security/harden-runner since this is a self-hosted runner
-      - name: Checkout
+      - name: Checkout instructlab/sdg
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           # https://github.com/actions/checkout/issues/249
+          fetch-depth: 0
+
+      - name: Checkout instructlab/instructlab
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        with:
+          repository: "instructlab/instructlab"
+          path: "instructlab"
           fetch-depth: 0
 
       - name: Install Packages
@@ -68,7 +75,6 @@ jobs:
           export PATH="/home/runner/.local/bin:/usr/local/cuda/bin:$PATH"
           python3 -m venv venv
           . venv/bin/activate
-          git clone https://github.com/instructlab/instructlab.git
           cd instructlab
           sed 's/\[.*\]//' requirements.txt > constraints.txt
           python3 -m pip cache remove llama_cpp_python
