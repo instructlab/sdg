@@ -14,11 +14,11 @@ import string
 import time
 
 # Third Party
-# instructlab - All of these need to go away (other than sdg) - issue #6
-from instructlab.configuration import get_model_family
 from jinja2 import Template
 from rouge_score import rouge_scorer
 import click
+
+# instructlab - this needs to go away - issue #6
 import instructlab.utils
 import tqdm
 
@@ -27,7 +27,7 @@ import tqdm
 from instructlab.sdg import utils
 from instructlab.sdg.utils import chunking
 from instructlab.sdg.utils import json as json_utils
-from instructlab.sdg.utils import openai
+from instructlab.sdg.utils import models, openai
 from instructlab.sdg.utils import taxonomy as taxonomy_utils
 
 DEFAULT_PROMPT_TEMPLATE_MERLINITE = """\
@@ -487,7 +487,7 @@ def generate_data(
         raise SystemExit(f"Error: taxonomy ({taxonomy}) does not exist.")
 
     prompt_template = check_prompt_file(
-        prompt_file_path, get_model_family(model_family, model_name)
+        prompt_file_path, models.get_model_family(model_family, model_name)
     )
     max_seed_tokens = chunking.max_seed_example_tokens(
         server_ctx_size, len(prompt_template)
