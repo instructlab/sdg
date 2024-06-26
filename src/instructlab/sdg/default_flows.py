@@ -7,8 +7,8 @@ import os
 
 # Local
 from .filterblock import FilterByValueBlock
-from .llmblock import LLMBlock
 from .iterblock import IterBlock
+from .llmblock import LLMBlock
 
 
 class Flow(ABC):
@@ -388,122 +388,4 @@ class SynthGroundedSkillsFlow(Flow):
                     },
                 },
             },
-        ]
-
-
-class SynthGroundedSkillsFlow(Flow):
-    def get_flow(self) -> list:
-        return [
-            {
-                'block_type': IterBlock,
-                'block_config': {
-                    'block_name': 'context_iter',
-                    'num_iters': 10,
-                    'block_type': LLMBlock,
-                    'block_kwargs': {
-                        'block_name': 'gen_contexts',
-                        'config_path': 'src/instructlab/sdg/configs/skills/contexts.yaml',
-                        'client': self.client,
-                        'model_id': self.model_id,
-                        'model_prompt': '<s> [INST] {prompt} [/INST]',
-                        'output_cols': ['context'],
-                        'batch_kwargs': {
-                            'num_procs': 8,
-                            'batched': True,
-                        },
-                    },
-                    'gen_kwargs': {
-                        'temperature': 0.7,
-                        'max_tokens': 2048,
-                    },
-                },
-            },
-            {
-                'block_type': LLMBlock,
-                'block_config': {
-                    'block_name': 'gen_grounded_questions',
-                    'config_path': 'src/instructlab/sdg/configs/skills/grounded_questions.yaml',
-                    'client': self.client,
-                    'model_id': self.model_id,
-                    'model_prompt': '<s> [INST] {prompt} [/INST]',
-                    'output_cols': ['question'],
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                        'batched': True,
-                    },
-                },
-                'drop_duplicates': ['question'],
-            },
-            {
-                'block_type': LLMBlock,
-                'block_config': {
-                    'block_name': 'eval_grounded_questions',
-                    'config_path': 'src/instructlab/sdg/configs/skills/evaluate_grounded_questions.yaml',
-                    'client': self.client,
-                    'model_id': self.model_id,
-                    'model_prompt': '<s> [INST] {prompt} [/INST]',
-                    'output_cols': ['evaluation', 'score'],
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                        'batched': True,
-                    },
-                },
-            },
-            {
-                'block_type': FilterByValueBlock,
-                'block_config': {
-                    'block_name': 'filter_grounded_questions',
-                    'filter_column': 'score',
-                    'filter_value': 1,
-                    'operation': operator.eq,
-                    'convert_dtype': int,
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                    },
-                },
-                'drop_columns': ['evaluation', 'score', 'num_samples']
-            },
-            {
-                'block_type': LLMBlock,
-                'block_config': {
-                    'block_name': 'gen_grounded_responses',
-                    'config_path': 'src/instructlab/sdg/configs/skills/grounded_responses.yaml',
-                    'client': self.client,
-                    'model_id': self.model_id,
-                    'model_prompt': '<s> [INST] {prompt} [/INST]',
-                    'output_cols': ['answer'],
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                        'batched': True,
-                    },
-                },
-            },
-            {
-                'block_type': LLMBlock,
-                'block_config': {
-                    'block_name': 'evaluate_grounded_qa_pair',
-                    'config_path': 'src/instructlab/sdg/configs/skills/evaluate_grounded_pair.yaml',
-                    'client': self.client,
-                    'model_id': self.model_id,
-                    'model_prompt': '<s> [INST] {prompt} [/INST]',
-                    'output_cols': ['evaluation', 'score'],
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                        'batched': True,
-                    },
-                },
-            },
-            {
-                'block_type': FilterByValueBlock,
-                'block_config': {
-                    'block_name': 'filter_grounded_qa_pair',
-                    'filter_column': 'score',
-                    'filter_value': 2,
-                    'operation': operator.ge,
-                    'convert_dtype': int,
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                    },
-                },
-            }
         ]

@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import ChainMap
 from typing import Any, Dict, Union
 
 # Third Party
-from datasets import Dataset
 import yaml
 
 # Local

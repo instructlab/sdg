@@ -13,6 +13,7 @@ class FilterByValueBlock(Block):
     def __init__(
         self, filter_column, filter_value, operation, convert_dtype=None, **batch_kwargs
     ) -> None:
+        super().__init__(block_name=self.__class__.__name__)
         self.value = filter_value
         self.column_name = filter_column
         self.operation = operation

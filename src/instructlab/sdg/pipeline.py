@@ -3,8 +3,8 @@
 from datasets import Dataset
 
 # Local
-from .logger_config import setup_logger
 from .iterblock import IterBlock
+from .logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -40,7 +40,7 @@ class Pipeline:
             block = block_type(**block_config)
 
             if block_type == IterBlock:
-                block_kwargs = block_config.pop('block_kwargs')
+                block_kwargs = block_config.pop("block_kwargs")
                 block = block_type(**block_config, block_kwargs=block_kwargs)
             else:
                 block = block_type(**block_config)

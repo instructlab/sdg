@@ -96,6 +96,9 @@ disable_error_code = ["import-not-found", "import-untyped"]
 exclude = [
     "^src/instructlab/sdg/generate_data\\.py$",
     "^src/instructlab/sdg/utils\\.py$",
+    "^src/instructlab/sdg/default_flows\\.py$",
+    "^src/instructlab/sdg/llmblock\\.py$",
+    "^src/instructlab/sdg/utilblocks\\.py$",
 ]
 # honor excludes by not following there through imports
 follow_imports = "silent"

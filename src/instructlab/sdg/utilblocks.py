@@ -11,6 +11,7 @@ logger = setup_logger(__name__)
 
 class SamplePopulatorBlock(Block):
     def __init__(self, config_paths, column_name, **batch_kwargs) -> None:
+        super().__init__(block_name=self.__class__.__name__)
         self.configs = {}
         for config in config_paths:
             config_key = config.split("/")[-1].split(".")[0]
@@ -29,6 +30,7 @@ class SamplePopulatorBlock(Block):
 
 class SelectorBlock(Block):
     def __init__(self, choice_map, choice_col, output_col, **batch_kwargs) -> None:
+        super().__init__(block_name=self.__class__.__name__)
         self.choice_map = choice_map
         self.choice_col = choice_col
         self.output_col = output_col
@@ -45,6 +47,7 @@ class SelectorBlock(Block):
 
 class CombineColumnsBlock(Block):
     def __init__(self, columns, output_col, separator="\n\n", **batch_kwargs) -> None:
+        super().__init__(block_name=self.__class__.__name__)
         self.columns = columns
         self.output_col = output_col
         self.separator = separator

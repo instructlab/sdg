@@ -13,6 +13,7 @@ logger = setup_logger(__name__)
 
 
 class LLMBlock(Block):
+    # pylint: disable=too-many-instance-attributes
     def __init__(
         self,
         block_name,
@@ -100,6 +101,7 @@ class LLMBlock(Block):
         new_data = []
         for sample, output in zip(samples, outputs):
             parsed_outputs = self._parse(output)
+            # pylint: disable=consider-using-generator
             max_length = max([len(value) for value in parsed_outputs.values()])
             for values in zip(*(lst[:max_length] for lst in parsed_outputs.values())):
                 new_data.append({**sample, **dict(zip(parsed_outputs.keys(), values))})
