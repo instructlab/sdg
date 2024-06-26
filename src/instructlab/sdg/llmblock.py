@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
-from typing import Any, Dict, Union
+from typing import Any, Dict
 import re
 
 # Third Party
@@ -86,7 +86,7 @@ class LLMBlock(Block):
         if (num_samples is not None) and ("num_samples" not in samples.column_names):
             samples = samples.add_column("num_samples", [num_samples] * len(samples))
 
-        # validate the each sample
+        # validate each sample
         for sample in samples:
             if not self._validate(self.prompt_template, sample):
                 return None
@@ -145,7 +145,7 @@ class ConditionalLLMBlock(LLMBlock):
     def _parse(self, generated_string):
         if self.parser_name == "default":
             return super()._parse(generated_string)
-        elif self.parser_name == "multi-line-logical-section":
+        if self.parser_name == "multi-line-logical-section":
             return {
                 self.output_cols[0]: self.extract_multiline_logical_section(
                     generated_string
@@ -191,7 +191,7 @@ class ConditionalLLMBlock(LLMBlock):
         )
         return [choice.text.strip() for choice in response.choices]
 
-    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
+    def _validate(self, prompt_template: str, input_dict: Dict[str, Any], extra_arg=None) -> bool:
         if isinstance(prompt_template, dict):
             prompt_template = prompt_template[input_dict[self.selector_column_name]]
         return super()._validate(prompt_template, input_dict)

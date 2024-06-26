@@ -11,6 +11,7 @@ logger = setup_logger(__name__)
 
 class SamplePopulatorBlock(Block):
     def __init__(self, config_paths, column_name, post_fix="", **batch_kwargs) -> None:
+        super().__init__(block_name=self.__class__.__name__)  # Call the base class's __init__
         self.configs = {}
         for config in config_paths:
             if post_fix:
