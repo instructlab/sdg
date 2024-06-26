@@ -9,19 +9,18 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
-
 class SamplePopulatorBlock(Block):
     def __init__(self, config_paths, column_name, post_fix="", **batch_kwargs) -> None:
         self.configs = {}
         for config in config_paths:
             if post_fix:
-                config_name = config.replace('.yaml', f'_{post_fix}.yaml')
+                config_name = config.replace(".yaml", f"_{post_fix}.yaml")
             else:
                 config_name = config
             config_key = config.split("/")[-1].split(".")[0]
             self.configs[config_key] = self._load_config(config_name)
         self.column_name = column_name
-        self.num_procs = batch_kwargs.get('num_procs', 8)
+        self.num_procs = batch_kwargs.get("num_procs", 8)
 
     def _generate(self, sample) -> dict:
         sample = {**sample, **self.configs[sample[self.column_name]]}
@@ -30,6 +29,7 @@ class SamplePopulatorBlock(Block):
     def generate(self, samples) -> Dataset:
         samples = samples.map(self._generate, num_proc=self.num_procs)
         return samples
+
 
 class SelectorBlock(Block):
     def __init__(self, choice_map, choice_col, output_col, **batch_kwargs) -> None:
