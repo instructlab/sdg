@@ -107,3 +107,51 @@ class LLMBlock(Block):
                 new_data.append({**sample, **dict(zip(parsed_outputs.keys(), values))})
 
         return Dataset.from_list(new_data)
+
+
+class ConditionalLLMBlock(LLMBlock):
+    def __init__(self, block_name, config_paths, client, model_id, output_cols, selector_column_name, parser_name, model_prompt="{prompt}", **batch_kwargs) -> None:
+        super().__init__(block_name, config_paths[0][0], client, model_id, output_cols, model_prompt=model_prompt, **batch_kwargs)
+        self.selector_column_name = selector_column_name
+        self.prompt_template = {}
+        self.parser_name = parser_name
+        if len(config_paths) == 1 and config_paths[0][1] == 'All':
+            self.prompt_template = self.prompt_struct.format(**self.block_config)
+        else:
+            for (config, config_key) in config_paths:
+                self.prompt_template[config_key] = self.prompt_struct.format(**self._load_config(config))
+
+    def _parse(self, generated_string):
+        if self.parser_name == 'default':
+            return matches
+        elif self.parser_name == 'multi-line-logical-section':
+            return {self.output_cols[0]: self.extract_multiline_logical_section(generated_string)}
+
+    def extract_multiline_logical_section(self, text):
+        """
+        Extracts multi-line points from the provided text into a list, removing the point numbers.
+
+        Args:
+            text (str): The input text containing multi-line points.
+
+        Returns:
+            list: A list of multi-line points without the point numbers.
+        """
+        pattern = re.compile(r'## Logical Section \d+: (.*?)(?=## Logical Section \d+:|$)', re.DOTALL)
+        sections = pattern.findall(text)
+
+        return sections
+
+    def _generate(self, samples, **gen_kwargs) -> str:
+        if isinstance(self.prompt_template, dict):
+            prompts = [self.model_prompt.format(prompt=self.prompt_template[sample[self.selector_column_name]].format(**sample).strip()) for sample in samples]
+        else:
+            prompts = [self.model_prompt.format(prompt=self.prompt_template.format(**sample).strip()) for sample in samples]
+        response = self.client.completions.create(prompt=prompts, **{**self.defaults, **gen_kwargs})
+        return [choice.text.strip() for choice in response.choices]
+    
+
+    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
+        if isinstance(prompt_template, dict):
+            prompt_template = prompt_template[input_dict[self.selector_column_name]]
+        return super()._validate(prompt_template, input_dict)
