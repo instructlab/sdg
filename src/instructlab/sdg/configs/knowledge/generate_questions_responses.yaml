@@ -68,11 +68,13 @@ examples: |
   {icl_response_3}
   [End of Response]
 
+generation: |
+  Now generate the question and answer pairs, remember to follow the principles mentioned above and use the same format as the examples. Remember to use the same style and format as the example above. 
+  
   Here is the document:
   {document}
 
-generation: |
-  Now generate the question and answer pairs, remember to follow the principles mentioned above and use the same format as the examples. Remember to use the same style and format as the example above. Return each question between [Start of Question] and [End of Question] tags and answer between [Start of Response] and [End of Response] tags.
+  Return each question between [Start of Question] and [End of Question] tags and answer between [Start of Response] and [End of Response] tags.
 
 start_tags: ["[Start of Question]", "[Start of Response]"]
 end_tags: ["[End of Question]", "[End of Response]"]
