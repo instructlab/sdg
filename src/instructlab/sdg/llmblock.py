@@ -8,6 +8,7 @@ from datasets import Dataset
 # Local
 from .block import Block
 from .logger_config import setup_logger
+from typing import Any, Dict, Union
 
 logger = setup_logger(__name__)
 
@@ -56,9 +57,8 @@ class LLMBlock(Block):
                 pattern = re.escape(start_tag) + r"(.*?)" + re.escape(end_tag)
                 all_matches = re.findall(pattern, generated_string, re.DOTALL)
                 matches[output_col] = (
-                    [match.strip() for match in all_matches] if all_matches else None
+                    [match.strip() for match in all_matches] if all_matches else []
                 )
-
         return matches
 
     def _generate(self, samples, **gen_kwargs) -> list:
@@ -123,7 +123,7 @@ class ConditionalLLMBlock(LLMBlock):
 
     def _parse(self, generated_string):
         if self.parser_name == 'default':
-            return matches
+            return super()._parse(generated_string)
         elif self.parser_name == 'multi-line-logical-section':
             return {self.output_cols[0]: self.extract_multiline_logical_section(generated_string)}
 
