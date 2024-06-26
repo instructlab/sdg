@@ -67,20 +67,21 @@ class LLMBlock(Block):
                 )
         else:
             for start_tag, end_tag, output_col in zip(
-                self.block_config["start_tags"],
-                self.block_config["end_tags"],
+                self.block_config.get("start_tags", []),
+                self.block_config.get("end_tags", []),
                 self.output_cols,
             ):
                 if not start_tag and not end_tag:
-                    matches[output_col] = (
+                    matches[output_col] = [
                         generated_string.strip() if generated_string else None
-                    )
+                    ]
                 else:
                     pattern = re.escape(start_tag) + r"(.*?)" + re.escape(end_tag)
                     all_matches = re.findall(pattern, generated_string, re.DOTALL)
                     matches[output_col] = (
                         [match.strip() for match in all_matches] if all_matches else []
                     )
+
         return matches
 
     def _generate(self, samples, **gen_kwargs) -> list:
@@ -104,6 +105,7 @@ class LLMBlock(Block):
         """
         num_samples = self.batch_params.get("num_samples", None)
         batched = self.batch_params.get("batched", False)
+        logger.debug("Generating outputs for {} samples".format(len(samples)))
 
         if (num_samples is not None) and ("num_samples" not in samples.column_names):
             samples = samples.add_column("num_samples", [num_samples] * len(samples))
@@ -119,6 +121,7 @@ class LLMBlock(Block):
             outputs = self._generate(samples, **gen_kwargs)
         else:
             outputs = [self._generate([sample], **gen_kwargs)[0] for sample in samples]
+        logger.debug("Generated outputs: {}".format(outputs))
 
         new_data = []
         for sample, output in zip(samples, outputs):

@@ -40,6 +40,34 @@ class Flow(ABC):
         pass
 
 
+class SimpleKnowledgeFlow(Flow):
+    def get_flow(self) -> list:
+        sdg_base = resources.files(__package__)
+        return [
+            {
+                "block_type": LLMBlock,
+                "block_config": {
+                    "block_name": "gen_knowledge",
+                    "config_path": os.path.join(
+                        sdg_base, "configs/knowledge/simple_generate_qa.yaml"
+                    ),
+                    "client": self.client,
+                    "model_id": self.model_id,
+                    "model_prompt": _get_model_prompt(self.model_family),
+                    "output_cols": ["output"],
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": self.batched,
+                    },
+                },
+                "gen_kwargs": {
+                    "max_tokens": 2048,
+                },
+                "drop_duplicates": ["output"],
+            },
+        ]
+
+
 class MMLUBenchFlow(Flow):
     def get_flow(self) -> list:
         sdg_base = resources.files(__package__)
