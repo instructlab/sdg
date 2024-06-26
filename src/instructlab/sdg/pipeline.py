@@ -34,7 +34,7 @@ class Pipeline:
         for block_prop in self.chained_blocks:
             block_type = block_prop["block_type"]
             block_config = block_prop["block_config"]
-            drop_columns = block_prop.get("drop_columns", None)
+            drop_columns = block_prop.get("drop_columns", [])
             gen_kwargs = block_prop.get("gen_kwargs", {})
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
             block = block_type(**block_config)
@@ -50,8 +50,9 @@ class Pipeline:
 
             dataset = block.generate(dataset, **gen_kwargs)
 
+            drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
             if drop_columns:
-                dataset = dataset.remove_columns(drop_columns)
+                dataset = dataset.remove_columns(drop_columns_in_ds)
 
             if drop_duplicates_cols:
                 dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
