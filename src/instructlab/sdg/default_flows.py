@@ -80,7 +80,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "eval_faithfulness_qa_pair",
                     "config_path": os.path.join(
-                        sdg_base, "/configs/knowledge/evaluate_faithfulness.yaml"
+                        sdg_base, "configs/knowledge/evaluate_faithfulness.yaml"
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
