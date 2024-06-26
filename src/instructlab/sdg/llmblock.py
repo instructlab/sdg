@@ -118,7 +118,7 @@ class LLMBlock(Block):
         if batched:
             outputs = self._generate(samples, **gen_kwargs)
         else:
-            outputs = [self._generate([sample], **gen_kwargs) for sample in samples]
+            outputs = [self._generate([sample], **gen_kwargs)[0] for sample in samples]
 
         new_data = []
         for sample, output in zip(samples, outputs):
