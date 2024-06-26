@@ -48,24 +48,24 @@ examples: |
 
   For this {domain} domain here are some sample questions:
   [Start of Question]
-  {question_1}
+  {icl_query_1}
   [End of Question]
   [Start of Response]
-  {response_1}
+  {icl_response_1}
   [End of Response]
 
   [Start of Question]
-  {question_2}
+  {icl_query_2}
   [End of Question]
   [Start of Response]
-  {response_2}
+  {icl_response_2}
   [End of Response]
 
   [Start of Question]
-  {question_3}
+  {icl_query_3}
   [End of Question]
   [Start of Response]
-  {response_3}
+  {icl_response_3}
   [End of Response]
 
   Here is the document:
