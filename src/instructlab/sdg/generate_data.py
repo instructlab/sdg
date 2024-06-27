@@ -25,6 +25,9 @@ import tqdm
 # First Party
 # pylint: disable=ungrouped-imports
 from instructlab.sdg import utils
+from instructlab.sdg.utils import chunking
+from instructlab.sdg.utils import json as json_utils
+from instructlab.sdg.utils import openai
 
 DEFAULT_PROMPT_TEMPLATE_MERLINITE = """\
 You are asked to come up with a set of 5 diverse task instructions under {{taxonomy}}{{" for the task \\"%s\\""|format(task_description)  if task_description}}. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
@@ -290,7 +293,7 @@ def get_instructions_from_model(
             ) from exc
         prompt = encode_prompt(prompt_instructions, prompt_template)
         batch_inputs.append(prompt)
-    decoding_args = utils.OpenAIDecodingArguments(
+    decoding_args = openai.OpenAIDecodingArguments(
         temperature=temperature,
         n=1,
         # Hard-coded to maximize length.
@@ -301,7 +304,7 @@ def get_instructions_from_model(
     )
     request_start = time.time()
     try:
-        results = utils.openai_completion(
+        results = openai.openai_completion(
             api_base=api_base,
             api_key=api_key,
             prompts=batch_inputs,
@@ -371,7 +374,7 @@ def _gen_test_data(
     server_ctx_size,
     output_file_test,
 ):
-    max_seed_chars = utils.num_chars_from_tokens(max_seed_tokens)
+    max_seed_chars = chunking.num_chars_from_tokens(max_seed_tokens)
     for seed_example in seed_instruction_data:
         if (
             len(seed_example["instruction"])
@@ -394,7 +397,7 @@ def _gen_test_data(
 
         documents = seed_example["document"]
         if documents:
-            seed_example["document"] = utils.chunk_document(
+            seed_example["document"] = chunking.chunk_document(
                 documents=documents,
                 server_ctx_size=server_ctx_size,
                 chunk_word_count=chunk_word_count,
@@ -405,7 +408,7 @@ def _gen_test_data(
         try:
             test_data.append(
                 {
-                    "system": utils.get_sysprompt(),
+                    "system": instructlab.utils.get_sysprompt(),
                     "user": unescape(user),
                     "assistant": unescape(seed_example["output"]),
                 }
@@ -416,7 +419,7 @@ def _gen_test_data(
                 fg="red",
             )
             raise click.exceptions.Exit(1)
-    # utils.jdump(test_data, os.path.join(output_dir, output_file_test))
+    # json_utils.jdump(test_data, os.path.join(output_dir, output_file_test))
     with open(output_file_test, "w", encoding="utf-8") as outfile:
         for entry in test_data:
             json.dump(entry, outfile, ensure_ascii=False)
@@ -431,12 +434,12 @@ def _gen_train_data(machine_instruction_data, output_file_train):
             user += "\n" + synth_example["input"]
         train_data.append(
             {
-                "system": utils.get_sysprompt(),
+                "system": instructlab.utils.get_sysprompt(),
                 "user": unescape(user),
                 "assistant": unescape(synth_example["output"]),
             }
         )
-    # utils.jdump(train_data, output_file_train)
+    # json_utils.jdump(train_data, output_file_train)
     with open(output_file_train, "w", encoding="utf-8") as outfile:
         for entry in train_data:
             json.dump(entry, outfile, ensure_ascii=False)
@@ -489,7 +492,7 @@ def generate_data(
     prompt_template = check_prompt_file(
         prompt_file_path, get_model_family(model_family, model_name)
     )
-    max_seed_tokens = utils.max_seed_example_tokens(
+    max_seed_tokens = chunking.max_seed_example_tokens(
         server_ctx_size, len(prompt_template)
     )
 
@@ -516,7 +519,9 @@ def generate_data(
     # load the LM-generated instructions
     machine_instruction_data = []
     if os.path.exists(os.path.join(output_dir, "regen.json")):
-        machine_instruction_data = utils.jload(os.path.join(output_dir, "regen.json"))
+        machine_instruction_data = json_utils.jload(
+            os.path.join(output_dir, "regen.json")
+        )
         logger.debug(
             f"Loaded {len(machine_instruction_data)} machine-generated instructions"
         )
@@ -629,7 +634,9 @@ def generate_data(
         logger.debug(
             f"Generated {total} instructions(discarded {discarded}), rouged {total - keep}, kept {keep} instructions"
         )
-        utils.jdump(machine_instruction_data, os.path.join(output_dir, output_file))
+        json_utils.jdump(
+            machine_instruction_data, os.path.join(output_dir, output_file)
+        )
         _gen_train_data(
             machine_instruction_data, os.path.join(output_dir, output_file_train)
         )
