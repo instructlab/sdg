@@ -10,12 +10,18 @@ logger = setup_logger(__name__)
 
 
 class SamplePopulatorBlock(Block):
-    def __init__(self, config_paths, column_name, **batch_kwargs) -> None:
-        super().__init__(block_name=self.__class__.__name__)
+    def __init__(self, config_paths, column_name, post_fix="", **batch_kwargs) -> None:
+        super().__init__(
+            block_name=self.__class__.__name__
+        )  # Call the base class's __init__
         self.configs = {}
         for config in config_paths:
+            if post_fix:
+                config_name = config.replace(".yaml", f"_{post_fix}.yaml")
+            else:
+                config_name = config
             config_key = config.split("/")[-1].split(".")[0]
-            self.configs[config_key] = self._load_config(config)
+            self.configs[config_key] = self._load_config(config_name)
         self.column_name = column_name
         self.num_procs = batch_kwargs.get("num_procs", 8)
 
