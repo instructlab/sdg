@@ -28,6 +28,7 @@ from instructlab.sdg import utils
 from instructlab.sdg.utils import chunking
 from instructlab.sdg.utils import json as json_utils
 from instructlab.sdg.utils import openai
+from instructlab.sdg.utils import taxonomy as taxonomy_utils
 
 DEFAULT_PROMPT_TEMPLATE_MERLINITE = """\
 You are asked to come up with a set of 5 diverse task instructions under {{taxonomy}}{{" for the task \\"%s\\""|format(task_description)  if task_description}}. These task instructions will be given to a GPT model and we will evaluate the GPT model for completing the instructions.
@@ -357,10 +358,6 @@ def get_instructions_from_model(
     return instruction_data, discarded
 
 
-def read_taxonomy(*args, **kwargs):
-    return instructlab.utils.read_taxonomy(*args, **kwargs)
-
-
 def unescape(s):
     return bytes(s, "utf-8").decode("utf-8")
 
@@ -483,8 +480,8 @@ def generate_data(
     # throw an error if both not found
     # pylint: disable=broad-exception-caught,raise-missing-from
     if taxonomy and os.path.exists(taxonomy):
-        seed_instruction_data = read_taxonomy(
-            logger, taxonomy, taxonomy_base, yaml_rules
+        seed_instruction_data = taxonomy_utils.read_taxonomy(
+            taxonomy, taxonomy_base, yaml_rules
         )
     else:
         raise SystemExit(f"Error: taxonomy ({taxonomy}) does not exist.")
