@@ -69,6 +69,11 @@ class SynthKnowledgeFlow(Flow):
                         "num_procs": 8,
                         "batched": True,
                     },
+                    "parser_kwargs": {
+                        "parser_name": "custom",
+                        "parsing_pattern": r"\[(?:Question|QUESTION)\]\s*(.*?)\s*\[(?:Answer|ANSWER)\]\s*(.*?)\s*(?=\[(?:Question|QUESTION)\]|$)",
+                        "parser_cleanup_tags": ["[END]"],
+                    },
                 },
                 "gen_kwargs": {
                     "max_tokens": 2048,
