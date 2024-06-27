@@ -29,10 +29,11 @@ def _get_model_prompt(model_family):
 
 
 class Flow(ABC):
-    def __init__(self, client, model_family, model_id) -> None:
+    def __init__(self, client, model_family, model_id, batched=True) -> None:
         self.client = client
         self.model_family = model_family
         self.model_id = model_id
+        self.batched = batched
 
     @abstractmethod
     def get_flow(self) -> list:
@@ -56,7 +57,7 @@ class MMLUBenchFlow(Flow):
                     "output_cols": ["mmlubench_question", "mmlubench_answer"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -85,7 +86,7 @@ class SynthKnowledgeFlow(Flow):
                     "output_cols": ["question", "response"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                     "parser_kwargs": {
                         "parser_name": "custom",
@@ -111,7 +112,7 @@ class SynthKnowledgeFlow(Flow):
                     "output_cols": ["explanation", "judgment"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -144,7 +145,7 @@ class SynthKnowledgeFlow(Flow):
                     "output_cols": ["feedback", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -177,7 +178,7 @@ class SynthKnowledgeFlow(Flow):
                     "output_cols": ["explanation", "rating"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -215,7 +216,7 @@ class SynthSkillsFlow(Flow):
                     "batch_kwargs": {
                         "num_procs": 8,
                         "num_samples": 30,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "drop_duplicates": ["question"],
@@ -231,7 +232,7 @@ class SynthSkillsFlow(Flow):
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -260,7 +261,7 @@ class SynthSkillsFlow(Flow):
                     "output_cols": ["answer"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -275,7 +276,7 @@ class SynthSkillsFlow(Flow):
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -314,7 +315,7 @@ class SynthGroundedSkillsFlow(Flow):
                         "output_cols": ["context"],
                         "batch_kwargs": {
                             "num_procs": 8,
-                            "batched": True,
+                            "batched": self.batched,
                         },
                     },
                     "gen_kwargs": {
@@ -334,7 +335,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "drop_duplicates": ["question"],
@@ -350,7 +351,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -379,7 +380,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "output_cols": ["answer"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -394,7 +395,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
