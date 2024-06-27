@@ -15,64 +15,54 @@ principles: |
 
   Strictly follow this format for each question answer pair your generate while responding
 
-  [Start of Question]
-  ...
-  [End of Question]
-  [Start of Response]
-  ...
-  [End of Response]
+  [QUESTION]
+  <Insert question here>
+  [ANSWER]
+  <Insert answer here>
+  [END]
+
 
   Each question and answer pair should stand alone as a mini-lesson, encapsulating a key concept or idea from the chapter in a way that is accessible and informative without requiring the reader to refer back to the textbook.
 
 examples: |
   Here are some examples of questions:
 
-  [Start of Question]
+  [QUESTION]
   Explain the process of photosynthesis in plants. Include in your answer the roles of chlorophyll, light, water, and carbon dioxide, and describe how oxygen and glucose are produced.
-  [End of Question]
-  [Start of Response]
+  [ANSWER]
   Photosynthesis is the process by which plants, algae, and some bacteria use sunlight to synthesize food from carbon dioxide and water. Photosynthesis in plants primarily occurs in the leaves, specifically in the chloroplasts. Chlorophyll, the green pigment in chloroplasts, absorbs light energy, which is then used to convert carbon dioxide (from the air) and water (from the soil) into glucose, a simple sugar. This process also releases oxygen as a byproduct. Light energy splits water molecules, releasing electrons and hydrogen ions and forming oxygen. The light-dependent reactions convert light energy into chemical energy (ATP and NADPH), which is used in the light-independent reactions (Calvin cycle) to convert carbon dioxide into glucose. The overall result is the conversion of solar energy into chemical energy in the form of glucose, which plants use for growth and development.
-  [End of Response]
+  [END]
 
-  [Start of Question]
+  [QUESTION]
   In a study on the effects of temperature on enzyme activity, an enzyme exhibited its highest activity at 37°C. At both higher and lower temperatures, its activity decreased. Based on this information, which of the following best explains the enzyme's behavior?
   Options:
   a) Enzymes are temperature-sensitive and can denature at high temperatures, losing their functional shape, while at low temperatures, their reaction rates decrease due to reduced molecular motion.
   b) Enzymes are more effective at higher temperatures as increased heat provides more energy for reactions, and lower temperatures cause enzymes to become more active due to enhanced molecular stability.
   c) The enzyme's behavior is unrelated to temperature; instead, it is likely due to changes in pH levels, which affect enzyme activity.
   d) All enzymes universally work best at exactly 37°C, as this is the standard temperature for all biochemical reactions in nature.
-  [End of Question]
-  [Start of Response]
+  [ANSWER]
   a) Enzymes are temperature-sensitive and can denature at high temperatures, losing their functional shape, while at low temperatures, their reaction rates decrease due to reduced molecular motion.
-  [End of Response]
+  [END]
 
   For this {domain} domain here are some sample questions:
-  [Start of Question]
-  {question_1}
-  [End of Question]
-  [Start of Response]
-  {response_1}
-  [End of Response]
+  [QUESTION]
+  {icl_query_1}
+  [ANSWER]
+  {icl_response_1}
+  [END]
 
-  [Start of Question]
-  {question_2}
-  [End of Question]
-  [Start of Response]
-  {response_2}
-  [End of Response]
+  [QUESTION]
+  {icl_query_2}
+  [ANSWER]
+  {icl_response_2}
+  [END]
 
-  [Start of Question]
-  {question_3}
-  [End of Question]
-  [Start of Response]
-  {response_3}
-  [End of Response]
-
-  Here is the document:
-  {document}
+  [QUESTION]
+  {icl_query_3}
+  [ANSWER]
+  {icl_response_3}
+  [END]
 
 generation: |
-  Now generate the question and answer pairs, remember to follow the principles mentioned above and use the same format as the examples. Remember to use the same style and format as the example above. Return each question between [Start of Question] and [End of Question] tags and answer between [Start of Response] and [End of Response] tags.
-
-start_tags: ["[Start of Question]", "[Start of Response]"]
-end_tags: ["[End of Question]", "[End of Response]"]
+  Here is the document:
+  {document}
