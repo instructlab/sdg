@@ -49,8 +49,7 @@ class LLMBlock(Block):
     def _parse(self, generated_string) -> dict:
         matches = {}
 
-
-        if self.parser_name is not None and self.parser_name == 'custom':
+        if self.parser_name is not None and self.parser_name == "custom":
             pattern = re.compile(self.parsing_pattern, re.DOTALL)
             all_matches = pattern.findall(generated_string)
             matches = {column_name: [] for column_name in self.output_cols}
@@ -63,15 +62,14 @@ class LLMBlock(Block):
                         matches[column_name].append(value)
             else:
                 matches[self.output_cols[0]] = (
-                        [match.strip() for match in all_matches] if all_matches else []
-                    )                
+                    [match.strip() for match in all_matches] if all_matches else []
+                )
         else:
             for start_tag, end_tag, output_col in zip(
                 self.block_config["start_tags"],
                 self.block_config["end_tags"],
                 self.output_cols,
             ):
-
                 if not start_tag and not end_tag:
                     matches[output_col] = (
                         generated_string.strip() if generated_string else None
@@ -164,7 +162,6 @@ class ConditionalLLMBlock(LLMBlock):
                 self.prompt_template[config_key] = self.prompt_struct.format(
                     **self._load_config(config)
                 )
-
 
     def _generate(self, samples, **gen_kwargs) -> str:
         if isinstance(self.prompt_template, dict):
