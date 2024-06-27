@@ -13,6 +13,7 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+# pylint: disable=dangerous-default-value
 class LLMBlock(Block):
     # pylint: disable=too-many-instance-attributes
     def __init__(
@@ -185,7 +186,7 @@ class ConditionalLLMBlock(LLMBlock):
         )
         return [choice.text.strip() for choice in response.choices]
 
-    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
+    def validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
             prompt_template = prompt_template[input_dict[self.selector_column_name]]
         return super()._validate(prompt_template, input_dict)
