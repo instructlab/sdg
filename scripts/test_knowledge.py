@@ -38,8 +38,8 @@ samples = [
 
 ds = Dataset.from_list(samples)
 
-mmlu_flow = MMLUBenchFlow(client, teacher_model).get_flow()
-knowledge_flow = SynthKnowledgeFlow(client, teacher_model).get_flow()
+mmlu_flow = MMLUBenchFlow(client, "mixtral", teacher_model, 1).get_flow()
+knowledge_flow = SynthKnowledgeFlow(client, "mixtral", teacher_model, 1).get_flow()
 knowledge_pipe = Pipeline(knowledge_flow)
 mmlu_pipe = Pipeline(mmlu_flow)
 
