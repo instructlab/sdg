@@ -39,12 +39,6 @@ class Pipeline:
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
             block = block_type(**block_config)
 
-            if block_type == IterBlock:
-                block_kwargs = block_config.pop("block_kwargs")
-                block = block_type(**block_config, block_kwargs=block_kwargs)
-            else:
-                block = block_type(**block_config)
-
             logger.info("Running block: %s", block_config["block_name"])
             logger.info(dataset)
 
