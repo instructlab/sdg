@@ -7,7 +7,6 @@ import os
 
 # Local
 from .filterblock import FilterByValueBlock
-from .iterblock import IterBlock
 from .llmblock import LLMBlock
 from .utilblocks import CombineColumnsBlock
 
@@ -47,12 +46,10 @@ class _SimpleFlow(Flow):
     def get_flow(self) -> list:
         return [
             {
-                "block_type": IterBlock,
-                "block_config": {
-                    "block_name": "",  # must be set by subclass
-                    "num_iters": self.num_iters,
-                    "block_type": LLMBlock,
-                    "block_kwargs": {
+                "block_type": LLMBlock,
+                "block_name": "",  # must be set by subclass
+                "num_iters": self.num_iters,
+                "block_kwargs": {
                         "block_name": "",  # must be set by subclass
                         "config_path": "",  # must be set by subclass
                         "client": self.client,
@@ -63,13 +60,13 @@ class _SimpleFlow(Flow):
                             "num_procs": 8,
                             "batched": self.batched,
                         },
-                    },
-                    "gen_kwargs": {
-                        "max_tokens": 2048,
-                        "temperature": 0.7,
-                    },
-                    "drop_duplicates": ["output"],
                 },
+                "gen_kwargs": {
+                    "max_tokens": 2048,
+                    "temperature": 0.7,
+                    "n": 1
+                },
+                "drop_duplicates": ["output"],
             }
         ]
 
@@ -382,30 +379,28 @@ class SynthGroundedSkillsFlow(Flow):
     def get_flow(self) -> list:
         return [
             {
-                "block_type": IterBlock,
-                "block_config": {
-                    "block_name": "context_iter",
-                    "num_iters": 10,
-                    "block_type": LLMBlock,
-                    "block_kwargs": {
-                        "block_name": "gen_contexts",
-                        "config_path": os.path.join(
-                            self.sdg_base,
-                            "configs/skills/contexts.yaml",
-                        ),
-                        "client": self.client,
-                        "model_id": self.model_id,
-                        "model_prompt": _get_model_prompt(self.model_family),
-                        "output_cols": ["context"],
-                        "batch_kwargs": {
-                            "num_procs": 8,
-                            "batched": self.batched,
-                        },
-                    },
-                    "gen_kwargs": {
-                        "temperature": 0.7,
-                        "max_tokens": 2048,
-                    },
+                "block_type": LLMBlock,
+                "block_name": "context_iter",
+                "block_kwargs": {
+                    "block_name": "gen_contexts",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/contexts.yaml",
+                    ),
+                    "client": self.client,
+                    "model_id": self.model_id,
+                    "model_prompt": _get_model_prompt(self.model_family),
+                    "output_cols": ["context"],
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": self.batched,
+                    }
+                },
+                "gen_kwargs": {
+                    "num_samples": 30,
+                    "temperature": 0.7,
+                    "max_tokens": 2048,
+                    "n": 10
                 },
             },
             {
