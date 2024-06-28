@@ -226,7 +226,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_relevancy",
                     "filter_column": "score",
-                    "filter_value": "2.0",
+                    "filter_value": 2.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
                     "batch_kwargs": {
@@ -260,7 +260,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_verify_question",
                     "filter_column": "rating",
-                    "filter_value": "1.0",
+                    "filter_value": 1.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
                     "batch_kwargs": {
@@ -485,15 +485,15 @@ class SynthGroundedSkillsFlow(Flow):
                 },
             },
             {
-                'block_type': CombineColumnsBlock,
-                'block_config': {
-                    'block_name': 'combine_question_and_context',
-                    'columns': ['context', 'question'],
-                    'output_col': 'question',
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                        'batched': True,
+                "block_type": CombineColumnsBlock,
+                "block_config": {
+                    "block_name": "combine_question_and_context",
+                    "columns": ["context", "question"],
+                    "output_col": "question",
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": True,
                     },
                 },
-            }
+            },
         ]

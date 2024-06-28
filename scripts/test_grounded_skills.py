@@ -22,7 +22,7 @@ teacher_model = models.data[0].id
 
 samples = [
     {
-        'seed_context': """*Ms. Thompson:* Good morning, everyone. Today, we''re here to discuss
+        "seed_context": """*Ms. Thompson:* Good morning, everyone. Today, we''re here to discuss
     our customer journey mapping and analysis. I believe this is crucial to understanding
     our customers'' experiences and improving our services.
 
@@ -64,9 +64,9 @@ samples = [
 
     *Mr. Patel:* Sounds good. We''ll reconvene in a week to share our findings and
     discuss next steps.""",
-        'seed_question': """Generate a company wide email based on the given meeting transcript""", 
-        'task_description': 'Writing emails based on minutes of meeting', 
-        'seed_response': """Subject: Recap and Next Steps - Customer Journey Mapping and Analysis\n\
+        "seed_question": """Generate a company wide email based on the given meeting transcript""",
+        "task_description": "Writing emails based on minutes of meeting",
+        "seed_response": """Subject: Recap and Next Steps - Customer Journey Mapping and Analysis\n\
     \nDear [Company Name] Team,\n\nI hope this email finds you well. Yesterday, we\
     \ gathered to discuss our customer journey mapping and analysis, aiming to understand\
     \ our customers' experiences and identify opportunities for improvement. The discussions\
@@ -97,7 +97,7 @@ samples = [
 
 ds = Dataset.from_list(samples)
 
-skills_flow = SynthGroundedSkillsFlow(client, teacher_model).get_flow()
+skills_flow = SynthGroundedSkillsFlow(client, "mixtral", teacher_model, 10).get_flow()
 skills_pipe = Pipeline(skills_flow)
 
 sdg = SDG([skills_pipe])
