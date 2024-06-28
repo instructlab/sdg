@@ -122,7 +122,7 @@ def _gen_test_data(
             outfile.write("\n")
 
 
-def _sdg_init(profile, client, model_family, model_name, batched):
+def _sdg_init(profile, client, model_family, model_name, num_iters, batched):
     knowledge_flow_types = []
     freeform_skill_flow_types = []
     grounded_skill_flow_types = []
@@ -138,19 +138,31 @@ def _sdg_init(profile, client, model_family, model_name, batched):
 
     sdg_knowledge = SDG(
         [
-            Pipeline(flow_type(client, model_family, model_name, batched).get_flow())
+            Pipeline(
+                flow_type(
+                    client, model_family, model_name, num_iters, batched
+                ).get_flow()
+            )
             for flow_type in knowledge_flow_types
         ]
     )
     sdg_freeform_skill = SDG(
         [
-            Pipeline(flow_type(client, model_family, model_name, batched).get_flow())
+            Pipeline(
+                flow_type(
+                    client, model_family, model_name, num_iters, batched
+                ).get_flow()
+            )
             for flow_type in freeform_skill_flow_types
         ]
     )
     sdg_grounded_skill = SDG(
         [
-            Pipeline(flow_type(client, model_family, model_name, batched).get_flow())
+            Pipeline(
+                flow_type(
+                    client, model_family, model_name, num_iters, batched
+                ).get_flow()
+            )
             for flow_type in grounded_skill_flow_types
         ]
     )
@@ -174,14 +186,13 @@ def generate_data(
     # TODO - not used -- when batching is enabled, this is relevant.
     # Right now the code hard codes 8 cpus for batching
     num_cpus: Optional[int] = None,
-    # TODO - not yet used, but should be presumably
-    num_instructions_to_generate: Optional[int] = None,
+    num_instructions_to_generate: Optional[int] = 30,
     # TODO - not used, can probably be removed
     num_prompt_instructions=2,
     # TODO - determine if this is relevant
     request_batch_size=5,
     # TODO - probably should be removed
-    temperature=1.0,
+    temperature=1.0,  # temperature per step is provided in the config file
     # TODO - probably should be removed
     top_p=1.0,
     # TODO - probably should be removed
@@ -240,7 +251,7 @@ def generate_data(
     batched = False
 
     sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
-        profile, client, model_family, model_name, batched
+        profile, client, model_family, model_name, num_instructions_to_generate, batched
     )
 
     if console_output:
