@@ -485,15 +485,15 @@ class SynthGroundedSkillsFlow(Flow):
                 },
             },
             {
-                'block_type': CombineColumnsBlock,
-                'block_config': {
-                    'block_name': 'combine_question_and_context',
-                    'columns': ['context', 'question'],
-                    'output_col': 'question',
-                    'batch_kwargs': {
-                        'num_procs': 8,
-                        'batched': True,
+                "block_type": CombineColumnsBlock,
+                "block_config": {
+                    "block_name": "combine_question_and_context",
+                    "columns": ["context", "question"],
+                    "output_col": "question",
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": True,
                     },
                 },
-            }
+            },
         ]
