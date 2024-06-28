@@ -444,9 +444,9 @@ disable=raw-checker-failed,
         logging-too-many-args,
         attribute-defined-outside-init,
         abstract-method,
-        pointless-statement,
         wrong-import-order,
-        line-too-long
+        line-too-long,
+        logging-fstring-interpolation
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

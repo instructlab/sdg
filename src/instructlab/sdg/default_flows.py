@@ -10,15 +10,102 @@ from .filterblock import FilterByValueBlock
 from .iterblock import IterBlock
 from .llmblock import LLMBlock
 
+MODEL_FAMILY_MIXTRAL = "mixtral"
+MODEL_FAMILY_MERLINITE = "merlinite"
+
+_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
+_MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
+
+_MODEL_PROMPTS = {
+    MODEL_FAMILY_MIXTRAL: _MODEL_PROMPT_MIXTRAL,
+    MODEL_FAMILY_MERLINITE: _MODEL_PROMPT_MERLINITE,
+}
+
+
+def _get_model_prompt(model_family):
+    if model_family not in _MODEL_PROMPTS:
+        raise ValueError(f"Unknown model family: {model_family}")
+    return _MODEL_PROMPTS[model_family]
+
 
 class Flow(ABC):
-    def __init__(self, client, model_id) -> None:
+    def __init__(self, client, model_family, model_id, num_iters, batched=True) -> None:
         self.client = client
+        self.model_family = model_family
         self.model_id = model_id
+        self.num_iters = num_iters
+        self.batched = batched
 
     @abstractmethod
     def get_flow(self) -> list:
         pass
+
+
+class _SimpleFlow(Flow):
+    def get_flow(self) -> list:
+        return [
+            {
+                "block_type": IterBlock,
+                "block_config": {
+                    "block_name": "",  # must be set by subclass
+                    "num_iters": self.num_iters,
+                    "block_type": LLMBlock,
+                    "block_kwargs": {
+                        "block_name": "",  # must be set by subclass
+                        "config_path": "",  # must be set by subclass
+                        "client": self.client,
+                        "model_id": self.model_id,
+                        "model_prompt": _get_model_prompt(self.model_family),
+                        "output_cols": ["output"],
+                        "batch_kwargs": {
+                            "num_procs": 8,
+                            "batched": self.batched,
+                        },
+                    },
+                    "gen_kwargs": {
+                        "max_tokens": 2048,
+                        "temperature": 0.7,
+                    },
+                    "drop_duplicates": ["output"],
+                },
+            }
+        ]
+
+
+class SimpleKnowledgeFlow(_SimpleFlow):
+    def get_flow(self) -> list:
+        flow = super().get_flow()
+        sdg_base = resources.files(__package__)
+        flow[0]["block_config"]["block_kwargs"]["config_path"] = os.path.join(
+            sdg_base, "configs/knowledge/simple_generate_qa.yaml"
+        )
+        flow[0]["block_config"]["block_kwargs"]["block_name"] = "gen_knowledge"
+        flow[0]["block_config"]["block_name"] = "gen_knowledge"
+        return flow
+
+
+class SimpleFreeformSkillFlow(_SimpleFlow):
+    def get_flow(self) -> list:
+        flow = super().get_flow()
+        sdg_base = resources.files(__package__)
+        flow[0]["block_config"]["block_kwargs"]["config_path"] = os.path.join(
+            sdg_base, "configs/skills/simple_generate_qa_freeform.yaml"
+        )
+        flow[0]["block_config"]["block_kwargs"]["block_name"] = "gen_skill_freeform"
+        flow[0]["block_config"]["block_name"] = "gen_skill_freeform"
+        return flow
+
+
+class SimpleGroundedSkillFlow(_SimpleFlow):
+    def get_flow(self) -> list:
+        flow = super().get_flow()
+        sdg_base = resources.files(__package__)
+        flow[0]["block_config"]["block_kwargs"]["config_path"] = os.path.join(
+            sdg_base, "configs/skills/simple_generate_qa_grounded.yaml"
+        )
+        flow[0]["block_config"]["block_kwargs"]["block_name"] = "gen_skill_grounded"
+        flow[0]["block_config"]["block_name"] = "gen_skill_grounded"
+        return flow
 
 
 class MMLUBenchFlow(Flow):
@@ -34,11 +121,11 @@ class MMLUBenchFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["mmlubench_question", "mmlubench_answer"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -63,11 +150,11 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["question", "response"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                     "parser_kwargs": {
                         "parser_name": "custom",
@@ -89,11 +176,11 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["explanation", "judgment"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -122,11 +209,11 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["feedback", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -155,11 +242,11 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["explanation", "rating"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "gen_kwargs": {
@@ -192,12 +279,12 @@ class SynthSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/freeform_questions.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_procs": 8,
                         "num_samples": 30,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "drop_duplicates": ["question"],
@@ -209,11 +296,11 @@ class SynthSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/evaluate_freeform_questions.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -238,11 +325,11 @@ class SynthSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/freeform_responses.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["answer"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -253,11 +340,11 @@ class SynthSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/evaluate_freeform_pair.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -292,11 +379,11 @@ class SynthGroundedSkillsFlow(Flow):
                         "config_path": "src/instructlab/sdg/configs/skills/contexts.yaml",
                         "client": self.client,
                         "model_id": self.model_id,
-                        "model_prompt": "<s> [INST] {prompt} [/INST]",
+                        "model_prompt": _get_model_prompt(self.model_family),
                         "output_cols": ["context"],
                         "batch_kwargs": {
                             "num_procs": 8,
-                            "batched": True,
+                            "batched": self.batched,
                         },
                     },
                     "gen_kwargs": {
@@ -312,11 +399,11 @@ class SynthGroundedSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/grounded_questions.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
                 "drop_duplicates": ["question"],
@@ -328,11 +415,11 @@ class SynthGroundedSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/evaluate_grounded_questions.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -357,11 +444,11 @@ class SynthGroundedSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/grounded_responses.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["answer"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
@@ -372,11 +459,11 @@ class SynthGroundedSkillsFlow(Flow):
                     "config_path": "src/instructlab/sdg/configs/skills/evaluate_grounded_pair.yaml",
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": "<s> [INST] {prompt} [/INST]",
+                    "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["evaluation", "score"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "batched": True,
+                        "batched": self.batched,
                     },
                 },
             },
