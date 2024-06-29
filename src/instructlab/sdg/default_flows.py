@@ -29,11 +29,10 @@ def _get_model_prompt(model_family):
 
 
 class Flow(ABC):
-    def __init__(self, client, model_family, model_id, num_iters, batched=True) -> None:
+    def __init__(self, client, model_family, model_id, batched=True) -> None:
         self.client = client
         self.model_family = model_family
         self.model_id = model_id
-        self.num_iters = num_iters
         self.batched = batched
 
     @abstractmethod
@@ -46,19 +45,17 @@ class _SimpleFlow(Flow):
         return [
             {
                 "block_type": LLMBlock,
-                "block_name": "",  # must be set by subclass
-                "num_iters": self.num_iters,
-                "block_kwargs": {
-                        "block_name": "",  # must be set by subclass
-                        "config_path": "",  # must be set by subclass
-                        "client": self.client,
-                        "model_id": self.model_id,
-                        "model_prompt": _get_model_prompt(self.model_family),
-                        "output_cols": ["output"],
-                        "batch_kwargs": {
-                            "num_procs": 8,
-                            "batched": self.batched,
-                        },
+                "block_config": {
+                    "block_name": "",  # must be set by subclass
+                    "config_path": "",  # must be set by subclass
+                    "client": self.client,
+                    "model_id": self.model_id,
+                    "model_prompt": _get_model_prompt(self.model_family),
+                    "output_cols": ["output"],
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": self.batched,
+                    },
                 },
                 "gen_kwargs": {
                     "max_tokens": 2048,
@@ -370,8 +367,7 @@ class SynthGroundedSkillsFlow(Flow):
         return [
             {
                 "block_type": LLMBlock,
-                "block_name": "context_iter",
-                "block_kwargs": {
+                "block_config": {
                     "block_name": "gen_contexts",
                     "config_path": "src/instructlab/sdg/configs/skills/contexts.yaml",
                     "client": self.client,

@@ -97,7 +97,7 @@ samples = [
 
 ds = Dataset.from_list(samples)
 
-skills_flow = SynthGroundedSkillsFlow(client, "mixtral", teacher_model, 10).get_flow()
+skills_flow = SynthGroundedSkillsFlow(client, "mixtral", teacher_model).get_flow()
 skills_pipe = Pipeline(skills_flow)
 
 sdg = SDG([skills_pipe])
