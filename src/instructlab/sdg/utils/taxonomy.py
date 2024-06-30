@@ -472,35 +472,16 @@ def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count
 
 
 def _skill_leaf_node_to_samples(leaf_node):
-    samples = [{}]
+    samples = []
 
     # pylint: disable=consider-using-enumerate
     for i in range(len(leaf_node)):
-        samples[-1].setdefault("task_description", leaf_node[i]["task_description"])
+        samples.append({})
+        samples[-1]["task_description"] = leaf_node[i]["task_description"]
         if leaf_node[i].get("input"):
-            samples[-1].setdefault("context", leaf_node[i]["input"])
-        if "icl_query_3" in samples[-1]:
-            samples.append({})
-        if "icl_query_1" not in samples[-1]:
-            samples[-1]["icl_query_1"] = leaf_node[i]["instruction"]
-            samples[-1]["icl_response_1"] = leaf_node[i]["output"]
-        elif "icl_query_2" not in samples[-1]:
-            samples[-1]["icl_query_2"] = leaf_node[i]["instruction"]
-            samples[-1]["icl_response_2"] = leaf_node[i]["output"]
-        else:
-            samples[-1]["icl_query_3"] = leaf_node[i]["instruction"]
-            samples[-1]["icl_response_3"] = leaf_node[i]["output"]
-
-    # wrap back around to the beginning if the number of examples was not
-    # evenly divisble by 3
-    if "icl_query_2" not in samples[-1]:
-        samples[-1]["icl_query_2"] = leaf_node[0]["instruction"]
-        samples[-1]["icl_response_2"] = leaf_node[0]["output"]
-    if "icl_query_3" not in samples[-1]:
-        samples[-1]["icl_query_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
-            "instruction"
-        ]
-        samples[-1]["icl_response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0]["output"]
+            samples[-1]["seed_context"] = leaf_node[i]["input"]
+        samples[-1]["seed_question"] = leaf_node[i]["instruction"]
+        samples[-1]["seed_response"] = leaf_node[i]["output"]
 
     return samples
 
@@ -508,7 +489,7 @@ def _skill_leaf_node_to_samples(leaf_node):
 def leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count):
     if not leaf_node:
         return []
-    if "document" in leaf_node[0]:
+    if leaf_node[0].get("document"):
         return _knowledge_leaf_node_to_samples(
             leaf_node, server_ctx_size, chunk_word_count
         )
