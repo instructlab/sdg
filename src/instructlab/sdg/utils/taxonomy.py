@@ -443,28 +443,28 @@ def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count
                 raise utils.GenerateException(
                     "Error: No domain provided for knowledge document in leaf node"
                 )
-            if "question_3" in samples[-1]:
+            if "icl_query_3" in samples[-1]:
                 samples.append({})
-            if "question_1" not in samples[-1]:
-                samples[-1]["question_1"] = leaf_node[i]["instruction"]
-                samples[-1]["response_1"] = leaf_node[i]["output"]
-            elif "question_2" not in samples[-1]:
-                samples[-1]["question_2"] = leaf_node[i]["instruction"]
-                samples[-1]["response_2"] = leaf_node[i]["output"]
+            if "icl_query_1" not in samples[-1]:
+                samples[-1]["icl_query_1"] = leaf_node[i]["instruction"]
+                samples[-1]["icl_response_1"] = leaf_node[i]["output"]
+            elif "icl_query_2" not in samples[-1]:
+                samples[-1]["icl_query_2"] = leaf_node[i]["instruction"]
+                samples[-1]["icl_response_2"] = leaf_node[i]["output"]
             else:
-                samples[-1]["question_3"] = leaf_node[i]["instruction"]
-                samples[-1]["response_3"] = leaf_node[i]["output"]
+                samples[-1]["icl_query_3"] = leaf_node[i]["instruction"]
+                samples[-1]["icl_response_3"] = leaf_node[i]["output"]
 
         # wrap back around to the beginning if the number of examples was not
         # evenly divisble by 3
-        if "question_2" not in samples[-1]:
-            samples[-1]["question_2"] = leaf_node[0]["instruction"]
-            samples[-1]["response_2"] = leaf_node[0]["output"]
-        if "question_3" not in samples[-1]:
-            samples[-1]["question_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
+        if "icl_query_2" not in samples[-1]:
+            samples[-1]["icl_query_2"] = leaf_node[0]["instruction"]
+            samples[-1]["icl_response_2"] = leaf_node[0]["output"]
+        if "icl_query_3" not in samples[-1]:
+            samples[-1]["icl_query_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
                 "instruction"
             ]
-            samples[-1]["response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
+            samples[-1]["icl_response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
                 "output"
             ]
 
@@ -479,28 +479,28 @@ def _skill_leaf_node_to_samples(leaf_node):
         samples[-1].setdefault("task_description", leaf_node[i]["task_description"])
         if leaf_node[i].get("input"):
             samples[-1].setdefault("context", leaf_node[i]["input"])
-        if "question_3" in samples[-1]:
+        if "icl_query_3" in samples[-1]:
             samples.append({})
-        if "question_1" not in samples[-1]:
-            samples[-1]["question_1"] = leaf_node[i]["instruction"]
-            samples[-1]["response_1"] = leaf_node[i]["output"]
-        elif "question_2" not in samples[-1]:
-            samples[-1]["question_2"] = leaf_node[i]["instruction"]
-            samples[-1]["response_2"] = leaf_node[i]["output"]
+        if "icl_query_1" not in samples[-1]:
+            samples[-1]["icl_query_1"] = leaf_node[i]["instruction"]
+            samples[-1]["icl_response_1"] = leaf_node[i]["output"]
+        elif "icl_query_2" not in samples[-1]:
+            samples[-1]["icl_query_2"] = leaf_node[i]["instruction"]
+            samples[-1]["icl_response_2"] = leaf_node[i]["output"]
         else:
-            samples[-1]["question_3"] = leaf_node[i]["instruction"]
-            samples[-1]["response_3"] = leaf_node[i]["output"]
+            samples[-1]["icl_query_3"] = leaf_node[i]["instruction"]
+            samples[-1]["icl_response_3"] = leaf_node[i]["output"]
 
     # wrap back around to the beginning if the number of examples was not
     # evenly divisble by 3
-    if "question_2" not in samples[-1]:
-        samples[-1]["question_2"] = leaf_node[0]["instruction"]
-        samples[-1]["response_2"] = leaf_node[0]["output"]
-    if "question_3" not in samples[-1]:
-        samples[-1]["question_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
+    if "icl_query_2" not in samples[-1]:
+        samples[-1]["icl_query_2"] = leaf_node[0]["instruction"]
+        samples[-1]["icl_response_2"] = leaf_node[0]["output"]
+    if "icl_query_3" not in samples[-1]:
+        samples[-1]["icl_query_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
             "instruction"
         ]
-        samples[-1]["response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0]["output"]
+        samples[-1]["icl_response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0]["output"]
 
     return samples
 

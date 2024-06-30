@@ -21,14 +21,14 @@ examples: |
 
   Here are some examples to help you understand the type of questions that are asked for:
 
-  {question_1}
-  {response_1}
+  {icl_query_1}
+  {icl_response_1}
 
-  {question_2}
-  {response_2}
+  {icl_query_2}
+  {icl_response_2}
 
-  {question_3}
-  {response_3}
+  {icl_query_3}
+  {icl_response_3}
 
 generation: |
   Provide a single question and answer pair based on the examples.
