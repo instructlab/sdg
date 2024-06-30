@@ -19,6 +19,7 @@ import yaml
 
 # First Party
 from instructlab.sdg import utils
+from instructlab.sdg.utils import chunking
 
 logger = logging.getLogger(__name__)
 
@@ -415,19 +416,67 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules):
     return leaf_nodes
 
 
-def leaf_node_to_samples(leaf_node):
+def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count):
+    samples = [{}]
+
+    # document is the same for the whole leaf node
+    chunks = (
+        chunking.chunk_document(
+            documents=leaf_node[0]["document"],
+            server_ctx_size=server_ctx_size,
+            chunk_word_count=chunk_word_count,
+        )
+        if leaf_node[0].get("document")
+        else []
+    )
+
+    # domain is the same for the whole leaf node
+    domain = leaf_node[0].get("domain")
+
+    for chunk in chunks:
+        # pylint: disable=consider-using-enumerate
+        for i in range(len(leaf_node)):
+            samples[-1].setdefault("task_description", leaf_node[i]["task_description"])
+            samples[-1].setdefault("domain", domain)
+            samples[-1].setdefault("document", chunk)
+            if samples[-1].get("document") and not samples[-1].get("domain"):
+                raise utils.GenerateException(
+                    "Error: No domain provided for knowledge document in leaf node"
+                )
+            if "question_3" in samples[-1]:
+                samples.append({})
+            if "question_1" not in samples[-1]:
+                samples[-1]["question_1"] = leaf_node[i]["instruction"]
+                samples[-1]["response_1"] = leaf_node[i]["output"]
+            elif "question_2" not in samples[-1]:
+                samples[-1]["question_2"] = leaf_node[i]["instruction"]
+                samples[-1]["response_2"] = leaf_node[i]["output"]
+            else:
+                samples[-1]["question_3"] = leaf_node[i]["instruction"]
+                samples[-1]["response_3"] = leaf_node[i]["output"]
+
+        # wrap back around to the beginning if the number of examples was not
+        # evenly divisble by 3
+        if "question_2" not in samples[-1]:
+            samples[-1]["question_2"] = leaf_node[0]["instruction"]
+            samples[-1]["response_2"] = leaf_node[0]["output"]
+        if "question_3" not in samples[-1]:
+            samples[-1]["question_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
+                "instruction"
+            ]
+            samples[-1]["response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
+                "output"
+            ]
+
+    return samples
+
+
+def _skill_leaf_node_to_samples(leaf_node):
     samples = [{}]
 
     # pylint: disable=consider-using-enumerate
     for i in range(len(leaf_node)):
         samples[-1].setdefault("task_description", leaf_node[i]["task_description"])
-        for field in ["document", "domain"]:
-            if leaf_node[i].get(field):
-                samples[-1].setdefault(field, leaf_node[i][field])
-        if samples[-1].get("document") and not samples[-1].get("domain"):
-            raise utils.GenerateException(
-                "Error: No domain provided for knowledge document in leaf node"
-            )
         if leaf_node[i].get("input"):
             samples[-1].setdefault("context", leaf_node[i]["input"])
         if "question_3" in samples[-1]:
@@ -454,3 +503,13 @@ def leaf_node_to_samples(leaf_node):
         samples[-1]["response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0]["output"]
 
     return samples
+
+
+def leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count):
+    if not leaf_node:
+        return []
+    if "document" in leaf_node[0]:
+        return _knowledge_leaf_node_to_samples(
+            leaf_node, server_ctx_size, chunk_word_count
+        )
+    return _skill_leaf_node_to_samples(leaf_node)
