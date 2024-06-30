@@ -468,10 +468,14 @@ def generate_data(
     tls_client_cert: Optional[str] = None,
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
+    pipeline: Optional[str] = None,
 ):
     seed_instruction_data = []
     machine_seed_instruction_data = []
     generate_start = time.time()
+
+    if pipeline and pipeline != "simple":
+        raise SystemExit("Error: Only 'simple' pipeline is supported.")
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
