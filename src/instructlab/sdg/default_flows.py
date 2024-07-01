@@ -9,6 +9,7 @@ import os
 from .filterblock import FilterByValueBlock
 from .iterblock import IterBlock
 from .llmblock import LLMBlock
+from .utilblocks import CombineColumnsBlock
 
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
@@ -225,8 +226,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_relevancy",
                     "filter_column": "score",
-                    "filter_value": "2",
+                    "filter_value": 2.0,
                     "operation": operator.eq,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -258,8 +260,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_verify_question",
                     "filter_column": "rating",
-                    "filter_value": "1",
+                    "filter_value": 1.0,
                     "operation": operator.eq,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -309,9 +312,9 @@ class SynthSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_questions",
                     "filter_column": "score",
-                    "filter_value": 1,
+                    "filter_value": 1.0,
                     "operation": operator.eq,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -353,9 +356,9 @@ class SynthSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_qa_pair",
                     "filter_column": "score",
-                    "filter_value": 2,
+                    "filter_value": 2.0,
                     "operation": operator.ge,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -420,6 +423,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "batch_kwargs": {
                         "num_procs": 8,
                         "batched": self.batched,
+                        "num_samples": 10,
                     },
                 },
             },
@@ -428,9 +432,9 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_grounded_questions",
                     "filter_column": "score",
-                    "filter_value": 1,
+                    "filter_value": 1.0,
                     "operation": operator.eq,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -472,11 +476,23 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_grounded_qa_pair",
                     "filter_column": "score",
-                    "filter_value": 2,
+                    "filter_value": 2.0,
                     "operation": operator.ge,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
+                    },
+                },
+            },
+            {
+                "block_type": CombineColumnsBlock,
+                "block_config": {
+                    "block_name": "combine_question_and_context",
+                    "columns": ["context", "question"],
+                    "output_col": "question",
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": True,
                     },
                 },
             },
