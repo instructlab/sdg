@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 click>=8.1.7,<9.0.0
 httpx>=0.25.0,<1.0.0
+instructlab-schema @ git+https://github.com/instructlab/schema.git@refs/pull/33/head
 jinja2
 langchain-text-splitters
 openai>=1.13.3,<2.0.0
