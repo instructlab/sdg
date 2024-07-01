@@ -7,8 +7,8 @@ import os
 
 # Local
 from .filterblock import FilterByValueBlock
-from .iterblock import IterBlock
 from .llmblock import LLMBlock
+from .utilblocks import CombineColumnsBlock
 
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
@@ -29,11 +29,10 @@ def _get_model_prompt(model_family):
 
 
 class Flow(ABC):
-    def __init__(self, client, model_family, model_id, num_iters, batched=True) -> None:
+    def __init__(self, client, model_family, model_id, batched=True) -> None:
         self.client = client
         self.model_family = model_family
         self.model_id = model_id
-        self.num_iters = num_iters
         self.batched = batched
 
     @abstractmethod
@@ -45,29 +44,25 @@ class _SimpleFlow(Flow):
     def get_flow(self) -> list:
         return [
             {
-                "block_type": IterBlock,
+                "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "",  # must be set by subclass
-                    "num_iters": self.num_iters,
-                    "block_type": LLMBlock,
-                    "block_kwargs": {
-                        "block_name": "",  # must be set by subclass
-                        "config_path": "",  # must be set by subclass
-                        "client": self.client,
-                        "model_id": self.model_id,
-                        "model_prompt": _get_model_prompt(self.model_family),
-                        "output_cols": ["output"],
-                        "batch_kwargs": {
-                            "num_procs": 8,
-                            "batched": self.batched,
-                        },
+                    "config_path": "",  # must be set by subclass
+                    "client": self.client,
+                    "model_id": self.model_id,
+                    "model_prompt": _get_model_prompt(self.model_family),
+                    "output_cols": ["output"],
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": self.batched,
                     },
-                    "gen_kwargs": {
-                        "max_tokens": 2048,
-                        "temperature": 0.7,
-                    },
-                    "drop_duplicates": ["output"],
                 },
+                "gen_kwargs": {
+                    "max_tokens": 2048,
+                    "temperature": 0.7,
+                    "n": 1
+                },
+                "drop_duplicates": ["output"],
             }
         ]
 
@@ -225,8 +220,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_relevancy",
                     "filter_column": "score",
-                    "filter_value": "2",
+                    "filter_value": "2.0",
                     "operation": operator.eq,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -258,8 +254,9 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_verify_question",
                     "filter_column": "rating",
-                    "filter_value": "1",
+                    "filter_value": "1.0",
                     "operation": operator.eq,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -309,9 +306,9 @@ class SynthSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_questions",
                     "filter_column": "score",
-                    "filter_value": 1,
+                    "filter_value": 1.0,
                     "operation": operator.eq,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -353,9 +350,9 @@ class SynthSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_qa_pair",
                     "filter_column": "score",
-                    "filter_value": 2,
+                    "filter_value": 2.0,
                     "operation": operator.ge,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -369,27 +366,24 @@ class SynthGroundedSkillsFlow(Flow):
     def get_flow(self) -> list:
         return [
             {
-                "block_type": IterBlock,
+                "block_type": LLMBlock,
                 "block_config": {
-                    "block_name": "context_iter",
-                    "num_iters": 10,
-                    "block_type": LLMBlock,
-                    "block_kwargs": {
-                        "block_name": "gen_contexts",
-                        "config_path": "src/instructlab/sdg/configs/skills/contexts.yaml",
-                        "client": self.client,
-                        "model_id": self.model_id,
-                        "model_prompt": _get_model_prompt(self.model_family),
-                        "output_cols": ["context"],
-                        "batch_kwargs": {
-                            "num_procs": 8,
-                            "batched": self.batched,
-                        },
-                    },
-                    "gen_kwargs": {
-                        "temperature": 0.7,
-                        "max_tokens": 2048,
-                    },
+                    "block_name": "gen_contexts",
+                    "config_path": "src/instructlab/sdg/configs/skills/contexts.yaml",
+                    "client": self.client,
+                    "model_id": self.model_id,
+                    "model_prompt": _get_model_prompt(self.model_family),
+                    "output_cols": ["context"],
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": self.batched,
+                    }
+                },
+                "gen_kwargs": {
+                    "num_samples": 30,
+                    "temperature": 0.7,
+                    "max_tokens": 2048,
+                    "n": 10
                 },
             },
             {
@@ -420,6 +414,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "batch_kwargs": {
                         "num_procs": 8,
                         "batched": self.batched,
+                        "num_samples": 10,
                     },
                 },
             },
@@ -428,9 +423,9 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_grounded_questions",
                     "filter_column": "score",
-                    "filter_value": 1,
+                    "filter_value": 1.0,
                     "operation": operator.eq,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -472,11 +467,23 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_grounded_qa_pair",
                     "filter_column": "score",
-                    "filter_value": 2,
+                    "filter_value": 2.0,
                     "operation": operator.ge,
-                    "convert_dtype": int,
+                    "convert_dtype": float,
                     "batch_kwargs": {
                         "num_procs": 8,
+                    },
+                },
+            },
+            {
+                "block_type": CombineColumnsBlock,
+                "block_config": {
+                    "block_name": "combine_question_and_context",
+                    "columns": ["context", "question"],
+                    "output_col": "question",
+                    "batch_kwargs": {
+                        "num_procs": 8,
+                        "batched": True,
                     },
                 },
             },
