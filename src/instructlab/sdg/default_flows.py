@@ -226,7 +226,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_relevancy",
                     "filter_column": "score",
-                    "filter_value": "2.0",
+                    "filter_value": 2.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
                     "batch_kwargs": {
