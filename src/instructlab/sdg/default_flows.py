@@ -260,7 +260,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_verify_question",
                     "filter_column": "rating",
-                    "filter_value": "1.0",
+                    "filter_value": 1.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
                     "batch_kwargs": {
