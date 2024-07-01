@@ -30,7 +30,7 @@ from instructlab.sdg.default_flows import (
     SynthSkillsFlow,
 )
 from instructlab.sdg.pipeline import Pipeline
-from instructlab.sdg.utils import chunking, models
+from instructlab.sdg.utils import models
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
@@ -270,7 +270,7 @@ def generate_data(
 
     generated_data = None
     for leaf_node in leaf_nodes.values():
-        samples = leaf_node_to_samples(leaf_node)
+        samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
 
         if not samples:
             raise utils.GenerateException("Error: No samples found in leaf node.")
@@ -289,16 +289,6 @@ def generate_data(
             raise utils.GenerateException(
                 "Error: No SDG pipeline for this leaf node type: %s" % samples[0]
             )
-
-        # TODO this is broken, just trying to get initial integration to run
-        # pylint: disable=consider-using-enumerate
-        if samples[0].get("document"):
-            for i in range(len(samples)):
-                samples[i]["document"] = chunking.chunk_document(
-                    documents=samples[i]["document"],
-                    server_ctx_size=server_ctx_size,
-                    chunk_word_count=chunk_word_count,
-                )[0]
 
         # TODO -- there is a parameter for how many samples to generate, but we ignore it so far
 

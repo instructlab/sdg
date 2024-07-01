@@ -15,16 +15,10 @@ Here are the requirements:
 examples: |
   The task is {task_description}.
 
-  Here are some examples to help you understand the type of questions that are asked for:
+  Here is an example to help you understand the type of questions that are asked for:
 
-  {question_1}
-  {response_1}
-
-  {question_2}
-  {response_2}
-
-  {question_3}
-  {response_3}
+  {seed_question}
+  {seed_response}
 
 generation: |
   Provide a single question and answer pair based on the examples.
