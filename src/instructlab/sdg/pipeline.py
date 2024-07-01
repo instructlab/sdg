@@ -3,7 +3,6 @@
 from datasets import Dataset
 
 # Local
-from .iterblock import IterBlock
 from .logger_config import setup_logger
 
 logger = setup_logger(__name__)

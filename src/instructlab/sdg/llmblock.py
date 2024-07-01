@@ -124,10 +124,12 @@ class LLMBlock(Block):
         logger.debug("Generated outputs: {}".format(outputs))
 
         num_parallel_samples = gen_kwargs.get("n", 1)
-        n_samples = [item for item in samples for i in range(num_parallel_samples)]
+        extended_samples = []
+        for item in samples:
+            extended_samples.extend([item] * num_parallel_samples)
 
         new_data = []
-        for sample, output in zip(n_samples, outputs):
+        for sample, output in zip(extended_samples, outputs):
             parsed_outputs = self._parse(output)
             # pylint: disable=consider-using-generator
             max_length = max([len(value) for value in parsed_outputs.values()])
