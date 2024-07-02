@@ -388,12 +388,12 @@ class SynthGroundedSkillsFlow(Flow):
                     "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["context"],
                     "batch_kwargs": {
+                        "num_samples": 30,
                         "num_procs": 8,
                         "batched": self.batched,
                     }
                 },
                 "gen_kwargs": {
-                    "num_samples": 30,
                     "temperature": 0.7,
                     "max_tokens": 2048,
                     "n": 10
