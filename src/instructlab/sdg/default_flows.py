@@ -144,7 +144,8 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "gen_knowledge",
                     "config_path": os.path.join(
-                        self.sdg_base, "configs/knowledge/generate_questions_responses.yaml"
+                        self.sdg_base,
+                        "configs/knowledge/generate_questions_responses.yaml",
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
@@ -276,7 +277,10 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_questions",
-                    "config_path": "src/instructlab/sdg/configs/skills/freeform_questions.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/freeform_questions.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -293,7 +297,10 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_questions",
-                    "config_path": "src/instructlab/sdg/configs/skills/evaluate_freeform_questions.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/evaluate_freeform_questions.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -322,7 +329,10 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_responses",
-                    "config_path": "src/instructlab/sdg/configs/skills/freeform_responses.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/freeform_responses.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -337,7 +347,10 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "evaluate_qa_pair",
-                    "config_path": "src/instructlab/sdg/configs/skills/evaluate_freeform_pair.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/evaluate_freeform_pair.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -376,7 +389,10 @@ class SynthGroundedSkillsFlow(Flow):
                     "block_type": LLMBlock,
                     "block_kwargs": {
                         "block_name": "gen_contexts",
-                        "config_path": "src/instructlab/sdg/configs/skills/contexts.yaml",
+                        "config_path": os.path.join(
+                            self.sdg_base,
+                            "configs/skills/contexts.yaml",
+                        ),
                         "client": self.client,
                         "model_id": self.model_id,
                         "model_prompt": _get_model_prompt(self.model_family),
@@ -396,7 +412,10 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_grounded_questions",
-                    "config_path": "src/instructlab/sdg/configs/skills/grounded_questions.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/grounded_questions.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -412,7 +431,10 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_grounded_questions",
-                    "config_path": "src/instructlab/sdg/configs/skills/evaluate_grounded_questions.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/evaluate_grounded_questions.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -442,7 +464,10 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_grounded_responses",
-                    "config_path": "src/instructlab/sdg/configs/skills/grounded_responses.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/grounded_responses.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
@@ -457,7 +482,10 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "evaluate_grounded_qa_pair",
-                    "config_path": "src/instructlab/sdg/configs/skills/evaluate_grounded_pair.yaml",
+                    "config_path": os.path.join(
+                        self.sdg_base,
+                        "configs/skills/evaluate_grounded_pair.yaml",
+                    ),
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
