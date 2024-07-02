@@ -72,10 +72,9 @@ class SimpleKnowledgeFlow(_SimpleFlow):
     def get_flow(self) -> list:
         flow = super().get_flow()
         sdg_base = resources.files(__package__)
-        flow[0]["block_config"]["block_kwargs"]["config_path"] = os.path.join(
+        flow[0]["block_config"]["config_path"] = os.path.join(
             sdg_base, "configs/knowledge/simple_generate_qa.yaml"
         )
-        flow[0]["block_config"]["block_kwargs"]["block_name"] = "gen_knowledge"
         flow[0]["block_config"]["block_name"] = "gen_knowledge"
         return flow
 
@@ -84,10 +83,9 @@ class SimpleFreeformSkillFlow(_SimpleFlow):
     def get_flow(self) -> list:
         flow = super().get_flow()
         sdg_base = resources.files(__package__)
-        flow[0]["block_config"]["block_kwargs"]["config_path"] = os.path.join(
+        flow[0]["block_config"]["config_path"] = os.path.join(
             sdg_base, "configs/skills/simple_generate_qa_freeform.yaml"
         )
-        flow[0]["block_config"]["block_kwargs"]["block_name"] = "gen_skill_freeform"
         flow[0]["block_config"]["block_name"] = "gen_skill_freeform"
         return flow
 
@@ -96,10 +94,9 @@ class SimpleGroundedSkillFlow(_SimpleFlow):
     def get_flow(self) -> list:
         flow = super().get_flow()
         sdg_base = resources.files(__package__)
-        flow[0]["block_config"]["block_kwargs"]["config_path"] = os.path.join(
+        flow[0]["block_config"]["config_path"] = os.path.join(
             sdg_base, "configs/skills/simple_generate_qa_grounded.yaml"
         )
-        flow[0]["block_config"]["block_kwargs"]["block_name"] = "gen_skill_grounded"
         flow[0]["block_config"]["block_name"] = "gen_skill_grounded"
         return flow
 
