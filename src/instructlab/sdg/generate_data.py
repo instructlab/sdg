@@ -30,7 +30,6 @@ from instructlab.sdg.pipeline import (
     Pipeline,
     PipelineContext,
 )
-from instructlab.sdg.sdg import SDG
 from instructlab.sdg.utils import GenerateException, models
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
@@ -241,9 +240,9 @@ def _sdg_init(ctx, pipeline):
             return Pipeline.from_file(ctx, os.path.join(pipeline, yaml_basename))
 
     return (
-        SDG([load_pipeline("knowledge.yaml")]),
-        SDG([load_pipeline("freeform_skills.yaml")]),
-        SDG([load_pipeline("grounded_skills.yaml")]),
+        load_pipeline("knowledge.yaml"),
+        load_pipeline("freeform_skills.yaml"),
+        load_pipeline("grounded_skills.yaml"),
     )
 
 
@@ -362,16 +361,15 @@ def generate_data(
         batch_num_workers=num_cpus,
     )
 
-    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(ctx, pipeline)
+    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe = _sdg_init(
+        ctx, pipeline
+    )
 
     # Make sure checkpointing is disabled (we don't want this pipeline to load checkpoints from the main pipeline)
     mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
     mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
 
-    # FIXME: remove SDG https://github.com/instructlab/sdg/pull/64
-    mixer = _mixer_init(
-        ctx, output_dir, date_suffix, sdg_knowledge.pipelines[0].auxiliary_inst
-    )
+    mixer = _mixer_init(ctx, output_dir, date_suffix, knowledge_pipe.auxiliary_inst)
 
     if console_output:
         logger.info(
@@ -388,19 +386,19 @@ def generate_data(
             raise GenerateException("Error: No samples found in leaf node.")
 
         if samples[0].get("document"):
-            sdg = sdg_knowledge
+            pipe = knowledge_pipe
             is_knowledge = True
 
         elif samples[0].get("seed_context"):
-            sdg = sdg_grounded_skill
+            pipe = grounded_skills_pipe
 
         else:
-            sdg = sdg_freeform_skill
+            pipe = freeform_skills_pipe
 
         logger.debug("Samples: %s", samples)
         ds = Dataset.from_list(samples)
         logger.debug("Dataset: %s", ds)
-        new_generated_data = sdg.generate(ds)
+        new_generated_data = pipe.generate(ds)
         if len(new_generated_data) == 0:
             raise EmptyDatasetError(
                 "Pipeline stopped: Empty dataset after running pipe"

@@ -7,7 +7,6 @@ from datasets import Dataset
 from openai import OpenAI
 
 # First Party
-from src.instructlab.sdg import SDG
 from src.instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     Pipeline,
@@ -47,8 +46,7 @@ ctx = PipelineContext(client, "mixtral", teacher_model, 1)
 with resources.path(FULL_PIPELINES_PACKAGE, "knowledge.yaml") as yaml_path:
     knowledge_pipe = Pipeline.from_file(ctx, yaml_path)
 
-sdg = SDG([knowledge_pipe])
-mmlubench_data = sdg.generate(ds)
+mmlubench_data = knowledge_pipe.generate(ds)
 
 print(mmlubench_data)
 print(mmlubench_data[0])

@@ -6,7 +6,6 @@ from datasets import Dataset
 from openai import OpenAI
 
 # First Party
-from src.instructlab.sdg import SDG
 from src.instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     Pipeline,
@@ -60,8 +59,7 @@ ctx = PipelineContext(client, "mixtral", teacher_model, 1)
 with resources.path(FULL_PIPELINES_PACKAGE, "freeform_skills.yaml") as yaml_path:
     skills_pipe = Pipeline.from_file(ctx, yaml_path)
 
-sdg = SDG([skills_pipe])
-gen_data = sdg.generate(ds)
+gen_data = skills_pipe.generate(ds)
 
 print(gen_data)
 print(gen_data[0])

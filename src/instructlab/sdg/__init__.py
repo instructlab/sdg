@@ -21,7 +21,6 @@ __all__ = (
     "SamplePopulatorBlock",
     "SelectorBlock",
     "SetToMajorityValueBlock",
-    "SDG",
     "SIMPLE_PIPELINES_PACKAGE",
     "FULL_PIPELINES_PACKAGE",
     "generate_data",
@@ -42,7 +41,6 @@ from .pipeline import (
     PipelineConfigParserError,
     PipelineContext,
 )
-from .sdg import SDG
 from .utilblocks import (
     CombineColumnsBlock,
     DuplicateColumnsBlock,
