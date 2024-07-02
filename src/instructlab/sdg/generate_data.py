@@ -124,7 +124,7 @@ def _gen_test_data(
             outfile.write("\n")
 
 
-def _sdg_init(pipeline, client, model_family, model_name, num_iters, batched):
+def _sdg_init(pipeline, client, model_family, model_name, num_instructions_to_generate, batched):
     knowledge_flow_types = []
     freeform_skill_flow_types = []
     grounded_skill_flow_types = []
@@ -144,7 +144,7 @@ def _sdg_init(pipeline, client, model_family, model_name, num_iters, batched):
         [
             Pipeline(
                 flow_type(
-                    client, model_family, model_name, num_iters, batched
+                    client, model_family, model_name, num_instructions_to_generate, batched
                 ).get_flow()
             )
             for flow_type in knowledge_flow_types
@@ -154,7 +154,7 @@ def _sdg_init(pipeline, client, model_family, model_name, num_iters, batched):
         [
             Pipeline(
                 flow_type(
-                    client, model_family, model_name, num_iters, batched
+                    client, model_family, model_name, num_instructions_to_generate, batched
                 ).get_flow()
             )
             for flow_type in freeform_skill_flow_types
@@ -164,7 +164,7 @@ def _sdg_init(pipeline, client, model_family, model_name, num_iters, batched):
         [
             Pipeline(
                 flow_type(
-                    client, model_family, model_name, num_iters, batched
+                    client, model_family, model_name, num_instructions_to_generate, batched
                 ).get_flow()
             )
             for flow_type in grounded_skill_flow_types

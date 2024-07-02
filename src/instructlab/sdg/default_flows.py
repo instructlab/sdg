@@ -29,10 +29,11 @@ def _get_model_prompt(model_family):
 
 
 class Flow(ABC):
-    def __init__(self, client, model_family, model_id, batched=True) -> None:
+    def __init__(self, client, model_family, model_id, num_instructions_to_generate, batched=True) -> None:
         self.client = client
         self.model_family = model_family
         self.model_id = model_id
+        self.num_instructions_to_generate = num_instructions_to_generate
         self.batched = batched
 
     @abstractmethod
@@ -60,7 +61,7 @@ class _SimpleFlow(Flow):
                 "gen_kwargs": {
                     "max_tokens": 2048,
                     "temperature": 0.7,
-                    "n": 1
+                    "n": self.num_instructions_to_generate
                 },
                 "drop_duplicates": ["output"],
             }
@@ -280,7 +281,7 @@ class SynthSkillsFlow(Flow):
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "num_samples": 30,
+                        "num_samples": self.num_instructions_to_generate,
                         "batched": self.batched,
                     },
                 },
@@ -375,7 +376,6 @@ class SynthGroundedSkillsFlow(Flow):
                     "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["context"],
                     "batch_kwargs": {
-                        "num_samples": 30,
                         "num_procs": 8,
                         "batched": self.batched,
                     }
@@ -383,8 +383,9 @@ class SynthGroundedSkillsFlow(Flow):
                 "gen_kwargs": {
                     "temperature": 0.7,
                     "max_tokens": 2048,
-                    "n": 10
+                    "n": self.num_instructions_to_generate
                 },
+                "drop_duplicates": ["context"],
             },
             {
                 "block_type": LLMBlock,
@@ -396,6 +397,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "model_prompt": _get_model_prompt(self.model_family),
                     "output_cols": ["question"],
                     "batch_kwargs": {
+                        "num_samples": 3,
                         "num_procs": 8,
                         "batched": self.batched,
                     },
@@ -414,7 +416,6 @@ class SynthGroundedSkillsFlow(Flow):
                     "batch_kwargs": {
                         "num_procs": 8,
                         "batched": self.batched,
-                        "num_samples": 10,
                     },
                 },
             },
