@@ -194,6 +194,7 @@ class SynthKnowledgeFlow(Flow):
                     "block_name": "filter_faithfulness",
                     "filter_column": "judgment",
                     "filter_value": "YES",
+                    "valid_values": ["YES", "NO"],
                     "operation": operator.eq,
                     "batch_kwargs": {
                         "num_procs": 8,
@@ -226,9 +227,10 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_relevancy",
                     "filter_column": "score",
-                    "filter_value": 2.0,
+                    "filter_value": 2,
+                    "valid_values": [0, 1, 2],
                     "operation": operator.eq,
-                    "convert_dtype": float,
+                    "convert_dtype": int,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -260,7 +262,8 @@ class SynthKnowledgeFlow(Flow):
                 "block_config": {
                     "block_name": "filter_verify_question",
                     "filter_column": "rating",
-                    "filter_value": 1.0,
+                    "filter_value": 1,
+                    "valid_values": [0, 1],
                     "operation": operator.eq,
                     "convert_dtype": float,
                     "batch_kwargs": {
@@ -312,9 +315,10 @@ class SynthSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_questions",
                     "filter_column": "score",
-                    "filter_value": 1.0,
+                    "filter_value": 1,
+                    "valid_values": [0, 1],
                     "operation": operator.eq,
-                    "convert_dtype": float,
+                    "convert_dtype": int,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -356,9 +360,10 @@ class SynthSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_qa_pair",
                     "filter_column": "score",
-                    "filter_value": 2.0,
+                    "filter_value": 2,
+                    "valid_values": [1, 2, 3],
                     "operation": operator.ge,
-                    "convert_dtype": float,
+                    "convert_dtype": int,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -432,9 +437,10 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_grounded_questions",
                     "filter_column": "score",
-                    "filter_value": 1.0,
+                    "filter_value": 1,
+                    "valid_values": [0, 1],
                     "operation": operator.eq,
-                    "convert_dtype": float,
+                    "convert_dtype": int,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
@@ -476,9 +482,10 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_config": {
                     "block_name": "filter_grounded_qa_pair",
                     "filter_column": "score",
-                    "filter_value": 2.0,
+                    "filter_value": 2,
+                    "valid_values": [1, 2, 3],
                     "operation": operator.ge,
-                    "convert_dtype": float,
+                    "convert_dtype": int,
                     "batch_kwargs": {
                         "num_procs": 8,
                     },
