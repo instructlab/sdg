@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
+# Standard
+from importlib import resources
+
 # Third Party
 from datasets import Dataset
 
@@ -8,12 +11,25 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+class PipelineContext:
+    def __init__(
+        self, client, model_family, model_id, num_instructions_to_generate
+    ) -> None:
+        self.client = client
+        self.model_family = model_family
+        self.model_id = model_id
+        self.num_instructions_to_generate = num_instructions_to_generate
+        self.sdg_base = resources.files(__package__)
+
+
 class Pipeline:
-    def __init__(self, chained_blocks: list) -> None:
+    def __init__(self, ctx, chained_blocks: list) -> None:
         """
         Initialize the Pipeline class with a configuration dictionary.
         config_dict: the run config py or yaml loaded into a dictionary
         """
+        # ctx is a PipelineContext object that supplies context configuration to every block
+        self.ctx = ctx
         # pipeline config is the run configuration that consists of the pipeline steps
         self.chained_blocks = chained_blocks
 
@@ -36,7 +52,7 @@ class Pipeline:
             drop_columns = block_prop.get("drop_columns", [])
             gen_kwargs = block_prop.get("gen_kwargs", {})
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
-            block = block_type(**block_config)
+            block = block_type(self.ctx, **block_config)
 
             logger.info("Running block: %s", block_config["block_name"])
             logger.info(dataset)

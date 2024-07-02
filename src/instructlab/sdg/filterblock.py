@@ -11,12 +11,19 @@ logger = setup_logger(__name__)
 
 class FilterByValueBlock(Block):
     def __init__(
-        self, filter_column, filter_value, operation, convert_dtype=None, **batch_kwargs
+        self,
+        ctx,
+        filter_column,
+        filter_value,
+        operation,
+        convert_dtype=None,
+        **batch_kwargs,
     ) -> None:
         """
         Initializes a new instance of the FilterByValueBlock class.
 
         Parameters:
+        - ctx (PipelineContext): A PipelineContext object containing runtime parameters.
         - filter_column (str): The name of the column in the dataset to apply the filter on.
         - filter_value (any or list of any): The value(s) to filter by.
         - operation (callable): A function that takes two arguments (column value and filter value) and returns a boolean indicating whether the row should be included in the filtered dataset.
@@ -26,7 +33,7 @@ class FilterByValueBlock(Block):
         Returns:
         None
         """
-        super().__init__(block_name=self.__class__.__name__)
+        super().__init__(ctx, block_name=self.__class__.__name__)
         self.value = filter_value if isinstance(filter_value, list) else [filter_value]
         self.column_name = filter_column
         self.operation = operation

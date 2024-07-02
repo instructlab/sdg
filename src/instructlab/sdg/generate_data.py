@@ -27,7 +27,7 @@ from instructlab.sdg.default_flows import (
     SynthSkillsFlow,
 )
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
-from instructlab.sdg.pipeline import Pipeline
+from instructlab.sdg.pipeline import Pipeline, PipelineContext
 from instructlab.sdg.utils import models
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
@@ -183,37 +183,25 @@ def _sdg_init(pipeline, client, model_family, model_name, num_instructions_to_ge
     else:
         raise utils.GenerateException(f"Error: pipeline ({pipeline}) is not supported.")
 
-    sdg_knowledge = SDG(
-        [
-            Pipeline(
-                flow_type(
-                    client, model_family, model_name, num_instructions_to_generate
-                ).get_flow()
-            )
-            for flow_type in knowledge_flow_types
-        ]
+    ctx = PipelineContext(
+        client, model_family, model_name, num_instructions_to_generate
     )
-    sdg_freeform_skill = SDG(
-        [
-            Pipeline(
-                flow_type(
-                    client, model_family, model_name, num_instructions_to_generate
-                ).get_flow()
-            )
-            for flow_type in freeform_skill_flow_types
-        ]
+
+    def build_pipeline(flow_types):
+        block_configs = []
+        for flow_type in flow_types:
+            block_configs.extend(flow_type(ctx).get_flow())
+        return Pipeline(ctx, block_configs)
+
+    knowledge_pipeline = build_pipeline(knowledge_flow_types)
+    freeform_skill_pipeline = build_pipeline(freeform_skill_flow_types)
+    grounded_skill_pipeline = build_pipeline(grounded_skill_flow_types)
+
+    return (
+        SDG([knowledge_pipeline]),
+        SDG([freeform_skill_pipeline]),
+        SDG([grounded_skill_pipeline]),
     )
-    sdg_grounded_skill = SDG(
-        [
-            Pipeline(
-                flow_type(
-                    client, model_family, model_name, num_instructions_to_generate
-                ).get_flow()
-            )
-            for flow_type in grounded_skill_flow_types
-        ]
-    )
-    return sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill
 
 
 # TODO - parameter removal needs to be done in sync with a CLI change.

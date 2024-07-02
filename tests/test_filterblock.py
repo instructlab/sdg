@@ -8,17 +8,20 @@ from datasets import Dataset, Features, Value
 
 # First Party
 from instructlab.sdg.filterblock import FilterByValueBlock
+from instructlab.sdg.pipeline import PipelineContext
 
 
 class TestFilterByValueBlock(unittest.TestCase):
     def setUp(self):
         self.block = FilterByValueBlock(
+            PipelineContext(None, None, None, None),
             filter_column="age",
             filter_value=30,
             operation=operator.eq,
             convert_dtype=int,
         )
         self.block_with_list = FilterByValueBlock(
+            PipelineContext(None, None, None, None),
             filter_column="age",
             filter_value=[30, 35],
             operation=operator.eq,

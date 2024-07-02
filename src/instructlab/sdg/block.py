@@ -14,7 +14,8 @@ logger = setup_logger(__name__)
 
 
 class Block(ABC):
-    def __init__(self, block_name: str) -> None:
+    def __init__(self, ctx, block_name: str) -> None:
+        self.ctx = ctx
         self.block_name = block_name
 
     @staticmethod
