@@ -49,7 +49,7 @@ Sincerely,
 
 ds = Dataset.from_list(samples)
 
-skills_flow = SynthSkillsFlow(client, "mixtral", teacher_model, 30).get_flow()
+skills_flow = SynthSkillsFlow(client, "mixtral", teacher_model, 1).get_flow()
 skills_pipe = Pipeline(skills_flow)
 
 sdg = SDG([skills_pipe])
