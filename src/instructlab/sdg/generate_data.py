@@ -283,13 +283,6 @@ def generate_data(
         else:
             sdg = sdg_freeform_skill
 
-        if not sdg:
-            # TODO - can be removed once the "full" pipelines are all defined,
-            # as there shouldn't be a code path to get here anymore
-            raise utils.GenerateException(
-                "Error: No SDG pipeline for this leaf node type: %s" % samples[0]
-            )
-
         # TODO -- there is a parameter for how many samples to generate, but we ignore it so far
 
         logger.debug("Samples: %s" % samples)
