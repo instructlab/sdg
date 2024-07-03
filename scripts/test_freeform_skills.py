@@ -3,6 +3,7 @@ from datasets import Dataset
 from openai import OpenAI
 
 # First Party
+# pylint: disable=import-error, no-name-in-module
 from instructlab.sdg import SDG
 from instructlab.sdg.default_flows import SynthSkillsFlow
 from instructlab.sdg.pipeline import Pipeline
