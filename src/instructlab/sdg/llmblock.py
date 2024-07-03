@@ -132,7 +132,7 @@ class LLMBlock(Block):
         # validate each sample
         for sample in samples:
             if not self._validate(self.prompt_template, sample):
-                logger.warn("Sample failed validation")  #TODO add details
+                logger.warning("Sample failed validation")  #TODO add details
                 #TODO remove sample from samples
 
         if len(samples) == 0:
@@ -145,19 +145,20 @@ class LLMBlock(Block):
 
         num_parallel_samples = gen_kwargs.get("n", 1)
         extended_samples = []
+        # Duplicate each input sample n times, where n is the number
+        # of output sequences generated per input, so that we can
+        # pair up the inputs and outputs.
         for item in samples:
             extended_samples.extend([item] * num_parallel_samples)
 
-        print(f"num outputs is {len(outputs)}")
         new_data = []
         for sample, output in zip(extended_samples, outputs):
             parsed_outputs = self._parse(output)
 
-            max_length = max([len(value) for value in parsed_outputs.values()])
+            max_length = max(len(value) for value in parsed_outputs.values())
             for values in zip(*(lst[:max_length] for lst in parsed_outputs.values())):
                 new_data.append({**sample, **dict(zip(parsed_outputs.keys(), values))})
 
-        print(f"num output after parse is {len(new_data)}")
         return Dataset.from_list(new_data)
 
 
