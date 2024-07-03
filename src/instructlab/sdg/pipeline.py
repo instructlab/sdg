@@ -46,7 +46,7 @@ class Pipeline:
                 block = block_type(**block_config)
 
             logger.info("Running block: %s", block_config["block_name"])
-            logger.info(dataset)
+            logger.info("Input: %s", dataset)
 
             dataset = block.generate(dataset, **gen_kwargs)
 
@@ -56,5 +56,7 @@ class Pipeline:
 
             if drop_duplicates_cols:
                 dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
+            
+            logger.info("Output: %s\n\n", dataset)
 
         return dataset
