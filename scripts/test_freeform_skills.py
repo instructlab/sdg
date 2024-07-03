@@ -3,9 +3,10 @@ from datasets import Dataset
 from openai import OpenAI
 
 # First Party
-from src.instructlab.sdg import SDG
-from src.instructlab.sdg.default_flows import SynthSkillsFlow
-from src.instructlab.sdg.pipeline import Pipeline
+from instructlab.sdg import SDG
+from instructlab.sdg.default_flows import SynthSkillsFlow
+from instructlab.sdg.pipeline import Pipeline
+
 
 # for vLLM endpoints, the api_key remains "EMPTY"
 openai_api_key = "EMPTY"
