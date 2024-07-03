@@ -336,7 +336,7 @@ class SynthSkillsFlow(Flow):
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
-                    "output_cols": ["answer"],
+                    "output_cols": ["response"],
                     "batch_kwargs": {
                         "num_procs": 8,
                         "batched": self.batched,
@@ -471,7 +471,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "client": self.client,
                     "model_id": self.model_id,
                     "model_prompt": _get_model_prompt(self.model_family),
-                    "output_cols": ["answer"],
+                    "output_cols": ["response"],
                     "batch_kwargs": {
                         "num_procs": 8,
                         "batched": self.batched,
