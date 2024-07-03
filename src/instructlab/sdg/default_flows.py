@@ -411,6 +411,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_procs": 8,
+                        "num_samples": 3,
                         "batched": self.batched,
                     },
                 },
