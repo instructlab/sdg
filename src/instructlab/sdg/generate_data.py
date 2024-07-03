@@ -51,7 +51,7 @@ def _get_question(logger, synth_example):
     if "question" in synth_example:
         return synth_example["question"]
 
-    if "output" not in synth_example:
+    if not synth_example.get("output"):
         raise utils.GenerateException(
             f"Error: output not found in synth_example: {synth_example}"
         )
