@@ -20,14 +20,14 @@ class FilterByValueBlock(Block):
         self.valid_values = valid_values
         self.convert_dtype = convert_dtype
         self.num_procs = batch_kwargs.get("num_procs", 1)
-    
+
     def _fiter_invalid_values(self, samples):
         samples = samples.filter(
             lambda x: x[self.column_name] in self.valid_values,
             num_proc=self.num_procs,
         )
         return samples
-    
+
     def _convert_dtype(self, sample):
         try:
             sample[self.column_name] = self.convert_dtype(sample[self.column_name])
