@@ -20,13 +20,20 @@ class FilterByValueBlock(Block):
         self.convert_dtype = convert_dtype
         self.num_procs = batch_kwargs.get("num_procs", 1)
 
+    def _convert_dtype(self, sample):
+        try:
+            sample[self.column_name] = self.convert_dtype(sample[self.column_name])
+        except ValueError as e:
+            logger.error(
+                "Error converting dtype: %s, filling with None to be filtered later", e
+            )
+            sample[self.column_name] = None
+        return sample
+
     def generate(self, samples) -> Dataset:
         if self.convert_dtype:
             samples = samples.map(
-                lambda x: {
-                    **x,
-                    self.column_name: self.convert_dtype(x[self.column_name]),
-                },
+                self._convert_dtype,
                 num_proc=self.num_procs,
             )
 
