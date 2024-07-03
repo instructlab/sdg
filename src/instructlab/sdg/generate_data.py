@@ -17,7 +17,6 @@ import openai
 
 # First Party
 # pylint: disable=ungrouped-imports
-from instructlab.sdg import SDG, utils
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
@@ -25,7 +24,8 @@ from instructlab.sdg.pipeline import (
     Pipeline,
     PipelineContext,
 )
-from instructlab.sdg.utils import models
+from instructlab.sdg.sdg import SDG
+from instructlab.sdg.utils import GenerateException, models
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
@@ -48,7 +48,7 @@ def _get_question(logger, synth_example):
         return synth_example["question"]
 
     if not synth_example.get("output"):
-        raise utils.GenerateException(
+        raise GenerateException(
             f"Error: output not found in synth_example: {synth_example}"
         )
 
@@ -64,7 +64,7 @@ def _get_response(logger, synth_example):
         return synth_example["response"]
 
     if "output" not in synth_example:
-        raise utils.GenerateException(
+        raise GenerateException(
             f"Error: output not found in synth_example: {synth_example}"
         )
 
@@ -173,12 +173,12 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
     else:
         # Validate that pipeline is a valid directory and that it contains the required files
         if not os.path.exists(pipeline):
-            raise utils.GenerateException(
+            raise GenerateException(
                 f"Error: pipeline directory ({pipeline}) does not exist."
             )
         for file in ["knowledge.yaml", "freeform_skills.yaml", "grounded_skills.yaml"]:
             if not os.path.exists(os.path.join(pipeline, file)):
-                raise utils.GenerateException(
+                raise GenerateException(
                     f"Error: pipeline directory ({pipeline}) does not contain {file}."
                 )
 
@@ -198,6 +198,7 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
     )
 
 
+# This is part of the public API, and used by instructlab.
 # TODO - parameter removal needs to be done in sync with a CLI change.
 # pylint: disable=unused-argument
 def generate_data(
@@ -226,7 +227,7 @@ def generate_data(
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
     pipeline: Optional[str] = "simple",
-):
+) -> None:
     """Generate data for training and testing a model.
 
     This currently serves as the primary interface from the `ilab` CLI to the `sdg` library.
@@ -246,11 +247,11 @@ def generate_data(
         os.mkdir(output_dir)
 
     if not (taxonomy and os.path.exists(taxonomy)):
-        raise utils.GenerateException(f"Error: taxonomy ({taxonomy}) does not exist.")
+        raise GenerateException(f"Error: taxonomy ({taxonomy}) does not exist.")
 
     leaf_nodes = read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules)
     if not leaf_nodes:
-        raise utils.GenerateException("Error: No new leaf nodes found in the taxonomy.")
+        raise GenerateException("Error: No new leaf nodes found in the taxonomy.")
 
     name = Path(model_name).stem  # Just in case it is a file path
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
@@ -301,7 +302,7 @@ def generate_data(
         samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
 
         if not samples:
-            raise utils.GenerateException("Error: No samples found in leaf node.")
+            raise GenerateException("Error: No samples found in leaf node.")
 
         if samples[0].get("document"):
             sdg = sdg_knowledge

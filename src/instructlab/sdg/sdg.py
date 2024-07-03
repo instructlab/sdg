@@ -6,6 +6,7 @@ from datasets import Dataset
 from .pipeline import Pipeline
 
 
+# This is part of the public API.
 class SDG:
     def __init__(self, pipelines: list[Pipeline]) -> None:
         self.pipelines = pipelines
