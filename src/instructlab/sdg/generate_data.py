@@ -178,33 +178,25 @@ def _sdg_init(pipeline, client, model_family, model_name, num_iters, batched):
 def generate_data(
     logger,
     api_base,
-    tls_insecure,
-    model_family: str,
-    yaml_rules: Optional[str] = None,
-    output_dir: Optional[str] = None,
-    taxonomy: Optional[str] = None,
-    taxonomy_base: Optional[str] = None,
-    # TODO - not used and should be removed from the CLI
-    prompt_file_path: Optional[str] = None,
+    api_key: Optional[str] = None,
+    model_family: Optional[str] = None,
     model_name: Optional[str] = None,
     # TODO - not used -- when batching is enabled, this is relevant.
     # Right now the code hard codes 8 cpus for batching
     num_cpus: Optional[int] = None,
     num_instructions_to_generate: Optional[int] = 30,
-    # TODO - not used, can probably be removed
-    num_prompt_instructions=2,
-    # TODO - determine if this is relevant
-    request_batch_size=5,
-    # TODO - probably should be removed
-    temperature=1.0,  # temperature per step is provided in the config file
-    # TODO - probably should be removed
-    top_p=1.0,
+    taxonomy: Optional[str] = None,
+    taxonomy_base: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    # TODO - not used and should be removed from the CLI
+    prompt_file_path: Optional[str] = None,
     # TODO - probably should be removed
     rouge_threshold: Optional[float] = None,
     console_output=True,
-    api_key: Optional[str] = None,
+    yaml_rules: Optional[str] = None,
     chunk_word_count=None,
     server_ctx_size=None,
+    tls_insecure=False,
     tls_client_cert: Optional[str] = None,
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
@@ -282,15 +274,6 @@ def generate_data(
             sdg = sdg_grounded_skill
         else:
             sdg = sdg_freeform_skill
-
-        if not sdg:
-            # TODO - can be removed once the "full" pipelines are all defined,
-            # as there shouldn't be a code path to get here anymore
-            raise utils.GenerateException(
-                "Error: No SDG pipeline for this leaf node type: %s" % samples[0]
-            )
-
-        # TODO -- there is a parameter for how many samples to generate, but we ignore it so far
 
         logger.debug("Samples: %s" % samples)
         ds = Dataset.from_list(samples)
