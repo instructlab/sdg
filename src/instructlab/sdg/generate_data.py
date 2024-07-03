@@ -283,8 +283,6 @@ def generate_data(
         else:
             sdg = sdg_freeform_skill
 
-        # TODO -- there is a parameter for how many samples to generate, but we ignore it so far
-
         logger.debug("Samples: %s" % samples)
         ds = Dataset.from_list(samples)
         logger.debug("Dataset: %s" % ds)
