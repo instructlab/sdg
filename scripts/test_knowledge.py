@@ -8,7 +8,6 @@ from instructlab.sdg import SDG
 from instructlab.sdg.default_flows import MMLUBenchFlow, SynthKnowledgeFlow
 from instructlab.sdg.pipeline import Pipeline
 
-
 # for vLLM endpoints, the api_key remains "EMPTY"
 openai_api_key = "EMPTY"
 openai_api_base = "Add model endpoint here"

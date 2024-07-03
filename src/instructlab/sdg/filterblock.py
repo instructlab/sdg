@@ -11,7 +11,13 @@ logger = setup_logger(__name__)
 
 class FilterByValueBlock(Block):
     def __init__(
-        self, filter_column, filter_value, operation, valid_values, convert_dtype=None, **batch_kwargs
+        self,
+        filter_column,
+        filter_value,
+        operation,
+        valid_values,
+        convert_dtype=None,
+        **batch_kwargs,
     ) -> None:
         super().__init__(block_name=self.__class__.__name__)
         self.value = filter_value
@@ -32,7 +38,9 @@ class FilterByValueBlock(Block):
         try:
             sample[self.column_name] = self.convert_dtype(sample[self.column_name])
         except ValueError as e:
-            logger.error("Error converting dtype: %s, filling with None to be filtered later", e)
+            logger.error(
+                "Error converting dtype: %s, filling with None to be filtered later", e
+            )
             sample[self.column_name] = None
         return sample
 
