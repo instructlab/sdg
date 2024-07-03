@@ -3,6 +3,7 @@
 from typing import Any, Dict
 import re
 
+import openai
 # Third Party
 from datasets import Dataset
 
@@ -45,7 +46,12 @@ class LLMBlock(Block):
             "model": self.model,
             "temperature": 0,
             "max_tokens": 12000,
+            #"seed": 12345,  TBD
         }
+
+        # Whether the LLM server supports a list of input prompts
+        # and supports the n parameter to generate n outputs per input
+        self.server_supports_batched = server_supports_batched(client, model_id)
 
     def _parse(self, generated_string) -> dict:
         matches = {}
@@ -84,19 +90,33 @@ class LLMBlock(Block):
 
         return matches
 
+    def _format_prompt(self, sample: Dict) -> str:
+        return self.prompt_template.format(**sample).strip()
+
     def _generate(self, samples, **gen_kwargs) -> list:
         prompts = [
-            self.model_prompt.format(
-                prompt=self.prompt_template.format(**sample).strip()
-            )
+            self.model_prompt.format(prompt=self._format_prompt(sample))
             for sample in samples
         ]
-        response = self.client.completions.create(
-            prompt=prompts, **{**self.defaults, **gen_kwargs}
-        )
-        return [choice.text.strip() for choice in response.choices]
+        generate_args = {**self.defaults, **gen_kwargs}
 
-    def generate(self, samples, **gen_kwargs) -> Dataset:
+        if self.server_supports_batched:
+            response = self.client.completions.create(
+                prompt=prompts, **generate_args
+            )
+            return [choice.text.strip() for choice in response.choices]
+
+        n = gen_kwargs.get("n", 1)
+        results = []
+        for prompt in prompts:
+            for _ in range(n):
+                response = self.client.completions.create(
+                    prompt=prompt, **generate_args
+                )
+                results.append(response.choices[0].text.strip())
+        return results
+
+    def generate(self, samples: Dataset, **gen_kwargs) -> Dataset:
         """
         Generate the output from the block. This method should first validate the input data,
         then generate the output, and finally parse the generated output before returning it.
@@ -104,7 +124,6 @@ class LLMBlock(Block):
         :return: The parsed output after generation.
         """
         num_samples = self.batch_params.get("num_samples", None)
-        batched = self.batch_params.get("batched", False)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
 
         if (num_samples is not None) and ("num_samples" not in samples.column_names):
@@ -113,29 +132,32 @@ class LLMBlock(Block):
         # validate each sample
         for sample in samples:
             if not self._validate(self.prompt_template, sample):
-                return None
+                logger.warn("Sample failed validation")  #TODO add details
+                #TODO remove sample from samples
+
+        if len(samples) == 0:
+            return Dataset.from_list([])
 
         # generate the output
-        outputs = []
-        if batched:
-            outputs = self._generate(samples, **gen_kwargs)
-        else:
-            outputs = [self._generate([sample], **gen_kwargs)[0] for sample in samples]
-        logger.debug("Generated outputs: {}".format(outputs))
+
+        outputs = self._generate(samples, **gen_kwargs)
+        logger.debug("Generated outputs: %s", outputs)
 
         num_parallel_samples = gen_kwargs.get("n", 1)
         extended_samples = []
         for item in samples:
             extended_samples.extend([item] * num_parallel_samples)
 
+        print(f"num outputs is {len(outputs)}")
         new_data = []
         for sample, output in zip(extended_samples, outputs):
             parsed_outputs = self._parse(output)
-            # pylint: disable=consider-using-generator
+
             max_length = max([len(value) for value in parsed_outputs.values()])
             for values in zip(*(lst[:max_length] for lst in parsed_outputs.values())):
                 new_data.append({**sample, **dict(zip(parsed_outputs.keys(), values))})
 
+        print(f"num output after parse is {len(new_data)}")
         return Dataset.from_list(new_data)
 
 
@@ -172,29 +194,33 @@ class ConditionalLLMBlock(LLMBlock):
                     **self._load_config(config)
                 )
 
-    def _generate(self, samples, **gen_kwargs) -> str:
+    def _format_prompt(self, sample: Dict) -> str:
         if isinstance(self.prompt_template, dict):
-            prompts = [
-                self.model_prompt.format(
-                    prompt=self.prompt_template[sample[self.selector_column_name]]
-                    .format(**sample)
-                    .strip()
-                )
-                for sample in samples
-            ]
-        else:
-            prompts = [
-                self.model_prompt.format(
-                    prompt=self.prompt_template.format(**sample).strip()
-                )
-                for sample in samples
-            ]
-        response = self.client.completions.create(
-            prompt=prompts, **{**self.defaults, **gen_kwargs}
-        )
-        return [choice.text.strip() for choice in response.choices]
+            return (self.prompt_template[sample[self.selector_column_name]]
+                    .format(**sample).strip())
+
+        return self.prompt_template.format(**sample).strip()
 
     def validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
             prompt_template = prompt_template[input_dict[self.selector_column_name]]
         return super()._validate(prompt_template, input_dict)
+
+
+def server_supports_batched(client, model_id: str) -> bool:
+    supported = getattr(client, "server_supports_batched", None)
+    if supported is not None:
+        return supported
+    try:
+        # Make a test call to the server to determine whether it supports
+        # multiple input prompts per request and also the n parameter
+        response = client.completions.create(
+            model=model_id, prompt=["test1", "test2"], max_tokens=1, n=3
+        )
+        # Number outputs should be 2 * 3 = 6
+        supported = len(response.choices) == 6
+    except openai.InternalServerError:
+        supported = False
+    client.server_supports_batched = supported
+    logger.info(f"LLM server supports batched inputs: {client.server_supports_batched}")
+    return supported
