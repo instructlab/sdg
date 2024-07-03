@@ -202,14 +202,6 @@ def generate_data(
     tls_client_passwd: Optional[str] = None,
     # TODO need to update the CLI to specify which pipeline to use (simple or full at the moment)
     pipeline: Optional[str] = "simple",
-    # TODO - not used, can probably be removed
-    num_prompt_instructions=2,
-    # TODO - determine if this is relevant
-    request_batch_size=5,
-    # TODO - probably should be removed
-    temperature=1.0,  # temperature per step is provided in the config file
-    # TODO - probably should be removed
-    top_p=1.0,
 ):
     generate_start = time.time()
 
