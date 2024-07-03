@@ -43,7 +43,7 @@ generation: |
   [End of Question]
 
   [Start of Answer]
-  {answer}
+  {response}
   [End of Answer]
 
   * Return the evaluation between [Start of Evaluation] and [End of Evaluation] tags.
