@@ -31,7 +31,8 @@ class FilterByValueBlock(Block):
     def _convert_dtype(self, sample):
         try:
             sample[self.column_name] = self.convert_dtype(sample[self.column_name])
-        except ValueError:
+        except ValueError as e:
+            logger.error("Error converting dtype: %s, filling with None to be filtered later", e)
             sample[self.column_name] = None
         return sample
 

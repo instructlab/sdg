@@ -56,7 +56,7 @@ class Pipeline:
 
             if drop_duplicates_cols:
                 dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
-            
+
             logger.info("Output: %s\n\n", dataset)
 
         return dataset
