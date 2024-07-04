@@ -338,9 +338,9 @@ def generate_data(
         logger.debug("Dataset: %s" % ds)
         new_generated_data = sdg.generate(ds)
         generated_data = (
-            new_generated_data
+            [new_generated_data]
             if generated_data is None
-            else generated_data + new_generated_data
+            else generated_data + [new_generated_data]
         )
         logger.info("Generated %d samples" % len(generated_data))
         logger.debug("Generated data: %s" % generated_data)
