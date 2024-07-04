@@ -2,6 +2,7 @@
 
 # Standard
 from functools import cache
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Union
 import glob
@@ -38,6 +39,25 @@ class TaxonomyReadingException(Exception):
 
 TAXONOMY_FOLDERS: List[str] = ["compositional_skills", "knowledge"]
 """Taxonomy folders which are also the schema names"""
+
+
+class HTMLTagStripper(HTMLParser):
+    def reset(self):
+        super().reset()
+        self.clean_text = ""
+
+    def strip_html_tags(self, text: str) -> str:
+        """Returns text without html tags for given text input.
+
+        :param text: The original text to be processed
+        """
+        self.reset()
+        self.feed(text)
+        self.close()
+        return self.clean_text
+
+    def handle_data(self, data):
+        self.clean_text += data
 
 
 def _istaxonomyfile(fn):
@@ -120,11 +140,13 @@ def _get_documents(
             file_contents = []
 
             logger.debug("Processing files...")
+            tag_stripper = HTMLTagStripper()
+
             for pattern in file_patterns:
                 for file_path in glob.glob(os.path.join(repo.working_dir, pattern)):
                     if os.path.isfile(file_path) and file_path.endswith(".md"):
                         with open(file_path, "r", encoding="utf-8") as file:
-                            file_contents.append(file.read())
+                            file_contents.append(tag_stripper.strip_html_tags(file.read()))
 
             if file_contents:
                 return file_contents
