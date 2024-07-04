@@ -14,7 +14,6 @@ class IterBlock(Block):
         self.num_iters = num_iters
         self.block = block_type(**block_kwargs)
         self.gen_kwargs = kwargs.get("gen_kwargs", {})
-        self.gen_kwargs = kwargs.get("gen_kwargs", {})
 
     def generate(self, samples, **gen_kwargs) -> Dataset:
         generated_samples = []
