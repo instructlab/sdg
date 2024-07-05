@@ -10,23 +10,6 @@ from .filterblock import FilterByValueBlock
 from .llmblock import LLMBlock
 from .utilblocks import CombineColumnsBlock
 
-MODEL_FAMILY_MIXTRAL = "mixtral"
-MODEL_FAMILY_MERLINITE = "merlinite"
-
-_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
-_MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
-
-_MODEL_PROMPTS = {
-    MODEL_FAMILY_MIXTRAL: _MODEL_PROMPT_MIXTRAL,
-    MODEL_FAMILY_MERLINITE: _MODEL_PROMPT_MERLINITE,
-}
-
-
-def _get_model_prompt(model_family):
-    if model_family not in _MODEL_PROMPTS:
-        raise ValueError(f"Unknown model family: {model_family}")
-    return _MODEL_PROMPTS[model_family]
-
 
 class Flow(ABC):
     def __init__(
@@ -53,7 +36,7 @@ class _SimpleFlow(Flow):
                     "config_path": "",  # must be set by subclass
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["output"],
                 },
                 "gen_kwargs": {
@@ -110,7 +93,7 @@ class MMLUBenchFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["mmlubench_question", "mmlubench_answer"],
                 },
                 "gen_kwargs": {
@@ -135,7 +118,7 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["question", "response"],
                     "parser_kwargs": {
                         "parser_name": "custom",
@@ -157,7 +140,7 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["explanation", "judgment"],
                 },
                 "gen_kwargs": {
@@ -186,7 +169,7 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["feedback", "score"],
                 },
                 "gen_kwargs": {
@@ -216,7 +199,7 @@ class SynthKnowledgeFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["explanation", "rating"],
                 },
                 "gen_kwargs": {
@@ -253,7 +236,7 @@ class SynthSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_samples": self.num_instructions_to_generate,
@@ -271,7 +254,7 @@ class SynthSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["evaluation", "score"],
                 },
             },
@@ -299,7 +282,7 @@ class SynthSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["response"],
                 },
             },
@@ -313,7 +296,7 @@ class SynthSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["evaluation", "score"],
                 },
             },
@@ -347,7 +330,7 @@ class SynthGroundedSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["context"],
                 },
                 "gen_kwargs": {
@@ -367,7 +350,7 @@ class SynthGroundedSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_samples": 3,
@@ -385,7 +368,7 @@ class SynthGroundedSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["evaluation", "score"],
                 },
             },
@@ -413,7 +396,7 @@ class SynthGroundedSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["response"],
                 },
             },
@@ -427,7 +410,7 @@ class SynthGroundedSkillsFlow(Flow):
                     ),
                     "client": self.client,
                     "model_id": self.model_id,
-                    "model_prompt": _get_model_prompt(self.model_family),
+                    "model_family": self.model_family,
                     "output_cols": ["evaluation", "score"],
                 },
             },

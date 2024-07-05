@@ -13,6 +13,23 @@ from .logger_config import setup_logger
 
 logger = setup_logger(__name__)
 
+MODEL_FAMILY_MIXTRAL = "mixtral"
+MODEL_FAMILY_MERLINITE = "merlinite"
+
+_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
+_MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
+
+_MODEL_PROMPTS = {
+    MODEL_FAMILY_MIXTRAL: _MODEL_PROMPT_MIXTRAL,
+    MODEL_FAMILY_MERLINITE: _MODEL_PROMPT_MERLINITE,
+}
+
+
+def _get_model_prompt(model_family):
+    if model_family not in _MODEL_PROMPTS:
+        raise ValueError(f"Unknown model family: {model_family}")
+    return _MODEL_PROMPTS[model_family]
+
 
 def server_supports_batched(client, model_id: str) -> bool:
     supported = getattr(client, "server_supports_batched", None)
@@ -42,9 +59,9 @@ class LLMBlock(Block):
         config_path,
         client,
         model_id,
+        model_family,
         output_cols,
         parser_kwargs={},
-        model_prompt="{prompt}",
         **batch_kwargs,
     ) -> None:
         super().__init__(block_name)
@@ -55,7 +72,8 @@ class LLMBlock(Block):
         self.prompt_template = self.prompt_struct.format(**self.block_config)
         self.client = client
         self.model = model_id
-        self.model_prompt = model_prompt
+        self.model_family = model_family
+        self.model_prompt = _get_model_prompt(self.model_family)
         self.output_cols = output_cols
         self.batch_params = batch_kwargs.get("batch_kwargs", {})
         self.parser_name = parser_kwargs.get("parser_name", None)
@@ -193,10 +211,10 @@ class ConditionalLLMBlock(LLMBlock):
         config_paths,
         client,
         model_id,
+        model_family,
         output_cols,
         selector_column_name,
         parser_kwargs={},
-        model_prompt="{prompt}",
         **batch_kwargs,
     ) -> None:
         super().__init__(
@@ -204,9 +222,9 @@ class ConditionalLLMBlock(LLMBlock):
             config_paths[0][0],
             client,
             model_id,
+            model_family,
             output_cols,
             parser_kwargs=parser_kwargs,
-            model_prompt=model_prompt,
             **batch_kwargs,
         )
         self.selector_column_name = selector_column_name
