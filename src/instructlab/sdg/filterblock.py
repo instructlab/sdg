@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
+# Standard
+import operator
+
 # Third Party
 from datasets import Dataset
 
@@ -7,6 +10,34 @@ from .block import Block
 from .logger_config import setup_logger
 
 logger = setup_logger(__name__)
+
+
+class FilterByValueBlockError(Exception):
+    """An exception raised by the FilterByValue block."""
+
+
+def _get_operator_func(op):
+    if not op in dir(operator):
+        raise FilterByValueBlockError("Unknown FilterByValueBlock operation '{op}'")
+    return getattr(operator, op)
+
+
+def _get_convert_dtype(convert_dtype):
+    if not convert_dtype:
+        return None
+
+    type_mapping = {
+        "int": int,
+        "float": float,
+        "bool": bool,
+    }
+
+    if not convert_dtype in type_mapping:
+        raise FilterByValueBlockError(
+            "Unknown FilterByValueBlock convert_dtype '{convert_dtype}'"
+        )
+
+    return type_mapping[convert_dtype]
 
 
 # Note - this is not a method on the class below in order to avoid
@@ -69,8 +100,10 @@ class FilterByValueBlock(Block):
         super().__init__(ctx, block_name)
         self.value = filter_value if isinstance(filter_value, list) else [filter_value]
         self.column_name = filter_column
-        self.operation = operation
-        self.convert_dtype = convert_dtype
+        self.operation = _get_operator_func(operation)
+        self.convert_dtype = _get_convert_dtype(convert_dtype)
+        if self.convert_dtype:
+            self.value = [self.convert_dtype(value) for value in self.value]
 
     def generate(self, samples) -> Dataset:
         if self.convert_dtype:

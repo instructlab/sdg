@@ -15,19 +15,19 @@ class TestFilterByValueBlock(unittest.TestCase):
     def setUp(self):
         self.block = FilterByValueBlock(
             PipelineContext(None, None, None, None),
-            block_name="filter_by_age",
+            "filter_by_age",
             filter_column="age",
-            filter_value=30,
-            operation=operator.eq,
-            convert_dtype=int,
+            filter_value="30",
+            operation="eq",
+            convert_dtype="int",
         )
         self.block_with_list = FilterByValueBlock(
             PipelineContext(None, None, None, None),
-            block_name="filter_by_ages",
+            "filter_by_age_list",
             filter_column="age",
-            filter_value=[30, 35],
-            operation=operator.eq,
-            convert_dtype=int,
+            filter_value=["30", "35"],
+            operation="eq",
+            convert_dtype="int",
         )
         self.dataset = Dataset.from_dict(
             {"age": ["25", "30", "35", "forty", "45"]},
