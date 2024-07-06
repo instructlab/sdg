@@ -287,7 +287,7 @@ class SynthSkillsFlow(Flow):
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_procs": 8,
-                        "num_samples": 30,
+                        "num_samples": self.num_iters,
                         "batched": self.batched,
                     },
                 },
