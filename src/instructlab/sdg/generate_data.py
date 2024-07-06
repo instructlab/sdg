@@ -11,7 +11,6 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from datasets import Dataset
-from instructlab.utils import get_sysprompt
 import httpx
 import openai
 
@@ -35,6 +34,8 @@ from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
 )
+
+_SYS_PROMPT = "You are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior."
 
 
 def _unescape(s):
@@ -86,7 +87,7 @@ def _gen_train_data(logger, machine_instruction_data, output_file_train):
             user += "\n" + synth_example["context"]
         train_data.append(
             {
-                "system": get_sysprompt(),
+                "system": _SYS_PROMPT,
                 "user": _unescape(user),
                 "assistant": _unescape(_get_response(logger, synth_example)),
             }
@@ -112,7 +113,7 @@ def _gen_test_data(
 
             test_data.append(
                 {
-                    "system": get_sysprompt(),
+                    "system": _SYS_PROMPT,
                     "user": _unescape(user),
                     "assistant": _unescape(seed_example["output"]),  # answer
                 }
