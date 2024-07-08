@@ -272,7 +272,7 @@ def generate_data(
         sdg = None
         if samples[0].get("document"):
             sdg = sdg_knowledge
-        elif samples[0].get("context"):
+        elif samples[0].get("seed_context"):
             sdg = sdg_grounded_skill
         else:
             sdg = sdg_freeform_skill
