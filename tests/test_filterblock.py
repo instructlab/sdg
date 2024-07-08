@@ -18,6 +18,12 @@ class TestFilterByValueBlock(unittest.TestCase):
             operation=operator.eq,
             convert_dtype=int,
         )
+        self.block_with_list = FilterByValueBlock(
+            filter_column="age",
+            filter_value=[30, 35],
+            operation=operator.eq,
+            convert_dtype=int,
+        )
         self.dataset = Dataset.from_dict(
             {"age": ["25", "30", "35", "forty", "45"]},
             features=Features({"age": Value("string")}),
@@ -28,4 +34,11 @@ class TestFilterByValueBlock(unittest.TestCase):
         filtered_dataset = self.block.generate(self.dataset)
         self.assertEqual(len(filtered_dataset), 1)
         self.assertEqual(filtered_dataset["age"], [30])
+        mock_logger.error.assert_called()
+
+    @patch("instructlab.sdg.filterblock.logger")
+    def test_generate_mixed_types_multi_value(self, mock_logger):
+        filtered_dataset = self.block_with_list.generate(self.dataset)
+        self.assertEqual(len(filtered_dataset), 2)
+        self.assertEqual(filtered_dataset["age"], [30, 35])
         mock_logger.error.assert_called()

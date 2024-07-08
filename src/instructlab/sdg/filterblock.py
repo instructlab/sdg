@@ -13,8 +13,21 @@ class FilterByValueBlock(Block):
     def __init__(
         self, filter_column, filter_value, operation, convert_dtype=None, **batch_kwargs
     ) -> None:
+        """
+        Initializes a new instance of the FilterByValueBlock class.
+
+        Parameters:
+        - filter_column (str): The name of the column in the dataset to apply the filter on.
+        - filter_value (any or list of any): The value(s) to filter by.
+        - operation (callable): A function that takes two arguments (column value and filter value) and returns a boolean indicating whether the row should be included in the filtered dataset.
+        - convert_dtype (callable, optional): A function to convert the data type of the filter column before applying the filter. Defaults to None.
+        - **batch_kwargs: Additional kwargs for batch processing.
+
+        Returns:
+        None
+        """
         super().__init__(block_name=self.__class__.__name__)
-        self.value = filter_value
+        self.value = filter_value if isinstance(filter_value, list) else [filter_value]
         self.column_name = filter_column
         self.operation = operation
         self.convert_dtype = convert_dtype
@@ -38,6 +51,8 @@ class FilterByValueBlock(Block):
             )
 
         return samples.filter(
-            lambda x: self.operation(x[self.column_name], self.value),
+            lambda x: any(
+                self.operation(x[self.column_name], value) for value in self.value
+            ),
             num_proc=self.num_procs,
         )
