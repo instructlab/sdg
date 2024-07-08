@@ -110,24 +110,26 @@ def _gen_train_data(
 ):
     train_data = []
     messages_data = []
-    for synth_example in machine_instruction_data:
-        logger.debug(synth_example)
-        user = _get_question(logger, synth_example)
-        if len(synth_example.get("context", "")) > 0:
-            user += "\n" + synth_example["context"]
-        assistant = _unescape(_get_response(logger, synth_example))
-        train_entry = {
-            "system": _SYS_PROMPT,
-            "user": _unescape(user),
-            "assistant": assistant,
-        }
-        train_data.append(train_entry)
-        sample = {
-            "inputs": _unescape(user),
-            "targets": assistant,
-            "system": _SYS_PROMPT,
-        }
-        messages_data.append(_convert_to_messages(sample))
+
+    for output_dataset in machine_instruction_data:
+        for synth_example in output_dataset:
+            logger.debug(synth_example)
+            user = _get_question(logger, synth_example)
+            if len(synth_example.get("context", "")) > 0:
+                user += "\n" + synth_example["context"]
+            assistant = _unescape(_get_response(logger, synth_example))
+            train_entry = {
+                "system": _SYS_PROMPT,
+                "user": _unescape(user),
+                "assistant": assistant,
+            }
+            train_data.append(train_entry)
+            sample = {
+                "inputs": _unescape(user),
+                "targets": assistant,
+                "system": _SYS_PROMPT,
+            }
+            messages_data.append(_convert_to_messages(sample))
 
     with open(output_file_train, "w", encoding="utf-8") as outfile:
         for entry in train_data:
@@ -259,15 +261,17 @@ def generate_data(
 
     name = Path(model_name).stem  # Just in case it is a file path
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
-    output_file_generated_train = f"generated_{name}_{date_suffix}.json"
-    output_file_messages_train = f"train_messages_{name}_{date_suffix}.jsonl"
+    output_file_messages = f"messages_{name}_{date_suffix}.json"
+    output_file_test = f"test_{name}_{date_suffix}.jsonl"
+    # train data in messages format that will be mixed and split up into train test eventually
+    output_file_train = f"train_{name}_{date_suffix}.jsonl"
 
     _gen_test_data(
         leaf_nodes,
         os.path.join(output_dir, output_file_test),
     )
 
-    logger.debug(f"Generating to: {os.path.join(output_dir, output_file_generated)}")
+    logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
 
     orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
     cert = tuple(item for item in orig_cert if item)
@@ -334,8 +338,8 @@ def generate_data(
     _gen_train_data(
         logger,
         generated_data,
-        os.path.join(output_dir, output_file_generated_train),
-        os.path.join(output_dir, output_file_messages_train),
+        os.path.join(output_dir, output_file_train),
+        os.path.join(output_dir, output_file_messages),
     )
 
     # TODO
