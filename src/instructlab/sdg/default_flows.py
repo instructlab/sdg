@@ -184,9 +184,7 @@ class SynthSkillsFlow(Flow):
                     "block_name": "gen_questions",
                     "config_path": "configs/skills/freeform_questions.yaml",
                     "output_cols": ["question"],
-                    "batch_kwargs": {
-                        "num_samples": self.ctx.num_instructions_to_generate,
-                    },
+                    "add_num_samples": True,
                 },
                 "drop_duplicates": ["question"],
             },
@@ -262,9 +260,7 @@ class SynthGroundedSkillsFlow(Flow):
                     "block_name": "gen_grounded_questions",
                     "config_path": "configs/skills/grounded_questions.yaml",
                     "output_cols": ["question"],
-                    "batch_kwargs": {
-                        "num_samples": 3,
-                    },
+                    "add_num_samples": True,
                 },
                 "drop_duplicates": ["question"],
             },
