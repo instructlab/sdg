@@ -11,7 +11,6 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from datasets import Dataset
-from instructlab.utils import get_sysprompt
 import httpx
 import openai
 
@@ -35,6 +34,8 @@ from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
 )
+
+_SYS_PROMPT = "You are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior."
 
 
 def _unescape(s):
@@ -116,7 +117,7 @@ def _gen_train_data(
             user += "\n" + synth_example["context"]
         assistant = _unescape(_get_response(logger, synth_example))
         train_entry = {
-            "system": get_sysprompt(),
+            "system": _SYS_PROMPT,
             "user": _unescape(user),
             "assistant": assistant,
         }
@@ -124,7 +125,7 @@ def _gen_train_data(
         sample = {
             "inputs": _unescape(user),
             "targets": assistant,
-            "system": get_sysprompt(),
+            "system": _SYS_PROMPT,
         }
         messages_data.append(_convert_to_messages(sample))
 
@@ -155,7 +156,7 @@ def _gen_test_data(
 
             test_data.append(
                 {
-                    "system": get_sysprompt(),
+                    "system": _SYS_PROMPT,
                     "user": _unescape(user),
                     "assistant": _unescape(seed_example["output"]),  # answer
                 }
@@ -163,7 +164,7 @@ def _gen_test_data(
             sample = {
                 "inputs": _unescape(user),
                 "targets": _unescape(seed_example["output"]),
-                "system": get_sysprompt(),
+                "system": _SYS_PROMPT,
             }
             messages_data.append(_convert_to_messages(sample))
 
