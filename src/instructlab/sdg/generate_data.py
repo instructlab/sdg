@@ -204,6 +204,9 @@ def generate_data(
     tls_client_passwd: Optional[str] = None,
     # TODO need to update the CLI to specify which pipeline to use (simple or full at the moment)
     pipeline: Optional[str] = "simple",
+    # CA bundle filepath to utilize to verify TLS connections: see
+    # https://www.python-httpx.org/advanced/ssl/ for more details
+    tls_ca_bundle: Optional[str] = None,
 ):
     generate_start = time.time()
 
@@ -233,6 +236,8 @@ def generate_data(
     orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
     cert = tuple(item for item in orig_cert if item)
     verify = not tls_insecure
+    if not tls_insecure and tls_ca_bundle:
+        verify = tls_ca_bundle
     client = openai.OpenAI(
         base_url=api_base,
         api_key=api_key,
