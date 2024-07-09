@@ -1,4 +1,5 @@
 import json
+import os
 
 import yaml
 import click
@@ -14,18 +15,20 @@ LOGGER = setup_logger(__name__)
 
 def load_ds(path, sampling_ratio):
     LOGGER.info(f"Loading dataset from {path} ...")
-    dataset = load_dataset('json', data_files=path, split='train')
+    dataset = load_dataset("json", data_files=path, split="train")
     LOGGER.info(f"Dataset columns: {dataset.column_names}")
     LOGGER.info(f"Dataset loaded with {len(dataset)} samples")
 
     if sampling_ratio != 1.0:
         num_samples = int(len(dataset) * sampling_ratio)
         dataset = adjust_train_sample_size(dataset, num_samples)
-    
+
     # check if metadata column is string if not convert it using json.dumps
-    if not isinstance(dataset['metadata'][0], str):
-        dataset = dataset.map(lambda x: {'metadata': json.dumps(x['metadata'])}, num_proc=32)
-    
+    if not isinstance(dataset["metadata"][0], str):
+        dataset = dataset.map(
+            lambda x: {"metadata": json.dumps(x["metadata"])}, num_proc=32
+        )
+
     return dataset
 
 
@@ -52,7 +55,7 @@ def adjust_train_sample_size(ds: Dataset, num_samples: int):
 
 
 def convert_metadata(sample):
-    sample['metadata'] = json.dumps(sample['metadata'])
+    sample["metadata"] = json.dumps(sample["metadata"])
     return sample
 
 
@@ -108,7 +111,7 @@ def save(ds, drop_cols, save_dir, filename):
     if drop_cols:
         drop_columns_in_ds = [e for e in drop_cols if e in ds.column_names]
         ds = ds.remove_columns(drop_columns_in_ds)
-  
+
     ds.to_json(save_path, orient="records", lines=True)
 
     fig1, ax1 = subplots(figsize=(7, 0.3 * (len(ds.unique("group")) - 1)))
@@ -121,43 +124,28 @@ def save(ds, drop_cols, save_dir, filename):
     fig2.savefig(f"{save_dir}/dataset_dist.png", bbox_inches="tight")
 
     # load dataset back to make sure it loads correctly
-    new_ds = load_dataset('json', data_files=save_path, split='train')
+    new_ds = load_dataset("json", data_files=save_path, split="train")
     LOGGER.info(f"Dataset loaded with {len(new_ds)} samples")
     LOGGER.info(f"Dataset columns: {new_ds.column_names}")
     LOGGER.info(f"Dataset Sample: {ds[0]}")
 
 
-@click.command()
-@click.option(
-    "--recipe",
-    help="recipe path",
-    required=True,
-    type=click.Path(exists=True),
-)
-def main(recipe):
-    with open(recipe, 'r') as fp:
+def get_populated_recipe(recipe_path, generated_data_path, recipe_output_path):
+    with open(recipe_path) as fp:
         recipe = yaml.safe_load(fp)
 
-    if recipe['sys_prompt']:
-        sys_prompt = recipe.get('sys_prompt', None).strip()
-    
-    if recipe['drop_columns']:
-        drop_cols = recipe.get('drop_columns', None)
+    recipe["datasets"].append({"path": generated_data_path, "sampling_ratio": 1.0})
 
-    datasets = []
-    for dataset in recipe['datasets']:
-        path = dataset['path']
-        sampling_ratio = dataset['sampling_ratio']
-        ds = load_ds(path, sampling_ratio)
-        datasets.append(ds)
-        
-    ds = concatenate_datasets(datasets)
-    ds = ds.map(add_system_message,
-                fn_kwargs={'sys_prompt': sys_prompt}, 
-                num_proc=32)
-    
-    save(ds, drop_cols, recipe['save_dir'], recipe['save_name'])
+    with open(recipe_output_path) as fp:
+        yaml.dump(recipe, fp)
+
+    return recipe
 
 
-if __name__ == "__main__":
-    main()
+def generate_train_test_splits(ds):
+    try:
+        ds = ds.train_test_split(test_size=0.1)
+    except Exception as e:
+        LOGGER.error("Train test split cannot be created!", e)
+
+    return ds["train"], ds["test"]

@@ -10,7 +10,7 @@ class SDG:
     def __init__(self, pipelines: list[Pipeline]) -> None:
         self.pipelines = pipelines
 
-    def generate(self, dataset: Dataset):
+    def generate(self, dataset: Dataset) -> Dataset:
         """
         Generate the dataset by running the chained pipeline steps.
         dataset: the input dataset
