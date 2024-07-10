@@ -9,6 +9,39 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+# Note - this is not a method on the class below in order to avoid
+# serializing the object itself when multi-processing is used.
+# In particular, SSLContext - embedded in the OpenAI client object -
+# cannot be pickled.
+def _filter_by_values(samples, column, op, values, num_proc=1):
+    return samples.filter(
+        lambda x: any(op(x[column], value) for value in values),
+        num_proc=num_proc,
+    )
+
+
+def _map_dtype(samples, column, dtype, num_proc=1):
+    def convert_column(sample):
+        try:
+            sample[column] = dtype(sample[column])
+        except ValueError as e:
+            logger.error(
+                "Error converting dtype: %s, filling with None to be filtered later", e
+            )
+            sample[column] = None
+        return sample
+
+    # FIXME: it appears multiprocessing map has issues with
+    # None columns. If we pass num_proc>1 here and the error
+    # case is triggered above, we get:
+    #   ValueError: The features can't be aligned ...
+    # because the column is still considered a string not
+    # the new dtype.
+    num_proc = 1
+
+    return samples.map(convert_column, num_proc=num_proc)
+
+
 class FilterByValueBlock(Block):
     def __init__(
         self,
@@ -40,26 +73,12 @@ class FilterByValueBlock(Block):
         self.convert_dtype = convert_dtype
         self.num_procs = batch_kwargs.get("num_procs", 1)
 
-    def _convert_dtype(self, sample):
-        try:
-            sample[self.column_name] = self.convert_dtype(sample[self.column_name])
-        except ValueError as e:
-            logger.error(
-                "Error converting dtype: %s, filling with None to be filtered later", e
-            )
-            sample[self.column_name] = None
-        return sample
-
     def generate(self, samples) -> Dataset:
         if self.convert_dtype:
-            samples = samples.map(
-                self._convert_dtype,
-                num_proc=self.num_procs,
+            samples = _map_dtype(
+                samples, self.column_name, self.convert_dtype, self.num_procs
             )
 
-        return samples.filter(
-            lambda x: any(
-                self.operation(x[self.column_name], value) for value in self.value
-            ),
-            num_proc=self.num_procs,
+        return _filter_by_values(
+            samples, self.column_name, self.operation, self.value, self.num_procs
         )
