@@ -6,6 +6,8 @@ from datasets import Dataset
 from .block import Block
 from .logger_config import setup_logger
 
+import operator
+
 logger = setup_logger(__name__)
 
 
@@ -50,9 +52,18 @@ class FilterByValueBlock(Block):
                 num_proc=self.num_procs,
             )
 
-        return samples.filter(
+        if self.operation == operator.contains:
+            samples = samples.filter(
+                lambda x: self.operation(self.value, x[self.column_name]),
+                num_proc=self.num_procs,
+            )
+
+
+        samples = samples.filter(
             lambda x: any(
                 self.operation(x[self.column_name], value) for value in self.value
             ),
             num_proc=self.num_procs,
         )
+
+        return samples

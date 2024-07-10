@@ -8,6 +8,10 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+class EmptyDatasetError(Exception):
+    pass
+
+
 class Pipeline:
     def __init__(self, chained_blocks: list) -> None:
         """
@@ -38,10 +42,14 @@ class Pipeline:
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
             block = block_type(**block_config)
 
+            logger.info("------------------------------------\n")
             logger.info("Running block: %s", block_config["block_name"])
-            logger.info(dataset)
+            logger.info("Input dataset: %s", dataset)
 
             dataset = block.generate(dataset, **gen_kwargs)
+
+            if len(dataset) == 0:
+                raise EmptyDatasetError(f"Pipeline stopped: Empty dataset after running block: {block_config['block_name']}")
 
             drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
             if drop_columns:
@@ -49,5 +57,8 @@ class Pipeline:
 
             if drop_duplicates_cols:
                 dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
+            
+            logger.info("Output dataset: %s", dataset)
+            logger.info("------------------------------------\n\n")
 
         return dataset
