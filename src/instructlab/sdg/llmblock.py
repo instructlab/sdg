@@ -64,7 +64,7 @@ class LLMBlock(Block):
         self.defaults = {
             "model": self.model,
             "temperature": 0,
-            "max_tokens": 12000,
+            "max_tokens": 4096,
         }
 
         # Whether the LLM server supports a list of input prompts
