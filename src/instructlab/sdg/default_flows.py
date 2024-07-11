@@ -2,7 +2,6 @@
 # Standard
 from abc import ABC, abstractmethod
 import operator
-import os
 
 # Local
 from .filterblock import FilterByValueBlock
@@ -42,8 +41,8 @@ class _SimpleFlow(Flow):
 class SimpleKnowledgeFlow(_SimpleFlow):
     def get_flow(self) -> list:
         flow = super().get_flow()
-        flow[0]["block_config"]["config_path"] = os.path.join(
-            self.ctx.sdg_base, "configs/knowledge/simple_generate_qa.yaml"
+        flow[0]["block_config"]["config_path"] = (
+            "configs/knowledge/simple_generate_qa.yaml"
         )
         flow[0]["block_config"]["block_name"] = "gen_knowledge"
         return flow
@@ -52,8 +51,8 @@ class SimpleKnowledgeFlow(_SimpleFlow):
 class SimpleFreeformSkillFlow(_SimpleFlow):
     def get_flow(self) -> list:
         flow = super().get_flow()
-        flow[0]["block_config"]["config_path"] = os.path.join(
-            self.ctx.sdg_base, "configs/skills/simple_generate_qa_freeform.yaml"
+        flow[0]["block_config"]["config_path"] = (
+            "configs/skills/simple_generate_qa_freeform.yaml"
         )
         flow[0]["block_config"]["block_name"] = "gen_skill_freeform"
         return flow
@@ -62,8 +61,8 @@ class SimpleFreeformSkillFlow(_SimpleFlow):
 class SimpleGroundedSkillFlow(_SimpleFlow):
     def get_flow(self) -> list:
         flow = super().get_flow()
-        flow[0]["block_config"]["config_path"] = os.path.join(
-            self.ctx.sdg_base, "configs/skills/simple_generate_qa_grounded.yaml"
+        flow[0]["block_config"]["config_path"] = (
+            "configs/skills/simple_generate_qa_grounded.yaml"
         )
         flow[0]["block_config"]["block_name"] = "gen_skill_grounded"
         return flow
@@ -76,9 +75,7 @@ class MMLUBenchFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_mmlu_knowledge",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base, "configs/knowledge/mcq_generation.yaml"
-                    ),
+                    "config_path": "configs/knowledge/mcq_generation.yaml",
                     "output_cols": ["mmlubench_question", "mmlubench_answer"],
                 },
                 "gen_kwargs": {
@@ -97,10 +94,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_knowledge",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/knowledge/generate_questions_responses.yaml",
-                    ),
+                    "config_path": "configs/knowledge/generate_questions_responses.yaml",
                     "output_cols": ["question", "response"],
                     "parser_kwargs": {
                         "parser_name": "custom",
@@ -117,10 +111,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_faithfulness_qa_pair",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/knowledge/evaluate_faithfulness.yaml",
-                    ),
+                    "config_path": "configs/knowledge/evaluate_faithfulness.yaml",
                     "output_cols": ["explanation", "judgment"],
                 },
                 "gen_kwargs": {
@@ -144,10 +135,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_relevancy_qa_pair",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/knowledge/evaluate_relevancy.yaml",
-                    ),
+                    "config_path": "configs/knowledge/evaluate_relevancy.yaml",
                     "output_cols": ["feedback", "score"],
                 },
                 "gen_kwargs": {
@@ -172,9 +160,7 @@ class SynthKnowledgeFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_verify_question",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base, "configs/knowledge/evaluate_question.yaml"
-                    ),
+                    "config_path": "configs/knowledge/evaluate_question.yaml",
                     "output_cols": ["explanation", "rating"],
                 },
                 "gen_kwargs": {
@@ -205,10 +191,7 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_questions",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/freeform_questions.yaml",
-                    ),
+                    "config_path": "configs/skills/freeform_questions.yaml",
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_samples": self.ctx.num_instructions_to_generate,
@@ -220,10 +203,7 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_questions",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/evaluate_freeform_questions.yaml",
-                    ),
+                    "config_path": "configs/skills/evaluate_freeform_questions.yaml",
                     "output_cols": ["evaluation", "score"],
                 },
             },
@@ -245,10 +225,7 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_responses",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/freeform_responses.yaml",
-                    ),
+                    "config_path": "configs/skills/freeform_responses.yaml",
                     "output_cols": ["response"],
                 },
             },
@@ -256,10 +233,7 @@ class SynthSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "evaluate_qa_pair",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/evaluate_freeform_pair.yaml",
-                    ),
+                    "config_path": "configs/skills/evaluate_freeform_pair.yaml",
                     "output_cols": ["evaluation", "score"],
                 },
             },
@@ -287,10 +261,7 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_contexts",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/contexts.yaml",
-                    ),
+                    "config_path": "configs/skills/contexts.yaml",
                     "output_cols": ["context"],
                 },
                 "gen_kwargs": {
@@ -304,10 +275,7 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_grounded_questions",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/grounded_questions.yaml",
-                    ),
+                    "config_path": "configs/skills/grounded_questions.yaml",
                     "output_cols": ["question"],
                     "batch_kwargs": {
                         "num_samples": 3,
@@ -319,10 +287,7 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "eval_grounded_questions",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/evaluate_grounded_questions.yaml",
-                    ),
+                    "config_path": "configs/skills/evaluate_grounded_questions.yaml",
                     "output_cols": ["evaluation", "score"],
                 },
             },
@@ -344,10 +309,7 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "gen_grounded_responses",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/grounded_responses.yaml",
-                    ),
+                    "config_path": "configs/skills/grounded_responses.yaml",
                     "output_cols": ["response"],
                 },
             },
@@ -355,10 +317,7 @@ class SynthGroundedSkillsFlow(Flow):
                 "block_type": LLMBlock,
                 "block_config": {
                     "block_name": "evaluate_grounded_qa_pair",
-                    "config_path": os.path.join(
-                        self.ctx.sdg_base,
-                        "configs/skills/evaluate_grounded_pair.yaml",
-                    ),
+                    "config_path": "configs/skills/evaluate_grounded_pair.yaml",
                     "output_cols": ["evaluation", "score"],
                 },
             },

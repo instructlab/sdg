@@ -3,6 +3,7 @@
 from abc import ABC
 from collections import ChainMap
 from typing import Any, Dict, Union
+import os.path
 
 # Third Party
 import yaml
@@ -42,8 +43,13 @@ class Block(ABC):
         """
         Load the configuration file for this block.
 
+        If the supplied configuration file is a relative path, it is assumed
+        to be part of this Python package.
+
         :param config_path: The path to the configuration file.
         :return: The loaded configuration.
         """
+        if not os.path.isabs(config_path):
+            config_path = os.path.join(self.ctx.sdg_base, config_path)
         with open(config_path, "r", encoding="utf-8") as config_file:
             return yaml.safe_load(config_file)
