@@ -10,9 +10,7 @@ logger = setup_logger(__name__)
 
 
 class SamplePopulatorBlock(Block):
-    def __init__(
-        self, ctx, block_name, config_paths, column_name, post_fix="", **batch_kwargs
-    ) -> None:
+    def __init__(self, ctx, block_name, config_paths, column_name, post_fix="") -> None:
         super().__init__(ctx, block_name)
         self.configs = {}
         for config in config_paths:
@@ -23,7 +21,6 @@ class SamplePopulatorBlock(Block):
             config_key = config.split("/")[-1].split(".")[0]
             self.configs[config_key] = self._load_config(config_name)
         self.column_name = column_name
-        self.num_procs = batch_kwargs.get("num_procs", 8)
 
     # Using a static method to avoid serializing self when using multiprocessing
     @staticmethod
@@ -35,19 +32,16 @@ class SamplePopulatorBlock(Block):
 
     def generate(self, samples) -> Dataset:
         return self._map_populate_samples(
-            samples, self.configs, self.column_name, self.num_procs
+            samples, self.configs, self.column_name, self.ctx.num_procs
         )
 
 
 class SelectorBlock(Block):
-    def __init__(
-        self, ctx, block_name, choice_map, choice_col, output_col, **batch_kwargs
-    ) -> None:
+    def __init__(self, ctx, block_name, choice_map, choice_col, output_col) -> None:
         super().__init__(ctx, block_name)
         self.choice_map = choice_map
         self.choice_col = choice_col
         self.output_col = output_col
-        self.num_procs = batch_kwargs.get("num_procs", 8)
 
     # Using a static method to avoid serializing self when using multiprocessing
     @staticmethod
@@ -64,19 +58,16 @@ class SelectorBlock(Block):
             self.choice_map,
             self.choice_col,
             self.output_col,
-            self.num_procs,
+            self.ctx.num_procs,
         )
 
 
 class CombineColumnsBlock(Block):
-    def __init__(
-        self, ctx, block_name, columns, output_col, separator="\n\n", **batch_kwargs
-    ) -> None:
+    def __init__(self, ctx, block_name, columns, output_col, separator="\n\n") -> None:
         super().__init__(ctx, block_name)
         self.columns = columns
         self.output_col = output_col
         self.separator = separator
-        self.num_procs = batch_kwargs.get("num_procs", 8)
 
     # Using a static method to avoid serializing self when using multiprocessing
     @staticmethod
@@ -89,5 +80,5 @@ class CombineColumnsBlock(Block):
 
     def generate(self, samples: Dataset) -> Dataset:
         return self._map_combine(
-            samples, self.columns, self.output_col, self.separator, self.num_procs
+            samples, self.columns, self.output_col, self.separator, self.ctx.num_procs
         )

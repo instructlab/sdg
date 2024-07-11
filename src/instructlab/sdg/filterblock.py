@@ -51,7 +51,6 @@ class FilterByValueBlock(Block):
         filter_value,
         operation,
         convert_dtype=None,
-        **batch_kwargs,
     ) -> None:
         """
         Initializes a new instance of the FilterByValueBlock class.
@@ -63,7 +62,6 @@ class FilterByValueBlock(Block):
         - filter_value (any or list of any): The value(s) to filter by.
         - operation (callable): A function that takes two arguments (column value and filter value) and returns a boolean indicating whether the row should be included in the filtered dataset.
         - convert_dtype (callable, optional): A function to convert the data type of the filter column before applying the filter. Defaults to None.
-        - **batch_kwargs: Additional kwargs for batch processing.
 
         Returns:
         None
@@ -73,14 +71,13 @@ class FilterByValueBlock(Block):
         self.column_name = filter_column
         self.operation = operation
         self.convert_dtype = convert_dtype
-        self.num_procs = batch_kwargs.get("num_procs", 1)
 
     def generate(self, samples) -> Dataset:
         if self.convert_dtype:
             samples = _map_dtype(
-                samples, self.column_name, self.convert_dtype, self.num_procs
+                samples, self.column_name, self.convert_dtype, self.ctx.num_procs
             )
 
         return _filter_by_values(
-            samples, self.column_name, self.operation, self.value, self.num_procs
+            samples, self.column_name, self.operation, self.value, self.ctx.num_procs
         )

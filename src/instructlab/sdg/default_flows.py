@@ -125,9 +125,6 @@ class SynthKnowledgeFlow(Flow):
                     "filter_column": "judgment",
                     "filter_value": "YES",
                     "operation": operator.eq,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
                 "drop_columns": ["judgment", "explanation"],
             },
@@ -150,9 +147,6 @@ class SynthKnowledgeFlow(Flow):
                     "filter_value": 2.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
                 "drop_columns": ["feedback", "score"],
             },
@@ -175,9 +169,6 @@ class SynthKnowledgeFlow(Flow):
                     "filter_value": 1.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
                 "drop_columns": ["explanation", "rating", "__index_level_0__"],
             },
@@ -215,9 +206,6 @@ class SynthSkillsFlow(Flow):
                     "filter_value": 1.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
                 "drop_columns": ["evaluation", "score", "num_samples"],
             },
@@ -245,9 +233,6 @@ class SynthSkillsFlow(Flow):
                     "filter_value": 2.0,
                     "operation": operator.ge,
                     "convert_dtype": float,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
                 "drop_columns": ["evaluation", "score"],
             },
@@ -299,9 +284,6 @@ class SynthGroundedSkillsFlow(Flow):
                     "filter_value": 1.0,
                     "operation": operator.eq,
                     "convert_dtype": float,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
                 "drop_columns": ["evaluation", "score", "num_samples"],
             },
@@ -329,9 +311,6 @@ class SynthGroundedSkillsFlow(Flow):
                     "filter_value": 2.0,
                     "operation": operator.ge,
                     "convert_dtype": float,
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                    },
                 },
             },
             {
@@ -340,10 +319,6 @@ class SynthGroundedSkillsFlow(Flow):
                     "block_name": "combine_question_and_context",
                     "columns": ["context", "question"],
                     "output_col": "question",
-                    "batch_kwargs": {
-                        "num_procs": 8,
-                        "batched": True,
-                    },
                 },
             },
         ]

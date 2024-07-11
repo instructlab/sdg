@@ -20,6 +20,8 @@ class PipelineContext:
         self.model_id = model_id
         self.num_instructions_to_generate = num_instructions_to_generate
         self.sdg_base = resources.files(__package__)
+        # FIXME: base this on the available number of CPUs
+        self.num_procs = 8
 
 
 class Pipeline:
