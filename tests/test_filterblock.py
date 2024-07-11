@@ -15,6 +15,7 @@ class TestFilterByValueBlock(unittest.TestCase):
     def setUp(self):
         self.block = FilterByValueBlock(
             PipelineContext(None, None, None, None),
+            block_name="filter_by_age",
             filter_column="age",
             filter_value=30,
             operation=operator.eq,
@@ -22,6 +23,7 @@ class TestFilterByValueBlock(unittest.TestCase):
         )
         self.block_with_list = FilterByValueBlock(
             PipelineContext(None, None, None, None),
+            block_name="filter_by_ages",
             filter_column="age",
             filter_value=[30, 35],
             operation=operator.eq,

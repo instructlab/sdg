@@ -46,6 +46,7 @@ class FilterByValueBlock(Block):
     def __init__(
         self,
         ctx,
+        block_name,
         filter_column,
         filter_value,
         operation,
@@ -57,6 +58,7 @@ class FilterByValueBlock(Block):
 
         Parameters:
         - ctx (PipelineContext): A PipelineContext object containing runtime parameters.
+        - block_name (str): An identifier for this block.
         - filter_column (str): The name of the column in the dataset to apply the filter on.
         - filter_value (any or list of any): The value(s) to filter by.
         - operation (callable): A function that takes two arguments (column value and filter value) and returns a boolean indicating whether the row should be included in the filtered dataset.
@@ -66,7 +68,7 @@ class FilterByValueBlock(Block):
         Returns:
         None
         """
-        super().__init__(ctx, block_name=self.__class__.__name__)
+        super().__init__(ctx, block_name)
         self.value = filter_value if isinstance(filter_value, list) else [filter_value]
         self.column_name = filter_column
         self.operation = operation
