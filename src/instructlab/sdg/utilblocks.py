@@ -27,13 +27,18 @@ class SamplePopulatorBlock(Block):
         self.column_name = column_name
         self.num_procs = batch_kwargs.get("num_procs", 8)
 
-    def _generate(self, sample) -> dict:
-        sample = {**sample, **self.configs[sample[self.column_name]]}
-        return sample
+    # Using a static method to avoid serializing self when using multiprocessing
+    @staticmethod
+    def _map_populate(samples, configs, column_name, num_proc=1):
+        def populate(sample):
+            return {**sample, **configs[sample[column_name]]}
+
+        return samples.map(populate, num_proc)
 
     def generate(self, samples) -> Dataset:
-        samples = samples.map(self._generate, num_proc=self.num_procs)
-        return samples
+        return self._map_populate_samples(
+            samples, self.configs, self.column_name, self.num_procs
+        )
 
 
 class SelectorBlock(Block):
@@ -44,13 +49,23 @@ class SelectorBlock(Block):
         self.output_col = output_col
         self.num_procs = batch_kwargs.get("num_procs", 8)
 
-    def _generate(self, sample) -> dict:
-        sample[self.output_col] = sample[self.choice_map[sample[self.choice_col]]]
-        return sample
+    # Using a static method to avoid serializing self when using multiprocessing
+    @staticmethod
+    def _map_select_choice(samples, choice_map, choice_col, output_col, num_proc=1):
+        def select_choice(sample) -> dict:
+            sample[output_col] = sample[choice_map[sample[choice_col]]]
+            return sample
+
+        return samples.map(select_choice, num_proc)
 
     def generate(self, samples: Dataset) -> Dataset:
-        samples = samples.map(self._generate, num_proc=self.num_procs)
-        return samples
+        return self._map_select_choice(
+            samples,
+            self.choice_map,
+            self.choice_col,
+            self.output_col,
+            self.num_procs,
+        )
 
 
 class CombineColumnsBlock(Block):
@@ -63,12 +78,16 @@ class CombineColumnsBlock(Block):
         self.separator = separator
         self.num_procs = batch_kwargs.get("num_procs", 8)
 
-    def _generate(self, sample) -> dict:
-        sample[self.output_col] = self.separator.join(
-            [sample[col] for col in self.columns]
-        )
-        return sample
+    # Using a static method to avoid serializing self when using multiprocessing
+    @staticmethod
+    def _map_combine(samples, columns, output_col, separator, num_proc=1):
+        def combine(sample):
+            sample[output_col] = separator.join([sample[col] for col in columns])
+            return sample
+
+        return samples.map(combine, num_proc=num_proc)
 
     def generate(self, samples: Dataset) -> Dataset:
-        samples = samples.map(self._generate, num_proc=self.num_procs)
-        return samples
+        return self._map_combine(
+            samples, self.columns, self.output_col, self.separator, self.num_procs
+        )
