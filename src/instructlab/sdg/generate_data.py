@@ -11,7 +11,6 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from datasets import Dataset
-import httpx
 import openai
 
 # First Party
@@ -221,8 +220,7 @@ def _sdg_init(pipeline, client, model_family, model_name, num_instructions_to_ge
 # pylint: disable=unused-argument
 def generate_data(
     logger,
-    api_base,
-    api_key: Optional[str] = None,
+    openai_client: openai.OpenAI,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
     # TODO - not used -- when batching is enabled, this is relevant.
@@ -240,10 +238,6 @@ def generate_data(
     yaml_rules: Optional[str] = None,
     chunk_word_count=None,
     server_ctx_size=None,
-    tls_insecure=False,
-    tls_client_cert: Optional[str] = None,
-    tls_client_key: Optional[str] = None,
-    tls_client_passwd: Optional[str] = None,
     # TODO need to update the CLI to specify which pipeline to use (simple or full at the moment)
     pipeline: Optional[str] = "simple",
 ):
@@ -273,15 +267,6 @@ def generate_data(
 
     logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
 
-    orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
-    cert = tuple(item for item in orig_cert if item)
-    verify = not tls_insecure
-    client = openai.OpenAI(
-        base_url=api_base,
-        api_key=api_key,
-        http_client=httpx.Client(cert=cert, verify=verify),
-    )
-
     if models.get_model_family(model_family, model_name) == "mixtral":
         model_family = MODEL_FAMILY_MIXTRAL
     else:
@@ -292,7 +277,7 @@ def generate_data(
 
     sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
         pipeline,
-        client,
+        openai_client,
         model_family,
         model_name,
         num_instructions_to_generate,
