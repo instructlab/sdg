@@ -261,7 +261,7 @@ def generate_data(
 
     name = Path(model_name).stem  # Just in case it is a file path
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
-    output_file_messages = f"messages_{name}_{date_suffix}.json"
+    output_file_messages = f"messages_{name}_{date_suffix}.jsonl"
     output_file_test = f"test_{name}_{date_suffix}.jsonl"
     # train data in messages format that will be mixed and split up into train test eventually
     output_file_train = f"train_{name}_{date_suffix}.jsonl"
