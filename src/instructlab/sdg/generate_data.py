@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 import json
+import logging
 import os
 import time
 
@@ -34,6 +35,8 @@ from instructlab.sdg.utils.taxonomy import (
     read_taxonomy_leaf_nodes,
 )
 
+logger = logging.getLogger(__name__)
+
 _SYS_PROMPT = "You are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior."
 
 
@@ -46,7 +49,7 @@ def _unescape(s):
 # API calls. All of this is because the smallest models we use on small environments
 # for testing and demos weren't good enough to follow the strict formatting instructions used
 # in the full pipeline.
-def _get_question(logger, synth_example):
+def _get_question(synth_example):
     if "question" in synth_example:
         return synth_example["question"]
 
@@ -62,7 +65,7 @@ def _get_question(logger, synth_example):
 
 
 # This is also a hack. See the comment above _get_question.
-def _get_response(logger, synth_example):
+def _get_response(synth_example):
     if "response" in synth_example:
         return synth_example["response"]
 
@@ -104,19 +107,17 @@ def _convert_to_messages(sample):
     return sample
 
 
-def _gen_train_data(
-    logger, machine_instruction_data, output_file_train, output_file_messages
-):
+def _gen_train_data(machine_instruction_data, output_file_train, output_file_messages):
     train_data = []
     messages_data = []
 
     for output_dataset in machine_instruction_data:
         for synth_example in output_dataset:
             logger.debug(synth_example)
-            user = _get_question(logger, synth_example)
+            user = _get_question(synth_example)
             if len(synth_example.get("context", "")) > 0:
                 user += "\n" + synth_example["context"]
-            assistant = _unescape(_get_response(logger, synth_example))
+            assistant = _unescape(_get_response(synth_example))
             train_entry = {
                 "system": _SYS_PROMPT,
                 "user": _unescape(user),
@@ -216,10 +217,64 @@ def _sdg_init(pipeline, client, model_family, model_name, num_instructions_to_ge
     return sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill
 
 
-# TODO - parameter removal needs to be done in sync with a CLI change.
-# pylint: disable=unused-argument
+# backwards compatible version
 def generate_data(
-    logger,
+    logger,  # pylint: disable=unused-argument
+    api_base,
+    api_key: Optional[str] = None,
+    model_family: Optional[str] = None,
+    model_name: Optional[str] = None,
+    # TODO - not used -- when batching is enabled, this is relevant.
+    # Right now the code hard codes 8 cpus for batching
+    num_cpus: Optional[int] = None,
+    num_instructions_to_generate: Optional[int] = 30,
+    taxonomy: Optional[str] = None,
+    taxonomy_base: Optional[str] = None,
+    output_dir: Optional[str] = None,
+    # TODO - not used and should be removed from the CLI
+    prompt_file_path: Optional[str] = None,
+    # TODO - probably should be removed
+    rouge_threshold: Optional[float] = None,
+    console_output=True,
+    yaml_rules: Optional[str] = None,
+    chunk_word_count=None,
+    server_ctx_size=None,
+    tls_insecure=False,
+    tls_client_cert: Optional[str] = None,
+    tls_client_key: Optional[str] = None,
+    tls_client_passwd: Optional[str] = None,
+    # TODO need to update the CLI to specify which pipeline to use (simple or full at the moment)
+    pipeline: Optional[str] = "simple",
+):
+    orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
+    cert = tuple(item for item in orig_cert if item)
+    verify = not tls_insecure
+    client = openai.OpenAI(
+        base_url=api_base,
+        api_key=api_key,
+        http_client=httpx.Client(cert=cert, verify=verify),
+    )
+    return generate_data_client(
+        openai_client=client,
+        model_family=model_family,
+        model_name=model_name,
+        num_cpus=num_cpus,
+        num_instructions_to_generate=num_instructions_to_generate,
+        taxonomy=taxonomy,
+        taxonomy_base=taxonomy_base,
+        output_dir=output_dir,
+        prompt_file_path=prompt_file_path,
+        rouge_threshold=rouge_threshold,
+        console_output=console_output,
+        yaml_rules=yaml_rules,
+        chunk_word_count=chunk_word_count,
+        server_ctx_size=server_ctx_size,
+        pipeline=pipeline,
+    )
+
+
+def generate_data_with_client(
+    *,
     openai_client: openai.OpenAI,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
@@ -302,23 +357,22 @@ def generate_data(
         else:
             sdg = sdg_freeform_skill
 
-        logger.debug("Samples: %s" % samples)
+        logger.debug("Samples: %s", samples)
         ds = Dataset.from_list(samples)
-        logger.debug("Dataset: %s" % ds)
+        logger.debug("Dataset: %s", ds)
         new_generated_data = sdg.generate(ds)
         generated_data = (
             [new_generated_data]
             if generated_data is None
             else generated_data + [new_generated_data]
         )
-        logger.info("Generated %d samples" % len(generated_data))
-        logger.debug("Generated data: %s" % generated_data)
+        logger.info("Generated %d samples", len(generated_data))
+        logger.debug("Generated data: %s", generated_data)
 
     if generated_data is None:
         generated_data = []
 
     _gen_train_data(
-        logger,
         generated_data,
         os.path.join(output_dir, output_file_train),
         os.path.join(output_dir, output_file_messages),
