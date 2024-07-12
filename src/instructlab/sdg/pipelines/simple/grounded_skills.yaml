@@ -3,7 +3,7 @@ blocks:
   - name: gen_skill_grounded
     type: LLMBlock
     config:
-      config_path: configs/skills/simple_generate_qa_grounded.yaml
+      config_path: ../../configs/skills/simple_generate_qa_grounded.yaml
       output_cols:
         - output
     gen_kwargs:

@@ -3,7 +3,7 @@ blocks:
   - name: gen_questions
     type: LLMBlock
     config:
-      config_path: configs/skills/freeform_questions.yaml
+      config_path: ../../configs/skills/freeform_questions.yaml
       output_cols:
         - question
       batch_kwargs:
@@ -13,7 +13,7 @@ blocks:
   - name: eval_questions
     type: LLMBlock
     config:
-      config_path: configs/skills/evaluate_freeform_questions.yaml
+      config_path: ../../configs/skills/evaluate_freeform_questions.yaml
       output_cols:
         - evaluation
         - score
@@ -31,13 +31,13 @@ blocks:
   - name: gen_responses
     type: LLMBlock
     config:
-      config_path: configs/skills/freeform_responses.yaml
+      config_path: ../../configs/skills/freeform_responses.yaml
       output_cols:
         - response
   - name: evaluate_qa_pair
     type: LLMBlock
     config:
-      config_path: configs/skills/evaluate_freeform_pair.yaml
+      config_path: ../../configs/skills/evaluate_freeform_pair.yaml
       output_cols:
         - evaluation
         - score

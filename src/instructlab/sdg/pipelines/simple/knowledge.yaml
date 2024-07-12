@@ -3,7 +3,7 @@ blocks:
   - name: gen_knowledge
     type: LLMBlock
     config:
-      config_path: configs/knowledge/simple_generate_qa.yaml
+      config_path: ../../configs/knowledge/simple_generate_qa.yaml
       output_cols:
       - output
     gen_kwargs:

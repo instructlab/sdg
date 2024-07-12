@@ -56,13 +56,14 @@ class LLMBlock(Block):
     def __init__(
         self,
         ctx,
+        pipe,
         block_name,
         config_path,
         output_cols,
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
-        super().__init__(ctx, block_name)
+        super().__init__(ctx, pipe, block_name)
         self.block_config = self._load_config(config_path)
         self.prompt_struct = (
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
@@ -215,6 +216,7 @@ class ConditionalLLMBlock(LLMBlock):
     def __init__(
         self,
         ctx,
+        pipe,
         block_name,
         config_paths,
         output_cols,
@@ -224,6 +226,7 @@ class ConditionalLLMBlock(LLMBlock):
     ) -> None:
         super().__init__(
             ctx,
+            pipe,
             block_name,
             config_paths[0][0],
             output_cols,

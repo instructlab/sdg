@@ -10,8 +10,10 @@ logger = setup_logger(__name__)
 
 
 class SamplePopulatorBlock(Block):
-    def __init__(self, ctx, block_name, config_paths, column_name, post_fix="") -> None:
-        super().__init__(ctx, block_name)
+    def __init__(
+        self, ctx, pipe, block_name, config_paths, column_name, post_fix=""
+    ) -> None:
+        super().__init__(ctx, pipe, block_name)
         self.configs = {}
         for config in config_paths:
             if post_fix:
@@ -37,8 +39,10 @@ class SamplePopulatorBlock(Block):
 
 
 class SelectorBlock(Block):
-    def __init__(self, ctx, block_name, choice_map, choice_col, output_col) -> None:
-        super().__init__(ctx, block_name)
+    def __init__(
+        self, ctx, pipe, block_name, choice_map, choice_col, output_col
+    ) -> None:
+        super().__init__(ctx, pipe, block_name)
         self.choice_map = choice_map
         self.choice_col = choice_col
         self.output_col = output_col
@@ -63,8 +67,10 @@ class SelectorBlock(Block):
 
 
 class CombineColumnsBlock(Block):
-    def __init__(self, ctx, block_name, columns, output_col, separator="\n\n") -> None:
-        super().__init__(ctx, block_name)
+    def __init__(
+        self, ctx, pipe, block_name, columns, output_col, separator="\n\n"
+    ) -> None:
+        super().__init__(ctx, pipe, block_name)
         self.columns = columns
         self.output_col = output_col
         self.separator = separator

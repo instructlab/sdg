@@ -3,7 +3,7 @@ blocks:
   - name: gen_skill_freeform
     type: LLMBlock
     config:
-      config_path: configs/skills/simple_generate_qa_freeform.yaml
+      config_path: ../../configs/skills/simple_generate_qa_freeform.yaml
       output_cols:
         - output
     gen_kwargs:

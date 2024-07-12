@@ -3,7 +3,7 @@ blocks:
   - name: gen_contexts
     type: LLMBlock
     config:
-      config_path: configs/skills/contexts.yaml
+      config_path: ../../configs/skills/contexts.yaml
       output_cols:
         - context
     gen_kwargs:
@@ -15,7 +15,7 @@ blocks:
   - name: gen_grounded_questions
     type: LLMBlock
     config:
-      config_path: configs/skills/grounded_questions.yaml
+      config_path: ../../configs/skills/grounded_questions.yaml
       output_cols:
         - question
       batch_kwargs:
@@ -25,7 +25,7 @@ blocks:
   - name: eval_grounded_questions
     type: LLMBlock
     config:
-      config_path: configs/skills/evaluate_grounded_questions.yaml
+      config_path: ../../configs/skills/evaluate_grounded_questions.yaml
       output_cols:
         - evaluation
         - score
@@ -43,13 +43,13 @@ blocks:
   - name: gen_grounded_responses
     type: LLMBlock
     config:
-      config_path: configs/skills/grounded_responses.yaml
+      config_path: ../../configs/skills/grounded_responses.yaml
       output_cols:
         - response
   - name: evaluate_grounded_qa_pair
     type: LLMBlock
     config:
-      config_path: configs/skills/evaluate_grounded_pair.yaml
+      config_path: ../../configs/skills/evaluate_grounded_pair.yaml
       output_cols:
         - evaluation
         - score

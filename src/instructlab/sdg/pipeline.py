@@ -22,27 +22,28 @@ class PipelineContext:
         self.model_family = model_family
         self.model_id = model_id
         self.num_instructions_to_generate = num_instructions_to_generate
-        self.sdg_base = resources.files(__package__)
         # FIXME: base this on the available number of CPUs
         self.num_procs = 8
 
 
 class Pipeline:
-    def __init__(self, ctx, chained_blocks: list) -> None:
+    def __init__(self, ctx, config_path, chained_blocks: list) -> None:
         """
         Initialize the Pipeline class with a configuration dictionary.
         config_dict: the run config py or yaml loaded into a dictionary
         """
         # ctx is a PipelineContext object that supplies context configuration to every block
         self.ctx = ctx
+        # config_path is the path of the pipeline config file used to create this pipeline
+        self.config_path = config_path
         # pipeline config is the run configuration that consists of the pipeline steps
         self.chained_blocks = chained_blocks
 
     @classmethod
     def from_file(cls, ctx, pipeline_yaml):
         if not os.path.isabs(pipeline_yaml):
-            pipeline_yaml = os.path.join(ctx.sdg_base, pipeline_yaml)
-        return cls(ctx, _parse_pipeline_config_file(pipeline_yaml))
+            pipeline_yaml = os.path.join(resources.files(__package__), pipeline_yaml)
+        return cls(ctx, pipeline_yaml, _parse_pipeline_config_file(pipeline_yaml))
 
     def _drop_duplicates(self, dataset, cols):
         """
@@ -64,7 +65,7 @@ class Pipeline:
             drop_columns = block_prop.get("drop_columns", [])
             gen_kwargs = block_prop.get("gen_kwargs", {})
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
-            block = block_type(self.ctx, block_name, **block_config)
+            block = block_type(self.ctx, self, block_name, **block_config)
 
             logger.info("Running block: %s", block_name)
             logger.info(dataset)

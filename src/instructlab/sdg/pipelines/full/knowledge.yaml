@@ -3,7 +3,7 @@ blocks:
   - name: gen_mmlu_knowledge
     type: LLMBlock
     config:
-      config_path: configs/knowledge/mcq_generation.yaml
+      config_path: ../../configs/knowledge/mcq_generation.yaml
       output_cols:
         - mmlubench_question
         - mmlubench_answer
@@ -15,7 +15,7 @@ blocks:
   - name: gen_knowledge
     type: LLMBlock
     config:
-      config_path: configs/knowledge/generate_questions_responses.yaml
+      config_path: ../../configs/knowledge/generate_questions_responses.yaml
       output_cols:
         - question
         - response
@@ -31,7 +31,7 @@ blocks:
   - name: eval_faithfulness_qa_pair
     type: LLMBlock
     config:
-      config_path: configs/knowledge/evaluate_faithfulness.yaml
+      config_path: ../../configs/knowledge/evaluate_faithfulness.yaml
       output_cols:
         - explanation
         - judgment
@@ -49,7 +49,7 @@ blocks:
   - name: eval_relevancy_qa_pair
     type: LLMBlock
     config:
-      config_path: configs/knowledge/evaluate_relevancy.yaml
+      config_path: ../../configs/knowledge/evaluate_relevancy.yaml
       output_cols:
         - feedback
         - score
@@ -68,7 +68,7 @@ blocks:
   - name: eval_verify_question
     type: LLMBlock
     config:
-      config_path: configs/knowledge/evaluate_question.yaml
+      config_path: ../../configs/knowledge/evaluate_question.yaml
       output_cols:
         - explanation
         - rating

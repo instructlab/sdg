@@ -16,10 +16,11 @@ class TestImportBlockWithMockPipeline(unittest.TestCase):
     @patch("instructlab.sdg.pipeline.Pipeline")
     def setUp(self, mock_pipeline):
         self.ctx = MagicMock()
+        self.pipe = MagicMock()
         self.block_name = "test_block"
         self.path = "/path/to/config"
         self.mock_pipeline = mock_pipeline
-        self.import_block = ImportBlock(self.ctx, self.block_name, self.path)
+        self.import_block = ImportBlock(self.ctx, self.pipe, self.block_name, self.path)
         self.dataset = Dataset.from_dict({})
 
     def test_initialization(self):

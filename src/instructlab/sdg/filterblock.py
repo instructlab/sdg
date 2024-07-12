@@ -77,6 +77,7 @@ class FilterByValueBlock(Block):
     def __init__(
         self,
         ctx,
+        pipe,
         block_name,
         filter_column,
         filter_value,
@@ -88,6 +89,7 @@ class FilterByValueBlock(Block):
 
         Parameters:
         - ctx (PipelineContext): A PipelineContext object containing runtime parameters.
+        - pipe (Pipeline): The Pipeline containing this block in its chain.
         - block_name (str): An identifier for this block.
         - filter_column (str): The name of the column in the dataset to apply the filter on.
         - filter_value (any or list of any): The value(s) to filter by.
@@ -147,7 +149,7 @@ class FilterByValueBlock(Block):
             - This block will filter the dataset to only include rows where the
               "full_name" column contains the substring "John" or "Jane".
         """
-        super().__init__(ctx, block_name)
+        super().__init__(ctx, pipe, block_name)
         self.value = filter_value if isinstance(filter_value, list) else [filter_value]
         self.column_name = filter_column
         self.operation = _get_operator_func(operation)

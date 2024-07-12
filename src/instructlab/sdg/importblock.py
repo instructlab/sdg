@@ -14,6 +14,7 @@ class ImportBlock(Block):
     def __init__(
         self,
         ctx,
+        pipe,
         block_name,
         path,
     ) -> None:
@@ -22,10 +23,11 @@ class ImportBlock(Block):
 
         Parameters:
         - ctx (PipelineContext): A PipelineContext object containing runtime parameters.
+        - pipe (Pipeline): The Pipeline containing this block in its chain.
         - block_name (str): An identifier for this block.
         - path (str): A path (absolute, or relative to the instructlab.sdg package) to a pipeline config file.
         """
-        super().__init__(ctx, block_name)
+        super().__init__(ctx, pipe, block_name)
         self.path = path
         self.pipeline = pipeline.Pipeline.from_file(self.ctx, self.path)
 

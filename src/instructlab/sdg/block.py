@@ -15,8 +15,9 @@ logger = setup_logger(__name__)
 
 
 class Block(ABC):
-    def __init__(self, ctx, block_name: str) -> None:
+    def __init__(self, ctx, pipe, block_name: str) -> None:
         self.ctx = ctx
+        self.pipe = pipe
         self.block_name = block_name
 
     @staticmethod
@@ -50,6 +51,8 @@ class Block(ABC):
         :return: The loaded configuration.
         """
         if not os.path.isabs(config_path):
-            config_path = os.path.join(self.ctx.sdg_base, config_path)
+            config_path = os.path.join(
+                os.path.dirname(self.pipe.config_path), config_path
+            )
         with open(config_path, "r", encoding="utf-8") as config_file:
             return yaml.safe_load(config_file)
