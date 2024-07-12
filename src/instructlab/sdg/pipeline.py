@@ -58,9 +58,9 @@ class Pipeline:
         dataset: the input dataset
         """
         for block_prop in self.chained_blocks:
-            block_name = block_prop["block_name"]
-            block_type = _lookup_block_type(block_prop["block_type"])
-            block_config = block_prop["block_config"]
+            block_name = block_prop["name"]
+            block_type = _lookup_block_type(block_prop["type"])
+            block_config = block_prop["config"]
             drop_columns = block_prop.get("drop_columns", [])
             gen_kwargs = block_prop.get("gen_kwargs", {})
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
