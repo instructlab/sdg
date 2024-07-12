@@ -78,6 +78,7 @@ class LLMBlock(Block):
             "model": self.ctx.model_id,
             "temperature": 0,
             "max_tokens": 12000,
+            "n": self.ctx.num_instructions_to_generate,
         }
 
         # Whether the LLM server supports a list of input prompts
