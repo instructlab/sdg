@@ -61,7 +61,7 @@ class LLMBlock(Block):
         output_cols,
         add_num_samples=False,
         parser_kwargs={},
-        **batch_kwargs,
+        batch_kwargs={},
     ) -> None:
         super().__init__(ctx, block_name)
         self.block_config = self._load_config(config_path)
@@ -72,7 +72,7 @@ class LLMBlock(Block):
         self.model_prompt = _get_model_prompt(self.ctx.model_family)
         self.add_num_samples = add_num_samples
         self.output_cols = output_cols
-        self.batch_params = batch_kwargs.get("batch_kwargs", {})
+        self.batch_params = batch_kwargs
         self.parser_name = parser_kwargs.get("parser_name", None)
         self.parsing_pattern = parser_kwargs.get("parsing_pattern", None)
         self.parser_cleanup_tags = parser_kwargs.get("parser_cleanup_tags", None)
@@ -216,7 +216,7 @@ class ConditionalLLMBlock(LLMBlock):
         selector_column_name,
         add_num_samples=False,
         parser_kwargs={},
-        **batch_kwargs,
+        batch_kwargs={},
     ) -> None:
         super().__init__(
             ctx,
@@ -225,7 +225,7 @@ class ConditionalLLMBlock(LLMBlock):
             output_cols,
             add_num_samples=add_num_samples,
             parser_kwargs=parser_kwargs,
-            **batch_kwargs,
+            batch_kwargs=batch_kwargs,
         )
         self.selector_column_name = selector_column_name
         self.prompt_template = {}
