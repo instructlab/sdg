@@ -121,12 +121,12 @@ def _parse_pipeline_config_file(pipeline_yaml):
             "The pipeline config file may have new features that will be ignored."
         )
 
-    if not "block_configs" in content:
+    if not "blocks" in content:
         raise PipelineConfigParserError(
-            "The pipeline config file contains no 'block_configs' section"
+            "The pipeline config file contains no 'blocks' section"
         )
 
-    return content["block_configs"]
+    return content["blocks"]
 
 
 SIMPLE_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.simple"
