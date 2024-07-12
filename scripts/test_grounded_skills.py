@@ -5,7 +5,7 @@ from openai import OpenAI
 # First Party
 from src.instructlab.sdg import SDG
 from src.instructlab.sdg.pipeline import (
-    SYNTH_GROUNDED_SKILLS_FLOW,
+    SYNTH_GROUNDED_SKILLS_FILE,
     Pipeline,
     PipelineContext,
 )
@@ -102,7 +102,7 @@ ds = Dataset.from_list(samples)
 
 ctx = PipelineContext(client, "mixtral", teacher_model, 10)
 
-skills_pipe = Pipeline.from_flows(ctx, [SYNTH_GROUNDED_SKILLS_FLOW])
+skills_pipe = Pipeline.from_file(ctx, SYNTH_GROUNDED_SKILLS_FILE)
 
 sdg = SDG([skills_pipe])
 gen_data = sdg.generate(ds)

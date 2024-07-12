@@ -39,13 +39,10 @@ class Pipeline:
         self.chained_blocks = chained_blocks
 
     @classmethod
-    def from_flows(cls, ctx, flows):
-        block_configs = []
-        for flow_path in flows:
-            if not os.path.isabs(flow_path):
-                flow_path = os.path.join(ctx.sdg_base, flow_path)
-            block_configs.extend(parse_flow_config_file(flow_path))
-        return cls(ctx, block_configs)
+    def from_file(cls, ctx, pipeline_yaml):
+        if not os.path.isabs(pipeline_yaml):
+            pipeline_yaml = os.path.join(ctx.sdg_base, pipeline_yaml)
+        return cls(ctx, _parse_pipeline_config_file(pipeline_yaml))
 
     def _drop_duplicates(self, dataset, cols):
         """
@@ -95,45 +92,45 @@ _block_types = {
 
 def _lookup_block_type(block_type):
     if not block_type in _block_types:
-        raise FlowParserError("Unknown block type {block_type}")
+        raise PipelineConfigParserError("Unknown block type {block_type}")
     return _block_types[block_type]
 
 
-_FLOW_PARSER_MAJOR = 1
-_FLOW_PARSER_MINOR = 0
+_PIPELINE_CONFIG_PARSER_MAJOR = 1
+_PIPELINE_CONFIG_PARSER_MINOR = 0
 
 
-class FlowParserError(Exception):
-    """An exception raised while parsing a flow config file."""
+class PipelineConfigParserError(Exception):
+    """An exception raised while parsing a pipline config file."""
 
 
-def parse_flow_config_file(flow_path):
-    with open(flow_path, "r", encoding="utf-8") as flow_file:
-        content = yaml.safe_load(flow_file)
+def _parse_pipeline_config_file(pipeline_yaml):
+    with open(pipeline_yaml, "r", encoding="utf-8") as pipeline_file:
+        content = yaml.safe_load(pipeline_file)
 
     version = content["version"]
     major, minor = map(int, version.split("."))
 
-    if major > _FLOW_PARSER_MAJOR:
-        raise FlowParserError(
-            "The custom flow file format is from a future major version."
+    if major > _PIPELINE_CONFIG_PARSER_MAJOR:
+        raise PipelineConfigParserError(
+            "The pipeline config file format is from a future major version."
         )
-    if major <= _FLOW_PARSER_MAJOR and minor > _FLOW_PARSER_MINOR:
+    if major <= _PIPELINE_CONFIG_PARSER_MAJOR and minor > _PIPELINE_CONFIG_PARSER_MINOR:
         logger.warning(
-            "The custom flow file may have new features that will be ignored."
+            "The pipeline config file may have new features that will be ignored."
         )
 
     if not "block_configs" in content:
-        raise FlowParserError(
-            "The custom flow file contains no 'block_configs' section"
+        raise PipelineConfigParserError(
+            "The pipeline config file contains no 'block_configs' section"
         )
 
     return content["block_configs"]
 
 
-SIMPLE_FREEFORM_SKILLS_FLOW = "flows/simple_freeform_skills.yaml"
-SIMPLE_GROUNDED_SKILLS_FLOW = "flows/simple_grounded_skills.yaml"
-SIMPLE_KNOWLEDGE_FLOW = "flows/simple_knowledge.yaml"
-SYNTH_FREEFORM_SKILLS_FLOW = "flows/synth_freeform_skills.yaml"
-SYNTH_GROUNDED_SKILLS_FLOW = "flows/synth_grounded_skills.yaml"
-SYNTH_KNOWLEDGE_FLOW = "flows/synth_knowledge.yaml"
+SIMPLE_FREEFORM_SKILLS_FILE = "flows/simple_freeform_skills.yaml"
+SIMPLE_GROUNDED_SKILLS_FILE = "flows/simple_grounded_skills.yaml"
+SIMPLE_KNOWLEDGE_FILE = "flows/simple_knowledge.yaml"
+SYNTH_FREEFORM_SKILLS_FILE = "flows/synth_freeform_skills.yaml"
+SYNTH_GROUNDED_SKILLS_FILE = "flows/synth_grounded_skills.yaml"
+SYNTH_KNOWLEDGE_FILE = "flows/synth_knowledge.yaml"
