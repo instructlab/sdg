@@ -14,6 +14,10 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+class EmptyDatasetError(Exception):
+    pass
+
+
 class PipelineContext:
     def __init__(
         self, client, model_family, model_id, num_instructions_to_generate
@@ -71,6 +75,12 @@ class Pipeline:
             logger.info(dataset)
 
             dataset = block.generate(dataset, **gen_kwargs)
+
+            # If at any point we end up with an empty data set, the pipeline has failed
+            if len(dataset) == 0:
+                raise EmptyDatasetError(
+                    f"Pipeline stopped: Empty dataset after running block: {block_name}"
+                )
 
             drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
             if drop_columns:
