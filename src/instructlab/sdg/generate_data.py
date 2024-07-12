@@ -19,12 +19,12 @@ import openai
 from instructlab.sdg import SDG, utils
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
+    FULL_FREEFORM_SKILLS_FILE,
+    FULL_GROUNDED_SKILLS_FILE,
+    FULL_KNOWLEDGE_FILE,
     SIMPLE_FREEFORM_SKILLS_FILE,
     SIMPLE_GROUNDED_SKILLS_FILE,
     SIMPLE_KNOWLEDGE_FILE,
-    SYNTH_FREEFORM_SKILLS_FILE,
-    SYNTH_GROUNDED_SKILLS_FILE,
-    SYNTH_KNOWLEDGE_FILE,
     Pipeline,
     PipelineContext,
 )
@@ -172,9 +172,9 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
     freeform_skills_yaml = None
     grounded_skills_yaml = None
     if pipeline == "full":
-        knowledge_yaml = SYNTH_KNOWLEDGE_FILE
-        freeform_skills_yaml = SYNTH_FREEFORM_SKILLS_FILE
-        grounded_skills_yaml = SYNTH_GROUNDED_SKILLS_FILE
+        knowledge_yaml = FULL_KNOWLEDGE_FILE
+        freeform_skills_yaml = FULL_FREEFORM_SKILLS_FILE
+        grounded_skills_yaml = FULL_GROUNDED_SKILLS_FILE
     elif pipeline == "simple":
         knowledge_yaml = SIMPLE_KNOWLEDGE_FILE
         freeform_skills_yaml = SIMPLE_FREEFORM_SKILLS_FILE
