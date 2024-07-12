@@ -44,7 +44,7 @@ class LLMBlock(Block):
         self.defaults = {
             "model": self.model,
             "temperature": 0,
-            "max_tokens": 12000,
+            "max_tokens": 4096,
         }
 
     def _parse(self, generated_string) -> dict:
