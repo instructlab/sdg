@@ -8,7 +8,7 @@ from datasets import Dataset
 import yaml
 
 # Local
-from . import filterblock, llmblock, utilblocks
+from . import filterblock, importblock, llmblock, utilblocks
 from .logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -85,6 +85,7 @@ _block_types = {
     "CombineColumnsBlock": utilblocks.CombineColumnsBlock,
     "ConditionalLLMBlock": llmblock.ConditionalLLMBlock,
     "FilterByValueBlock": filterblock.FilterByValueBlock,
+    "ImportBlock": importblock.ImportBlock,
     "LLMBlock": llmblock.LLMBlock,
     "SamplePopulatorBlock": utilblocks.SamplePopulatorBlock,
     "SelectorBlock": utilblocks.SelectorBlock,
