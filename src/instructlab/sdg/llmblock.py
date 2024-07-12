@@ -59,8 +59,8 @@ class LLMBlock(Block):
         block_name,
         config_path,
         output_cols,
-        add_num_samples=False,
         parser_kwargs={},
+        batch_kwargs={},
     ) -> None:
         super().__init__(ctx, block_name)
         self.block_config = self._load_config(config_path)
@@ -69,8 +69,8 @@ class LLMBlock(Block):
         )
         self.prompt_template = self.prompt_struct.format(**self.block_config)
         self.model_prompt = _get_model_prompt(self.ctx.model_family)
-        self.add_num_samples = add_num_samples
         self.output_cols = output_cols
+        self.batch_params = batch_kwargs
         self.parser_name = parser_kwargs.get("parser_name", None)
         self.parsing_pattern = parser_kwargs.get("parsing_pattern", None)
         self.parser_cleanup_tags = parser_kwargs.get("parser_cleanup_tags", None)
@@ -164,12 +164,11 @@ class LLMBlock(Block):
 
         :return: The parsed output after generation.
         """
+        num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
 
-        if self.add_num_samples and ("num_samples" not in samples.column_names):
-            samples = samples.add_column(
-                "num_samples", [self.ctx.num_instructions_to_generate] * len(samples)
-            )
+        if (num_samples is not None) and ("num_samples" not in samples.column_names):
+            samples = samples.add_column("num_samples", [num_samples] * len(samples))
 
         # validate each sample
         # Log errors and remove invalid samples
@@ -220,16 +219,16 @@ class ConditionalLLMBlock(LLMBlock):
         config_paths,
         output_cols,
         selector_column_name,
-        add_num_samples=False,
         parser_kwargs={},
+        batch_kwargs={},
     ) -> None:
         super().__init__(
             ctx,
             block_name,
             config_paths[0][0],
             output_cols,
-            add_num_samples=add_num_samples,
             parser_kwargs=parser_kwargs,
+            batch_kwargs=batch_kwargs,
         )
         self.selector_column_name = selector_column_name
         self.prompt_template = {}

@@ -16,9 +16,10 @@ blocks:
     type: LLMBlock
     config:
       config_path: configs/skills/grounded_questions.yaml
-      add_num_samples: True
       output_cols:
         - question
+      batch_kwargs:
+        num_samples: 3
     drop_duplicates:
       - question
   - name: eval_grounded_questions
