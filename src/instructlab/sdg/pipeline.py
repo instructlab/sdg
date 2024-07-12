@@ -129,9 +129,5 @@ def _parse_pipeline_config_file(pipeline_yaml):
     return content["block_configs"]
 
 
-SIMPLE_FREEFORM_SKILLS_FILE = "pipelines/simple/freeform_skills.yaml"
-SIMPLE_GROUNDED_SKILLS_FILE = "pipelines/simple/grounded_skills.yaml"
-SIMPLE_KNOWLEDGE_FILE = "pipelines/simple/knowledge.yaml"
-FULL_FREEFORM_SKILLS_FILE = "pipelines/full/freeform_skills.yaml"
-FULL_GROUNDED_SKILLS_FILE = "piplines/full/synth_grounded_skills.yaml"
-FULL_KNOWLEDGE_FILE = "pipelines/full/synth_knowledge.yaml"
+SIMPLE_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.simple"
+FULL_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.full"

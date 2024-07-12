@@ -2,6 +2,7 @@
 
 # Standard
 from datetime import datetime
+from importlib import resources
 from pathlib import Path
 from typing import Optional
 import json
@@ -19,12 +20,8 @@ import openai
 from instructlab.sdg import SDG, utils
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
-    FULL_FREEFORM_SKILLS_FILE,
-    FULL_GROUNDED_SKILLS_FILE,
-    FULL_KNOWLEDGE_FILE,
-    SIMPLE_FREEFORM_SKILLS_FILE,
-    SIMPLE_GROUNDED_SKILLS_FILE,
-    SIMPLE_KNOWLEDGE_FILE,
+    FULL_PIPELINES_PACKAGE,
+    SIMPLE_PIPELINES_PACKAGE,
     Pipeline,
     PipelineContext,
 )
@@ -168,26 +165,23 @@ def _gen_test_data(
 
 
 def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_generate):
-    knowledge_yaml = None
-    freeform_skills_yaml = None
-    grounded_skills_yaml = None
     if pipeline == "full":
-        knowledge_yaml = FULL_KNOWLEDGE_FILE
-        freeform_skills_yaml = FULL_FREEFORM_SKILLS_FILE
-        grounded_skills_yaml = FULL_GROUNDED_SKILLS_FILE
+        pipeline_pkg = FULL_PIPELINES_PACKAGE
     elif pipeline == "simple":
-        knowledge_yaml = SIMPLE_KNOWLEDGE_FILE
-        freeform_skills_yaml = SIMPLE_FREEFORM_SKILLS_FILE
-        grounded_skills_yaml = SIMPLE_GROUNDED_SKILLS_FILE
+        pipeline_pkg = SIMPLE_PIPELINES_PACKAGE
     else:
         raise utils.GenerateException(f"Error: pipeline ({pipeline}) is not supported.")
 
     ctx = PipelineContext(client, model_family, model_id, num_instructions_to_generate)
 
+    def load_pipeline(yaml_basename):
+        with resources.path(pipeline_pkg, yaml_basename) as yaml_path:
+            return Pipeline.from_file(ctx, yaml_path)
+
     return (
-        SDG([Pipeline.from_file(ctx, knowledge_yaml)]),
-        SDG([Pipeline.from_file(ctx, freeform_skills_yaml)]),
-        SDG([Pipeline.from_file(ctx, grounded_skills_yaml)]),
+        SDG([load_pipeline("knowledge.yaml")]),
+        SDG([load_pipeline("freeform_skills.yaml")]),
+        SDG([load_pipeline("grounded_skills.yaml")]),
     )
 
 

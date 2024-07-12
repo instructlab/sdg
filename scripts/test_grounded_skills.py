@@ -1,3 +1,6 @@
+# Standard
+from importlib import resources
+
 # Third Party
 from datasets import Dataset
 from openai import OpenAI
@@ -5,7 +8,7 @@ from openai import OpenAI
 # First Party
 from src.instructlab.sdg import SDG
 from src.instructlab.sdg.pipeline import (
-    FULL_GROUNDED_SKILLS_FILE,
+    FULL_PIPELINES_PACKAGE,
     Pipeline,
     PipelineContext,
 )
@@ -102,7 +105,8 @@ ds = Dataset.from_list(samples)
 
 ctx = PipelineContext(client, "mixtral", teacher_model, 10)
 
-skills_pipe = Pipeline.from_file(ctx, FULL_GROUNDED_SKILLS_FILE)
+with resources.path(FULL_PIPELINES_PACKAGE, "grounded_skills.yaml") as yaml_path:
+    skills_pipe = Pipeline.from_file(ctx, yaml_path)
 
 sdg = SDG([skills_pipe])
 gen_data = sdg.generate(ds)

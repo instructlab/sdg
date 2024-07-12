@@ -1,4 +1,5 @@
 # Standard
+from importlib import resources
 import operator
 
 # Third Party
@@ -7,7 +8,11 @@ from openai import OpenAI
 
 # First Party
 from src.instructlab.sdg import SDG
-from src.instructlab.sdg.pipeline import FULL_KNOWLEDGE_FILE, Pipeline, PipelineContext
+from src.instructlab.sdg.pipeline import (
+    FULL_PIPELINES_PACKAGE,
+    Pipeline,
+    PipelineContext,
+)
 
 # Please don't add you vLLM endpoint key here
 openai_api_key = "EMPTY"
@@ -39,7 +44,8 @@ ds = Dataset.from_list(samples)
 
 ctx = PipelineContext(client, "mixtral", teacher_model, 1)
 
-knowledge_pipe = Pipeline.from_file(ctx, FULL_KNOWLEDGE_FILE)
+with resources.path(FULL_PIPELINES_PACKAGE, "knowledge.yaml") as yaml_path:
+    knowledge_pipe = Pipeline.from_file(ctx, yaml_path)
 
 sdg = SDG([knowledge_pipe])
 mmlubench_data = sdg.generate(ds)
