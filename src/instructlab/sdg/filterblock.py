@@ -91,11 +91,61 @@ class FilterByValueBlock(Block):
         - block_name (str): An identifier for this block.
         - filter_column (str): The name of the column in the dataset to apply the filter on.
         - filter_value (any or list of any): The value(s) to filter by.
-        - operation (callable): A function that takes two arguments (column value and filter value) and returns a boolean indicating whether the row should be included in the filtered dataset.
-        - convert_dtype (callable, optional): A function to convert the data type of the filter column before applying the filter. Defaults to None.
+        - operation (string): The name of a function provided by the "operator"
+          Python package that takes two arguments (column value and filter value)
+          and returns a boolean indicating whether the row should be included in
+          the filtered dataset.
+        - convert_dtype (string, optional): the name of a Python type to convert
+          the column values to. Supported values are "int", "float", and "bool".
+          Defaults to None.
 
         Returns:
         None
+
+        For supported values of `operation`, see the "operator" package
+        documentation: https://docs.python.org/3/library/operator.html
+
+        Only a subset of the "operator" package is relevant. It has to
+        follow the semantics of taking two parameters and returning a boolean.
+        Some operations that work include:
+        - eq: equal to
+        - ne: not equal to
+        - gt: greater than
+        - ge: greater than or equal to
+        - lt: less than
+        - le: less than or equal to
+        - contains: filter_column contains filter_value (only for string columns)
+
+        Note that the sematics of all operations are:
+          - filter_column operation filter_value
+
+        Example: FilterByValueBlock(ctx, "filter_by_age", "age", 30, "eq", "int")
+            - This block will filter the dataset to only include rows where the
+              "age" column is equal to 30.
+
+        The `contains` operator is only supported for string columns. This is
+        useful if you want to ensure that a string column contains a specific
+        substring.
+
+        Example: FilterByValueBlock(ctx, "filter_by_name", "full_name", "John", "contains")
+            - This block will filter the dataset to only include rows where the
+              "full_name" column contains the substring "John".
+
+        `filter_value` does not have to be a single value. It can also be a list of values.
+        In that case, the operation will be applied to each value in the list. The result is
+        considered True if the operation is True for any of the values in the list.
+
+        Example: FilterByValueBlock(ctx, "filter_by_age", "age", [30, 35], "eq", "int")
+            - This block will filter the dataset to only include rows where the
+              "age" column is equal to 30 or 35.
+
+        Example: FilterByValueBlock(ctx, "filter_by_city", "city", ["boston", "charleston", "dublin", "new york"], "eq")
+            - This block will filter the dataset to only include rows where the
+              "city" column is equal to "boston", "charleston", "dublin", or "new york".
+
+        Example: FilterByValueBlock(ctx, "filter_by_name", "full_name", ["John", "Jane"], "contains")
+            - This block will filter the dataset to only include rows where the
+              "full_name" column contains the substring "John" or "Jane".
         """
         super().__init__(ctx, block_name)
         self.value = filter_value if isinstance(filter_value, list) else [filter_value]
