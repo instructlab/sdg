@@ -32,7 +32,11 @@ class TestDefaultPipelineConfigs(unittest.TestCase):
     def setUp(self):
         self._yaml_files = [
             file
-            for file in resources.files("instructlab.sdg.flows").iterdir()
+            for package in [
+                "instructlab.sdg.pipelines.simple",
+                "instructlab.sdg.pipelines.full",
+            ]
+            for file in resources.files(package).iterdir()
             if file.suffix == ".yaml"
         ]
 
