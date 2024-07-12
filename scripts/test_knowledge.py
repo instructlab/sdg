@@ -8,7 +8,7 @@ from openai import OpenAI
 # First Party
 from src.instructlab.sdg import SDG
 from src.instructlab.sdg.pipeline import (
-    SYNTH_KNOWLEDGE_FLOW,
+    SYNTH_KNOWLEDGE_FILE,
     Pipeline,
     PipelineContext,
 )
@@ -43,7 +43,7 @@ ds = Dataset.from_list(samples)
 
 ctx = PipelineContext(client, "mixtral", teacher_model, 1)
 
-knowledge_pipe = Pipeline.from_flows(ctx, [SYNTH_KNOWLEDGE_FLOW])
+knowledge_pipe = Pipeline.from_file(ctx, SYNTH_KNOWLEDGE_FILE)
 
 sdg = SDG([knowledge_pipe])
 mmlubench_data = sdg.generate(ds)

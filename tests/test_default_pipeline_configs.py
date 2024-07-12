@@ -28,7 +28,7 @@ def _noop_generate(self, samples, **gen_kwargs):
 @patch.object(SamplePopulatorBlock, "generate", _noop_generate)
 @patch.object(SelectorBlock, "generate", _noop_generate)
 @patch("instructlab.sdg.llmblock.server_supports_batched", lambda c, m: True)
-class TestDefaultFlows(unittest.TestCase):
+class TestDefaultPipelineConfigs(unittest.TestCase):
     def setUp(self):
         self._yaml_files = [
             file
@@ -36,14 +36,14 @@ class TestDefaultFlows(unittest.TestCase):
             if file.suffix == ".yaml"
         ]
 
-    def test_pipeline_from_flows(self):
+    def test_pipeline_from_config(self):
         ctx = PipelineContext(
             client=None,
             model_family="mixtral",
             model_id="model",
             num_instructions_to_generate=1,
         )
-        for flow_path in self._yaml_files:
-            pipeline = Pipeline.from_flows(ctx, [flow_path])
+        for pipeline_yaml in self._yaml_files:
+            pipeline = Pipeline.from_file(ctx, pipeline_yaml)
             output = pipeline.generate(Dataset.from_list([]))
             self.assertIsNotNone(output)

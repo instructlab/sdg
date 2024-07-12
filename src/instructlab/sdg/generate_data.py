@@ -19,12 +19,12 @@ import openai
 from instructlab.sdg import SDG, utils
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
-    SIMPLE_FREEFORM_SKILLS_FLOW,
-    SIMPLE_GROUNDED_SKILLS_FLOW,
-    SIMPLE_KNOWLEDGE_FLOW,
-    SYNTH_FREEFORM_SKILLS_FLOW,
-    SYNTH_GROUNDED_SKILLS_FLOW,
-    SYNTH_KNOWLEDGE_FLOW,
+    SIMPLE_FREEFORM_SKILLS_FILE,
+    SIMPLE_GROUNDED_SKILLS_FILE,
+    SIMPLE_KNOWLEDGE_FILE,
+    SYNTH_FREEFORM_SKILLS_FILE,
+    SYNTH_GROUNDED_SKILLS_FILE,
+    SYNTH_KNOWLEDGE_FILE,
     Pipeline,
     PipelineContext,
 )
@@ -168,26 +168,26 @@ def _gen_test_data(
 
 
 def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_generate):
-    knowledge_flows = []
-    freeform_skill_flows = []
-    grounded_skill_flows = []
+    knowledge_yaml = None
+    freeform_skills_yaml = None
+    grounded_skills_yaml = None
     if pipeline == "full":
-        knowledge_flows.append(SYNTH_KNOWLEDGE_FLOW)
-        freeform_skill_flows.append(SYNTH_FREEFORM_SKILLS_FLOW)
-        grounded_skill_flows.append(SYNTH_GROUNDED_SKILLS_FLOW)
+        knowledge_yaml = SYNTH_KNOWLEDGE_FILE
+        freeform_skills_yaml = SYNTH_FREEFORM_SKILLS_FILE
+        grounded_skills_yaml = SYNTH_GROUNDED_SKILLS_FILE
     elif pipeline == "simple":
-        knowledge_flows.append(SIMPLE_KNOWLEDGE_FLOW)
-        freeform_skill_flows.append(SIMPLE_FREEFORM_SKILLS_FLOW)
-        grounded_skill_flows.append(SIMPLE_GROUNDED_SKILLS_FLOW)
+        knowledge_yaml = SIMPLE_KNOWLEDGE_FILE
+        freeform_skills_yaml = SIMPLE_FREEFORM_SKILLS_FILE
+        grounded_skills_yaml = SIMPLE_GROUNDED_SKILLS_FILE
     else:
         raise utils.GenerateException(f"Error: pipeline ({pipeline}) is not supported.")
 
     ctx = PipelineContext(client, model_family, model_id, num_instructions_to_generate)
 
     return (
-        SDG([Pipeline.from_flows(ctx, knowledge_flows)]),
-        SDG([Pipeline.from_flows(ctx, freeform_skill_flows)]),
-        SDG([Pipeline.from_flows(ctx, grounded_skill_flows)]),
+        SDG([Pipeline.from_file(ctx, knowledge_yaml)]),
+        SDG([Pipeline.from_file(ctx, freeform_skills_yaml)]),
+        SDG([Pipeline.from_file(ctx, grounded_skills_yaml)]),
     )
 
 
