@@ -1,33 +1,33 @@
 version: "1.0"
 block_configs:
-  - block_name: gen_contexts
-    block_type: LLMBlock
-    block_config:
+  - name: gen_contexts
+    type: LLMBlock
+    config:
       config_path: configs/skills/contexts.yaml
       output_cols:
         - context
     gen_kwargs:
       temperature: 0.7
       max_tokens: 2048
-  - block_name: gen_grounded_questions
-    block_type: LLMBlock
-    block_config:
+  - name: gen_grounded_questions
+    type: LLMBlock
+    config:
       config_path: configs/skills/grounded_questions.yaml
       add_num_samples: True
       output_cols:
         - question
     drop_duplicates:
       - question
-  - block_name: eval_grounded_questions
-    block_type: LLMBlock
-    block_config:
+  - name: eval_grounded_questions
+    type: LLMBlock
+    config:
       config_path: configs/skills/evaluate_grounded_questions.yaml
       output_cols:
         - evaluation
         - score
-  - block_name: filter_grounded_questions
-    block_type: FilterByValueBlock
-    block_config:
+  - name: filter_grounded_questions
+    type: FilterByValueBlock
+    config:
       filter_column: score
       filter_value: 1.0
       operation: eq
@@ -36,29 +36,29 @@ block_configs:
       - evaluation
       - score
       - num_samples
-  - block_name: gen_grounded_responses
-    block_type: LLMBlock
-    block_config:
+  - name: gen_grounded_responses
+    type: LLMBlock
+    config:
       config_path: configs/skills/grounded_responses.yaml
       output_cols:
         - response
-  - block_name: evaluate_grounded_qa_pair
-    block_type: LLMBlock
-    block_config:
+  - name: evaluate_grounded_qa_pair
+    type: LLMBlock
+    config:
       config_path: configs/skills/evaluate_grounded_pair.yaml
       output_cols:
         - evaluation
         - score
-  - block_name: filter_grounded_qa_pair
-    block_type: FilterByValueBlock
-    block_config:
+  - name: filter_grounded_qa_pair
+    type: FilterByValueBlock
+    config:
       filter_column: score
       filter_value: 2.0
       operation: ge
       convert_dtype: float
-  - block_name: combine_question_and_context
-    block_type: CombineColumnsBlock
-    block_config:
+  - name: combine_question_and_context
+    type: CombineColumnsBlock
+    config:
       columns:
         - context
         - question

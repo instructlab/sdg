@@ -1,8 +1,8 @@
 version: "1.0"
 block_configs:
-  - block_name: gen_mmlu_knowledge
-    block_type: LLMBlock
-    block_config:
+  - name: gen_mmlu_knowledge
+    type: LLMBlock
+    config:
       config_path: configs/knowledge/mcq_generation.yaml
       output_cols:
         - mmlubench_question
@@ -12,9 +12,9 @@ block_configs:
       max_tokens: 2048
     drop_duplicates:
       - mmlubench_question
-  - block_name: gen_knowledge
-    block_type: LLMBlock
-    block_config:
+  - name: gen_knowledge
+    type: LLMBlock
+    config:
       config_path: configs/knowledge/generate_questions_responses.yaml
       output_cols:
         - question
@@ -28,36 +28,36 @@ block_configs:
       max_tokens: 2048
     drop_duplicates:
       - question
-  - block_name: eval_faithfulness_qa_pair
-    block_type: LLMBlock
-    block_config:
+  - name: eval_faithfulness_qa_pair
+    type: LLMBlock
+    config:
       config_path: configs/knowledge/evaluate_faithfulness.yaml
       output_cols:
         - explanation
         - judgment
     gen_kwargs:
       max_tokens: 2048
-  - block_name: filter_faithfulness
-    block_type: FilterByValueBlock
-    block_config:
+  - name: filter_faithfulness
+    type: FilterByValueBlock
+    config:
       filter_column: judgment
       filter_value: YES
       operation: eq
     drop_columns:
       - judgment
       - explanation
-  - block_name: eval_relevancy_qa_pair
-    block_type: LLMBlock
-    block_config:
+  - name: eval_relevancy_qa_pair
+    type: LLMBlock
+    config:
       config_path: configs/knowledge/evaluate_relevancy.yaml
       output_cols:
         - feedback
         - score
     gen_kwargs:
       max_tokens: 2048
-  - block_name: filter_relevancy
-    block_type: FilterByValueBlock
-    block_config:
+  - name: filter_relevancy
+    type: FilterByValueBlock
+    config:
       filter_column: score
       filter_value: 2.0
       operation: eq
@@ -65,18 +65,18 @@ block_configs:
     drop_columns:
       - feedback
       - score
-  - block_name: eval_verify_question
-    block_type: LLMBlock
-    block_config:
+  - name: eval_verify_question
+    type: LLMBlock
+    config:
       config_path: configs/knowledge/evaluate_question.yaml
       output_cols:
         - explanation
         - rating
     gen_kwargs:
       max_tokens: 2048
-  - block_name: filter_verify_question
-    block_type: FilterByValueBlock
-    block_config:
+  - name: filter_verify_question
+    type: FilterByValueBlock
+    config:
       filter_column: rating
       filter_value: 1.0
       operation: eq

@@ -1,8 +1,8 @@
 version: "1.0"
 block_configs:
-  - block_name: gen_knowledge
-    block_type: LLMBlock
-    block_config:
+  - name: gen_knowledge
+    type: LLMBlock
+    config:
       config_path: configs/knowledge/simple_generate_qa.yaml
       output_cols:
       - output

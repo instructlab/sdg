@@ -1,8 +1,8 @@
 version: "1.0"
 block_configs:
-  - block_name: gen_skill_freeform
-    block_type: LLMBlock
-    block_config:
+  - name: gen_skill_freeform
+    type: LLMBlock
+    config:
       config_path: configs/skills/simple_generate_qa_freeform.yaml
       output_cols:
         - output
