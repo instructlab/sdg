@@ -58,6 +58,10 @@ class FilterByValueBlock(Block):
                 num_proc=self.num_procs,
             )
 
+        samples = samples.filter(
+            lambda x: x[self.column_name] is not None,
+            num_proc=self.num_procs,
+        )
 
         samples = samples.filter(
             lambda x: any(
