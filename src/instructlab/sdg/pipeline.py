@@ -131,7 +131,6 @@ def parse_flow_config_file(flow_path):
     return content["block_configs"]
 
 
-MMLU_BENCH_FLOW = "flows/mmlu_bench.yaml"
 SIMPLE_FREEFORM_SKILLS_FLOW = "flows/simple_freeform_skills.yaml"
 SIMPLE_GROUNDED_SKILLS_FLOW = "flows/simple_grounded_skills.yaml"
 SIMPLE_KNOWLEDGE_FLOW = "flows/simple_knowledge.yaml"

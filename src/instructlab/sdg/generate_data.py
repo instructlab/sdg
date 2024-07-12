@@ -19,7 +19,6 @@ import openai
 from instructlab.sdg import SDG, utils
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
-    MMLU_BENCH_FLOW,
     SIMPLE_FREEFORM_SKILLS_FLOW,
     SIMPLE_GROUNDED_SKILLS_FLOW,
     SIMPLE_KNOWLEDGE_FLOW,
@@ -173,7 +172,6 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
     freeform_skill_flows = []
     grounded_skill_flows = []
     if pipeline == "full":
-        knowledge_flows.append(MMLU_BENCH_FLOW)
         knowledge_flows.append(SYNTH_KNOWLEDGE_FLOW)
         freeform_skill_flows.append(SYNTH_FREEFORM_SKILLS_FLOW)
         grounded_skill_flows.append(SYNTH_GROUNDED_SKILLS_FLOW)
