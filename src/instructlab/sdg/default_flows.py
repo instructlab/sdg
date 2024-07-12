@@ -12,17 +12,22 @@ import yaml
 # Local
 from .filterblock import FilterByValueBlock
 from .llmblock import LLMBlock
-from .utilblocks import CombineColumnsBlock
+from .utilblocks import CombineColumnsBlock, SamplePopulatorBlock, SelectorBlock
 
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
+MODEL_FAMILY_BLANK = "blank"
+
 
 _MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
 _MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
+_BLANK_PROMPT = "{prompt}"
+
 
 _MODEL_PROMPTS = {
     MODEL_FAMILY_MIXTRAL: _MODEL_PROMPT_MIXTRAL,
     MODEL_FAMILY_MERLINITE: _MODEL_PROMPT_MERLINITE,
+    MODEL_FAMILY_BLANK: _BLANK_PROMPT
 }
 
 
@@ -36,6 +41,8 @@ BLOCK_TYPE_MAP = {
     "LLMBlock": LLMBlock,
     "FilterByValueBlock": FilterByValueBlock,
     "CombineColumnsBlock": CombineColumnsBlock,
+    "SamplePopulatorBlock": SamplePopulatorBlock,
+    "SelectorBlock": SelectorBlock,
 }
 
 MODEL_FAMILY_MAP = {
@@ -45,6 +52,7 @@ MODEL_FAMILY_MAP = {
 OPERATOR_MAP = {
     "operator.eq": operator.eq,
     "operator.ge": operator.ge,
+    "operator.contains": operator.contains,
 }
 
 CONVERT_DTYPE_MAP = {
@@ -82,7 +90,7 @@ class Flow(ABC):
                 if "model_family" in block["block_config"]:
                     model_family = block["block_config"]["model_family"]
                 else:
-                    model_family = MODEL_FAMILY_MAP[model_id]
+                    model_family = MODEL_FAMILY_MAP.get(model_id, MODEL_FAMILY_BLANK)
                 block["block_config"]["model_prompt"] = _get_model_prompt(model_family)
             if "operation" in block["block_config"]:
                 block["block_config"]["operation"] = OPERATOR_MAP[
@@ -94,7 +102,7 @@ class Flow(ABC):
                 ]
             n = self.num_instructions_to_generate
             if n is not None:
-                if "gen_kwargs" in block and block["gen_kwargs"]["n"] is not None:
+                if "gen_kwargs" in block and block["gen_kwargs"].get("n", None) is not None:
                     block["gen_kwargs"]["n"] = n
         return flow
 
