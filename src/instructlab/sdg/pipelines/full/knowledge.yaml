@@ -41,7 +41,7 @@ blocks:
     type: FilterByValueBlock
     config:
       filter_column: judgment
-      filter_value: YES
+      filter_value: "YES"
       operation: eq
     drop_columns:
       - judgment
