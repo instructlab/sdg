@@ -28,6 +28,7 @@ def _noop_generate(self, samples, **gen_kwargs):
 @patch.object(SamplePopulatorBlock, "generate", _noop_generate)
 @patch.object(SelectorBlock, "generate", _noop_generate)
 @patch("instructlab.sdg.llmblock.server_supports_batched", lambda c, m: True)
+@patch.object(Pipeline, "_drop_duplicates", lambda self, dataset, cols: dataset)
 class TestDefaultPipelineConfigs(unittest.TestCase):
     def setUp(self):
         self._yaml_files = [
@@ -49,5 +50,5 @@ class TestDefaultPipelineConfigs(unittest.TestCase):
         )
         for pipeline_yaml in self._yaml_files:
             pipeline = Pipeline.from_file(ctx, pipeline_yaml)
-            output = pipeline.generate(Dataset.from_list([]))
+            output = pipeline.generate(Dataset.from_list([{"test": "test"}]))
             self.assertIsNotNone(output)
