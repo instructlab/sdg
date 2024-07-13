@@ -30,7 +30,7 @@ class SamplePopulatorBlock(Block):
         def populate(sample):
             return {**sample, **configs[sample[column_name]]}
 
-        return samples.map(populate, num_proc)
+        return samples.map(populate, num_proc=num_proc)
 
     def generate(self, samples) -> Dataset:
         return self._map_populate_samples(
@@ -54,7 +54,7 @@ class SelectorBlock(Block):
             sample[output_col] = sample[choice_map[sample[choice_col]]]
             return sample
 
-        return samples.map(select_choice, num_proc)
+        return samples.map(select_choice, num_proc=num_proc)
 
     def generate(self, samples: Dataset) -> Dataset:
         return self._map_select_choice(
