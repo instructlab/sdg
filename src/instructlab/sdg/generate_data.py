@@ -2,6 +2,7 @@
 
 # Standard
 from datetime import datetime
+from importlib import resources
 from pathlib import Path
 from typing import Optional
 import json
@@ -17,18 +18,13 @@ import openai
 # First Party
 # pylint: disable=ungrouped-imports
 from instructlab.sdg import SDG, utils
-from instructlab.sdg.default_flows import (
-    MODEL_FAMILY_MERLINITE,
-    MODEL_FAMILY_MIXTRAL,
-    MMLUBenchFlow,
-    SimpleFreeformSkillFlow,
-    SimpleGroundedSkillFlow,
-    SimpleKnowledgeFlow,
-    SynthGroundedSkillsFlow,
-    SynthKnowledgeFlow,
-    SynthSkillsFlow,
+from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
+from instructlab.sdg.pipeline import (
+    FULL_PIPELINES_PACKAGE,
+    SIMPLE_PIPELINES_PACKAGE,
+    Pipeline,
+    PipelineContext,
 )
-from instructlab.sdg.pipeline import Pipeline
 from instructlab.sdg.utils import models
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
@@ -168,53 +164,38 @@ def _gen_test_data(
             outfile.write("\n")
 
 
-def _sdg_init(pipeline, client, model_family, model_name, num_instructions_to_generate):
-    knowledge_flow_types = []
-    freeform_skill_flow_types = []
-    grounded_skill_flow_types = []
+def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_generate):
+    pipeline_pkg = None
     if pipeline == "full":
-        knowledge_flow_types.append(MMLUBenchFlow)
-        knowledge_flow_types.append(SynthKnowledgeFlow)
-        freeform_skill_flow_types.append(SynthSkillsFlow)
-        grounded_skill_flow_types.append(SynthGroundedSkillsFlow)
+        pipeline_pkg = FULL_PIPELINES_PACKAGE
     elif pipeline == "simple":
-        knowledge_flow_types.append(SimpleKnowledgeFlow)
-        freeform_skill_flow_types.append(SimpleFreeformSkillFlow)
-        grounded_skill_flow_types.append(SimpleGroundedSkillFlow)
+        pipeline_pkg = SIMPLE_PIPELINES_PACKAGE
     else:
-        raise utils.GenerateException(f"Error: pipeline ({pipeline}) is not supported.")
+        # Validate that pipeline is a valid directory and that it contains the required files
+        if not os.path.exists(pipeline):
+            raise utils.GenerateException(
+                f"Error: pipeline directory ({pipeline}) does not exist."
+            )
+        for file in ["knowledge.yaml", "freeform_skills.yaml", "grounded_skills.yaml"]:
+            if not os.path.exists(os.path.join(pipeline, file)):
+                raise utils.GenerateException(
+                    f"Error: pipeline directory ({pipeline}) does not contain {file}."
+                )
 
-    sdg_knowledge = SDG(
-        [
-            Pipeline(
-                flow_type(
-                    client, model_family, model_name, num_instructions_to_generate
-                ).get_flow()
-            )
-            for flow_type in knowledge_flow_types
-        ]
+    ctx = PipelineContext(client, model_family, model_id, num_instructions_to_generate)
+
+    def load_pipeline(yaml_basename):
+        if pipeline_pkg:
+            with resources.path(pipeline_pkg, yaml_basename) as yaml_path:
+                return Pipeline.from_file(ctx, yaml_path)
+        else:
+            return Pipeline.from_file(ctx, os.path.join(pipeline, yaml_basename))
+
+    return (
+        SDG([load_pipeline("knowledge.yaml")]),
+        SDG([load_pipeline("freeform_skills.yaml")]),
+        SDG([load_pipeline("grounded_skills.yaml")]),
     )
-    sdg_freeform_skill = SDG(
-        [
-            Pipeline(
-                flow_type(
-                    client, model_family, model_name, num_instructions_to_generate
-                ).get_flow()
-            )
-            for flow_type in freeform_skill_flow_types
-        ]
-    )
-    sdg_grounded_skill = SDG(
-        [
-            Pipeline(
-                flow_type(
-                    client, model_family, model_name, num_instructions_to_generate
-                ).get_flow()
-            )
-            for flow_type in grounded_skill_flow_types
-        ]
-    )
-    return sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill
 
 
 # TODO - parameter removal needs to be done in sync with a CLI change.
@@ -244,9 +225,21 @@ def generate_data(
     tls_client_cert: Optional[str] = None,
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
-    # TODO need to update the CLI to specify which pipeline to use (simple or full at the moment)
     pipeline: Optional[str] = "simple",
 ):
+    """Generate data for training and testing a model.
+
+    This currently serves as the primary interface from the `ilab` CLI to the `sdg` library.
+    It is somewhat a transitionary measure, as this function existed back when all of the
+    functionality was embedded in the CLI. At some stage, we expect to evolve the CLI to
+    use the SDG library constructs directly, and this function will likely be removed.
+
+    Args:
+        pipeline: This argument may be either an alias defined by the sdg library ("simple", "full"),
+                  or an absolute path to a directory containing the pipeline YAML files.
+                  We expect three files to be present in this directory: "knowledge.yaml",
+                    "freeform_skills.yaml", and "grounded_skills.yaml".
+    """
     generate_start = time.time()
 
     if not os.path.exists(output_dir):

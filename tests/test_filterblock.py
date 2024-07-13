@@ -1,5 +1,5 @@
 # Standard
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import operator
 import unittest
 
@@ -8,21 +8,31 @@ from datasets import Dataset, Features, Value
 
 # First Party
 from instructlab.sdg.filterblock import FilterByValueBlock
+from instructlab.sdg.pipeline import PipelineContext
 
 
 class TestFilterByValueBlock(unittest.TestCase):
     def setUp(self):
+        self.ctx = MagicMock()
+        self.ctx.num_procs = 1
+        self.pipe = MagicMock()
         self.block = FilterByValueBlock(
+            self.ctx,
+            self.pipe,
+            "filter_by_age",
             filter_column="age",
-            filter_value=30,
-            operation=operator.eq,
-            convert_dtype=int,
+            filter_value="30",
+            operation="eq",
+            convert_dtype="int",
         )
         self.block_with_list = FilterByValueBlock(
+            self.ctx,
+            self.pipe,
+            "filter_by_age_list",
             filter_column="age",
-            filter_value=[30, 35],
-            operation=operator.eq,
-            convert_dtype=int,
+            filter_value=["30", "35"],
+            operation="eq",
+            convert_dtype="int",
         )
         self.dataset = Dataset.from_dict(
             {"age": ["25", "30", "35", "forty", "45"]},
