@@ -1,0 +1,151 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "blocks"],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "blocks": {
+      "type": "array",
+      "additionalProperties": false,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type", "config"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "drop_duplicates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "drop_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gen_kwargs": {
+            "type": "object",
+            "properties": {
+              "max_tokens": {
+                "type": "number"
+              },
+              "temperature": {
+                "type": "number"
+              },
+              "n": {
+                "type": "number"
+              }
+            }
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "FilterByValueBlock",
+                "additionalProperties": true,
+                "properties": {
+                  "config_path": {
+                    "type": "string"
+                  },
+                  "output_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "convert_dtype": {
+                    "type": "string"
+                  },
+                  "filter_column": {
+                    "type": "string"
+                  },
+                  "filter_value": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "operation": {
+                    "type": "string"
+                  }
+                },
+                "required": ["filter_column", "filter_value", "operation"]
+              },
+              {
+                "type": "object",
+                "description": "LLMBlock",
+                "additionalProperties": false,
+                "properties": {
+                  "config_path": {
+                    "type": "string"
+                  },
+                  "output_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "parser_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "parser_name": {
+                        "type": "string"
+                      },
+                      "parsing_pattern": {
+                        "type": "string"
+                      },
+                      "parser_cleanup_tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "batch_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "num_samples": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type:": "object",
+                "description": "CombineColumnsBlock",
+                "additionalProperties": false,
+                "required": ["columns", "output_col"],
+                "properties": {
+                  "output_col": {
+                    "type": "string"
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
