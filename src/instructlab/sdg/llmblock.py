@@ -133,7 +133,14 @@ class LLMBlock(Block):
             gen_kwargs["max_tokens"] = int(gen_kwargs["max_tokens"])
         if "temperature" in gen_kwargs:
             gen_kwargs["temperature"] = float(gen_kwargs["temperature"])
+        gen_kwargs["n"] = self._get_n(gen_kwargs)
         return gen_kwargs
+
+    def _get_n(self, gen_kwargs):
+        n = gen_kwargs.get("n", 1)
+        if isinstance(n, str) and n == "scaled":
+            n = self.ctx.num_instructions_to_generate
+        return n
 
     def _generate(self, samples, **gen_kwargs) -> list:
         prompts = [
@@ -148,10 +155,9 @@ class LLMBlock(Block):
             )
             return [choice.text.strip() for choice in response.choices]
 
-        n = gen_kwargs.get("n", 1)
         results = []
         for prompt in prompts:
-            for _ in range(n):
+            for _ in range(generate_args["n"]):
                 response = self.ctx.client.completions.create(
                     prompt=prompt, **generate_args
                 )
@@ -193,7 +199,7 @@ class LLMBlock(Block):
         outputs = self._generate(samples, **gen_kwargs)
         logger.debug("Generated outputs: %s", outputs)
 
-        num_parallel_samples = gen_kwargs.get("n", 1)
+        num_parallel_samples = self._get_n(gen_kwargs)
         extended_samples = []
 
         # Duplicate each input sample n times, where n is the number
