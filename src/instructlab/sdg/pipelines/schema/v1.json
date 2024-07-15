@@ -74,7 +74,8 @@
                     ]
                   },
                   "operation": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": ["eq", "ne", "gt", "ge", "lt", "le", "contains"]
                   }
                 },
                 "required": ["filter_column", "filter_value", "operation"]
