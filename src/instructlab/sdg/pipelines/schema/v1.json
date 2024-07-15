@@ -56,15 +56,6 @@
                 "description": "FilterByValueBlock",
                 "additionalProperties": true,
                 "properties": {
-                  "config_path": {
-                    "type": "string"
-                  },
-                  "output_cols": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
                   "convert_dtype": {
                     "type": "string"
                   },
