@@ -18,7 +18,7 @@ class FilterByValueBlockError(Exception):
 
 def _get_operator_func(op):
     if not op in dir(operator):
-        raise FilterByValueBlockError("Unknown FilterByValueBlock operation '{op}'")
+        raise FilterByValueBlockError(f"Unknown FilterByValueBlock operation '{op}'")
     return getattr(operator, op)
 
 
@@ -34,7 +34,7 @@ def _get_convert_dtype(convert_dtype):
 
     if not convert_dtype in type_mapping:
         raise FilterByValueBlockError(
-            "Unknown FilterByValueBlock convert_dtype '{convert_dtype}'"
+            f"Unknown FilterByValueBlock convert_dtype '{convert_dtype}'"
         )
 
     return type_mapping[convert_dtype]
