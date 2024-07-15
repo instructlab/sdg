@@ -60,6 +60,7 @@ class LLMBlock(Block):
         block_name,
         config_path,
         output_cols,
+        model_prompt=None,
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
@@ -69,7 +70,11 @@ class LLMBlock(Block):
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )
         self.prompt_template = self.prompt_struct.format(**self.block_config)
-        self.model_prompt = _get_model_prompt(self.ctx.model_family)
+        self.model_prompt = (
+            model_prompt
+            if model_prompt is not None
+            else _get_model_prompt(self.ctx.model_family)
+        )
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
         self.parser_name = parser_kwargs.get("parser_name", None)
@@ -221,6 +226,7 @@ class ConditionalLLMBlock(LLMBlock):
         config_paths,
         output_cols,
         selector_column_name,
+        model_prompt=None,
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
@@ -230,6 +236,7 @@ class ConditionalLLMBlock(LLMBlock):
             block_name,
             config_paths[0][0],
             output_cols,
+            model_prompt=model_prompt,
             parser_kwargs=parser_kwargs,
             batch_kwargs=batch_kwargs,
         )
