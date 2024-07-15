@@ -69,3 +69,8 @@ jobs:
         if: ${{ !cancelled() && (steps.deps.outcome == 'success') }}
         run: |
           tox -e mypy
+
+      - name: Validate pipeline schemas
+        if: ${{ !cancelled() && (steps.deps.outcome == 'success') }}
+        run: |
+          tox -e validate-pipelines

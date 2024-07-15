@@ -65,3 +65,7 @@ spellcheck-sort: .spellcheck-en-custom.txt ## Sort spellcheck directory
 .PHONY: verify
 verify: check-tox ## Run linting, typing, and formatting checks via tox
 	tox p -e fastlint,mypy,ruff
+
+.PHONY: validate-pipelines
+validate-pipelines: ## Validate all pipeline files against schema
+	tox -e validate-pipelines
