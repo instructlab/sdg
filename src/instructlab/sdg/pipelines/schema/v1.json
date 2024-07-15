@@ -122,6 +122,53 @@
                 }
               },
               {
+                "type": "object",
+                "description": "ConditionalLLMBlock",
+                "additionalProperties": false,
+                "properties": {
+                  "config_paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "output_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "selector_column_name": {
+                    "type": "string"
+                  },
+                  "parser_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "parser_name": {
+                        "type": "string"
+                      },
+                      "parsing_pattern": {
+                        "type": "string"
+                      },
+                      "parser_cleanup_tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "batch_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "num_samples": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              },
+              {
                 "type:": "object",
                 "description": "CombineColumnsBlock",
                 "additionalProperties": false,
