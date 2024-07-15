@@ -54,9 +54,10 @@ class SDG:
                 # get columns from the original dataset
                 orig_cols = dataset.column_names
                 # concate the values as the key
-                orig_repr = lambda x: "-".join([x[col] for col in orig_cols])
+                def orig_repr(x):
+                    return "-".join([x[col] for col in orig_cols])
                 # build cache
-                cache = set([orig_repr(x) for x in cache_dataset])
+                cache = set(orig_repr(x) for x in cache_dataset)
                 # filter out the dataset to keep only the new ones
                 dataset = dataset.filter(lambda x: orig_repr(x) not in cache)
                 # return cached dataset if no new data
