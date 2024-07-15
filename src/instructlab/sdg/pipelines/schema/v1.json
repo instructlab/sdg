@@ -57,7 +57,8 @@
                 "additionalProperties": true,
                 "properties": {
                   "convert_dtype": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": ["float", "int", "bool"]
                   },
                   "filter_column": {
                     "type": "string"
