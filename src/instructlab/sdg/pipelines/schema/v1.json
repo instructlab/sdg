@@ -35,6 +35,9 @@
           "gen_kwargs": {
             "type": "object",
             "properties": {
+              "model": {
+                "type": "string"
+              },
               "max_tokens": {
                 "type": "number"
               },
