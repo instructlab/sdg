@@ -170,6 +170,43 @@
               },
               {
                 "type:": "object",
+                "description": "SamplePopulatorBlock",
+                "additionalProperties": false,
+                "required": ["config_paths", "column_name"],
+                "properties": {
+                  "config_paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "column_name": {
+                    "type": "string"
+                  },
+                  "post_fix": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type:": "object",
+                "description": "SelectorBlock",
+                "additionalProperties": false,
+                "required": ["choice_map", "choice_col", "output_col"],
+                "properties": {
+                  "choice_map": {
+                    "type": "object"
+                  },
+                  "choice_col": {
+                    "type": "string"
+                  },
+                  "output_col": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type:": "object",
                 "description": "CombineColumnsBlock",
                 "additionalProperties": false,
                 "required": ["columns", "output_col"],
