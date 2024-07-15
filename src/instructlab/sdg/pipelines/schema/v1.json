@@ -73,6 +73,19 @@
                       },
                       {
                         "type": "number"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
                       }
                     ]
                   },
