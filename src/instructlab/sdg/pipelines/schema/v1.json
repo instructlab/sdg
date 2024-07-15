@@ -57,7 +57,8 @@
               {
                 "type": "object",
                 "description": "FilterByValueBlock",
-                "additionalProperties": true,
+                "required": ["filter_column", "filter_value", "operation"],
+                "additionalProperties": false,
                 "properties": {
                   "convert_dtype": {
                     "type": "string",
@@ -93,12 +94,12 @@
                     "type": "string",
                     "enum": ["eq", "ne", "gt", "ge", "lt", "le", "contains"]
                   }
-                },
-                "required": ["filter_column", "filter_value", "operation"]
+                }
               },
               {
                 "type": "object",
                 "description": "LLMBlock",
+                "required": ["config_path", "output_cols"],
                 "additionalProperties": false,
                 "properties": {
                   "config_path": {
@@ -140,6 +141,7 @@
               {
                 "type": "object",
                 "description": "ConditionalLLMBlock",
+                "required": ["config_paths", "output_cols", "selector_column_name"],
                 "additionalProperties": false,
                 "properties": {
                   "config_paths": {
