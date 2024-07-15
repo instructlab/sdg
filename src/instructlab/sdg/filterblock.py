@@ -1,12 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
+# Standard
+import operator
+
 # Third Party
 from datasets import Dataset
 
 # Local
 from .block import Block
 from .logger_config import setup_logger
-
-import operator
 
 logger = setup_logger(__name__)
 
