@@ -34,6 +34,7 @@
           },
           "gen_kwargs": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "model": {
                 "type": "string"
@@ -45,6 +46,9 @@
                 "type": "number"
               },
               "n": {
+                "type": "number"
+              },
+              "seed": {
                 "type": "number"
               },
               "extra_body": {
