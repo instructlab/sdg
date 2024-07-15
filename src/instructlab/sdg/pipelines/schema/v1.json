@@ -46,6 +46,9 @@
               },
               "n": {
                 "type": "number"
+              },
+              "extra_body": {
+                "type": "object"
               }
             }
           },
