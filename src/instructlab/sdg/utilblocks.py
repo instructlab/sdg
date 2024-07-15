@@ -95,3 +95,82 @@ class CombineColumnsBlock(Block):
             self.separator,
             self.ctx.dataset_num_procs,
         )
+
+
+class FlattenColumnsBlock(Block):
+    """Melt/transform a data from a wide format to a long format see pandas.melt for a description
+
+    Args:
+            var_cols (list): Column(s) to unpivot. All other columns are set to use as identifier variables.
+            value_name (str): Name to use for the ‘value’ column, can’t be an existing column label.
+            var_name (str):  Name to use for the ‘variable’ column. If None it uses frame.columns.name or ‘variable’.
+    """
+
+    def __init__(
+        self, ctx, pipe, block_name: str, var_cols: list, value_name: str, var_name: str
+    ) -> None:
+        super().__init__(ctx, pipe, block_name)
+        self.var_cols = var_cols
+        self.value_name = value_name
+        self.var_name = var_name
+
+    def generate(self, samples: Dataset) -> Dataset:
+        df = samples.to_pandas()
+        id_cols = [col for col in samples.column_names if col not in self.var_cols]
+        flatten_df = df.melt(
+            id_vars=id_cols,
+            value_vars=self.var_cols,
+            value_name=self.value_name,
+            var_name=self.var_name,
+        )
+        return Dataset.from_pandas(flatten_df)
+
+
+class DuplicateColumnsBlock(Block):
+    def __init__(self, ctx, pipe, block_name: str, columns_map: dict) -> None:
+        """Create duplicate of columns specified in column map.
+
+        Args:
+            columns_map (dict): mapping of existing column to new column names
+        """
+        super().__init__(ctx, pipe, block_name)
+        self.columns_map = columns_map
+
+    def generate(self, samples: Dataset):
+        for col_to_dup in self.columns_map:
+            samples = samples.add_column(
+                self.columns_map[col_to_dup], samples[col_to_dup]
+            )
+        return samples
+
+
+class RenameColumnsBlock(Block):
+    def __init__(self, ctx, pipe, block_name: str, columns_map: dict) -> None:
+        """Rename dataset columns.
+
+        Args:
+            columns_map (dict): mapping of existing column to new column names
+        """
+        self.columns_map = columns_map
+        super().__init__(ctx, pipe, block_name)
+
+    def generate(self, samples: Dataset):
+        samples = samples.rename_columns(self.columns_map)
+        return samples
+
+
+class SetToMajorityValueBlock(Block):
+    """Set the value of the specified column to the most common value (the mode)
+
+    Args:
+        col_name (str): the column to find the "mode" of and then set universally
+    """
+
+    def __init__(self, ctx, pipe, block_name: str, col_name) -> None:
+        self.col_name = col_name
+        super().__init__(ctx, pipe, block_name)
+
+    def generate(self, samples: Dataset):
+        samples = samples.to_pandas()
+        samples[self.col_name] = samples[self.col_name].mode()[0]
+        return Dataset.from_pandas(samples)

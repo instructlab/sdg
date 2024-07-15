@@ -231,11 +231,15 @@ class Pipeline:
 _block_types = {
     "CombineColumnsBlock": utilblocks.CombineColumnsBlock,
     "ConditionalLLMBlock": llmblock.ConditionalLLMBlock,
+    "DuplicateColumnsBlock": utilblocks.DuplicateColumnsBlock,
     "FilterByValueBlock": filterblock.FilterByValueBlock,
+    "FlattenColumnsBlock": utilblocks.FlattenColumnsBlock,
     "ImportBlock": importblock.ImportBlock,
     "LLMBlock": llmblock.LLMBlock,
+    "RenameColumnsBlock": utilblocks.RenameColumnsBlock,
     "SamplePopulatorBlock": utilblocks.SamplePopulatorBlock,
     "SelectorBlock": utilblocks.SelectorBlock,
+    "SetToMajorityValueBlock": utilblocks.SetToMajorityValueBlock,
 }
 
 
