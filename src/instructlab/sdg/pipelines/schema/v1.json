@@ -56,6 +56,17 @@
             "anyOf": [
               {
                 "type": "object",
+                "description": "ImportBlock",
+                "required": ["path"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
                 "description": "FilterByValueBlock",
                 "required": ["filter_column", "filter_value", "operation"],
                 "additionalProperties": false,
