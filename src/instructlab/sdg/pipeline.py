@@ -49,7 +49,9 @@ class Pipeline:
             dataset = block.generate(dataset, **gen_kwargs)
 
             if len(dataset) == 0:
-                raise EmptyDatasetError(f"Pipeline stopped: Empty dataset after running block: {block_config['block_name']}")
+                raise EmptyDatasetError(
+                    f"Pipeline stopped: Empty dataset after running block: {block_config['block_name']}"
+                )
 
             drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
             if drop_columns:
@@ -57,7 +59,7 @@ class Pipeline:
 
             if drop_duplicates_cols:
                 dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
-            
+
             logger.info("Output dataset: %s", dataset)
             logger.info("------------------------------------\n\n")
 
