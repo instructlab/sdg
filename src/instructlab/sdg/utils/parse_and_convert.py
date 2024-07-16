@@ -139,83 +139,83 @@ def create_summary_dataset(generated_dataset: Dataset):
     "Extract all the atomic facts from the given document.",
     "List all the key takeaways from the provided text."
     ]
-    summary_ds = generated_dataset.filter(lambda x: x['summary_type'] != 'summary_base_document')
-    unique_document_summary = summary_ds.to_pandas().drop_duplicates(subset=['document'])
-    unique_document_summary = Dataset.from_pandas(unique_document_summary).remove_columns(['icl_query_1', 'icl_response_1', 'icl_query_2', 'icl_response_2', 'icl_query_3', 'icl_response_3', 'route', '__index_level_0__', 'question', 'response'])
-    unique_document_summary = unique_document_summary.rename_columns({'raw_document': 'context', 'document': 'response'})
+    summary_ds = generated_dataset.filter(lambda x: x["summary_type"] != "summary_base_document")
+    unique_document_summary = summary_ds.to_pandas().drop_duplicates(subset=["document"])
+    unique_document_summary = Dataset.from_pandas(unique_document_summary).remove_columns(["icl_query_1", "icl_response_1", "icl_query_2", "icl_response_2", "icl_query_3", "icl_response_3", "route", "__index_level_0__", "question", "response"])
+    unique_document_summary = unique_document_summary.rename_columns({"raw_document": "context", "document": "response"})
     def __create_summary_ds(rec):
-        if rec['summary_type'] == 'summary_detailed':
+        if rec["summary_type"] == "summary_detailed":
             instruction = random.choice(detailed_summary_inst)
-        elif rec['summary_type'] == 'summary_extractive':
+        elif rec["summary_type"] == "summary_extractive":
             instruction = random.choice(extractive_summary_inst)
         else:
             # Its probably atomic facts
             instruction = random.choice(atomic_facts_inst)
-        messages = [{'role': 'user', 'content': f"{rec['context']}\n\n{instruction}"},
-                    {'role': 'assistant', 'content': rec['response']}]
+        messages = [{"role": "user", "content": f"{rec['context']}\n\n{instruction}"},
+                    {"role": "assistant", "content": rec["response"]}]
         metadata = json.dumps({
-            'summary_type': rec['summary_type'],
-            'raw_document': rec['context']
+            "summary_type": rec["summary_type"],
+            "raw_document": rec["context"]
         })
-        return {'messages': messages, 'metadata': metadata, 'id':  str(uuid.uuid4())}
+        return {"messages": messages, "metadata": metadata, "id":  str(uuid.uuid4())}
     unique_document_summary = unique_document_summary.map(__create_summary_ds, remove_columns=unique_document_summary.column_names)
     return unique_document_summary
 
 
 def generate_knowledge_qa_dataset(generated_dataset: Dataset, keep_context_separate=False):
     def __create_qa_row(rec):
-        context = rec['document']
-        instruction = rec['question']
-        response = rec['response']
+        context = rec["document"]
+        instruction = rec["question"]
+        response = rec["response"]
         metadata = json.dumps({
-            'raw_document': rec['raw_document'],
-            'summary_type': rec['summary_type'],
-            'sdg_document': rec['document'],
-            'domain': rec['domain']
+            "raw_document": rec["raw_document"],
+            "summary_type": rec["summary_type"],
+            "sdg_document": rec["document"],
+            "domain": rec["domain"]
         })
         if keep_context_separate:
-            messages = [{'role': 'user', 'content': f"{instruction}"},
-                            {'role': 'assistant', 'content': response}]
-            return {'messages': messages, 'metadata': metadata, 'id':  str(uuid.uuid4()), 'context': context}
+            messages = [{"role": "user", "content": f"{instruction}"},
+                            {"role": "assistant", "content": response}]
+            return {"messages": messages, "metadata": metadata, "id":  str(uuid.uuid4()), "context": context}
         else:
-            messages = [{'role': 'user', 'content': f"{context}\n\n{instruction}"},
-                        {'role': 'assistant', 'content': response}]
+            messages = [{"role": "user", "content": f"{context}\n\n{instruction}"},
+                        {"role": "assistant", "content": response}]
        
-            return {'messages': messages, 'metadata': metadata, 'id':  str(uuid.uuid4())}
+            return {"messages": messages, "metadata": metadata, "id":  str(uuid.uuid4())}
     knowledge_ds = generated_dataset.map(__create_qa_row, remove_columns=generated_dataset.column_names)
     return knowledge_ds 
 
 
 def build_raft_dataset(ds: Dataset, p, num_doc_in_context=4):
-    all_context = ds['context']
-    all_context = [' '.join(e.split(" ")[:random.randint(100, 500)]) for e in all_context]
-    ds = ds.add_column('row_idx', range(ds.num_rows))
+    all_context = ds["context"]
+    all_context = [" ".join(e.split(" ")[:random.randint(100, 500)]) for e in all_context]
+    ds = ds.add_column("row_idx", range(ds.num_rows))
     def __pick_documents(rec, p):
         while True:
             selected_docs = random.choices(range(ds.num_rows), k=num_doc_in_context)
-            if rec['row_idx'] not in selected_docs:
+            if rec["row_idx"] not in selected_docs:
                 break
         if random.uniform(0, 1) < p:
-            docs = [all_context[idx] for idx in selected_docs[:num_doc_in_context-1]] + [rec['context']]
+            docs = [all_context[idx] for idx in selected_docs[:num_doc_in_context-1]] + [rec["context"]]
             # rec['indicator'] ='golden'
         else:
             docs = [all_context[idx] for idx in selected_docs] 
             # rec['indicator'] = 'distractor'
         random.shuffle(docs)
-        docs = '\n'.join(([f"Document:\n{e}\n\n" for idx, e in enumerate(docs)]))
-        user_idx, user_msg = [(idx, rec_msg) for idx, rec_msg in enumerate(rec['messages']) if rec_msg['role'] == 'user'][0]
-        user_inst = user_msg['content']
-        rec['messages'][user_idx]['content'] = f"{docs}\n\n{user_inst}"
-        rec['messages'] = rec['messages']
+        docs = "\n".join(([f"Document:\n{e}\n\n" for idx, e in enumerate(docs)]))
+        user_idx, user_msg = [(idx, rec_msg) for idx, rec_msg in enumerate(rec["messages"]) if rec_msg["role"] == "user"][0]
+        user_inst = user_msg["content"]
+        rec["messages"][user_idx]["content"] = f"{docs}\n\n{user_inst}"
+        rec["messages"] = rec["messages"]
         return rec
-    ds = ds.map(__pick_documents, fn_kwargs={'p': p}, remove_columns=['context'])
+    ds = ds.map(__pick_documents, fn_kwargs={"p": p}, remove_columns=["context"])
     return ds
 
 def _conv_pretrain(rec):
-    rec['messages'] = [
+    rec["messages"] = [
         {
-        'role': 'pretraining',
-        'content': f"<|user|>\n{rec['messages'][0]['content']}\n<|assistant|>\n{rec['messages'][1]['content']}"
+        "role": "pretraining",
+        "content": f"<|user|>\n{rec['messages'][0]['content']}\n<|assistant|>\n{rec['messages'][1]['content']}"
     }]
     return rec
 
