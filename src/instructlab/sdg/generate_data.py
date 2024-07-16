@@ -173,7 +173,15 @@ def _check_pipeline_dir(pipeline):
             )
 
 
-def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_generate):
+def _sdg_init(
+    pipeline: Pipeline,
+    client: openai.OpenAI,
+    model_family: str,
+    model_id: str,
+    num_instructions_to_generate: int,
+    batch_num_workers: Optional[int],
+    batch_size: Optional[int],
+):
     pipeline_pkg = None
 
     # Search for the pipeline in User and Site data directories
@@ -200,7 +208,14 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
                 )
             _check_pipeline_dir(pipeline)
 
-    ctx = PipelineContext(client, model_family, model_id, num_instructions_to_generate)
+    ctx = PipelineContext(
+        client=client,
+        model_family=model_family,
+        model_id=model_id,
+        num_instructions_to_generate=num_instructions_to_generate,
+        batch_size=batch_size,
+        batch_num_workers=batch_num_workers,
+    )
 
     def load_pipeline(yaml_basename):
         if pipeline_pkg:
@@ -227,8 +242,6 @@ def generate_data(
     api_key: Optional[str] = None,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
-    # TODO - not used -- when batching is enabled, this is relevant.
-    # Right now the code hard codes 8 cpus for batching
     num_cpus: Optional[int] = None,
     num_instructions_to_generate: Optional[int] = 30,
     taxonomy: Optional[str] = None,
@@ -247,6 +260,7 @@ def generate_data(
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
     pipeline: Optional[str] = "simple",
+    batch_size: Optional[int] = PipelineContext.DEFAULT_BATCH_SIZE,
 ) -> None:
     """Generate data for training and testing a model.
 
@@ -311,6 +325,8 @@ def generate_data(
         model_family,
         model_name,
         num_instructions_to_generate,
+        batch_num_workers=num_cpus,
+        batch_size=batch_size,
     )
 
     if console_output:
