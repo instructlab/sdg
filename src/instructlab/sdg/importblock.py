@@ -10,6 +10,7 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+# This is part of the public API.
 class ImportBlock(Block):
     def __init__(
         self,
