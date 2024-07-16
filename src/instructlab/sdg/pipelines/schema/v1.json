@@ -32,38 +32,6 @@
               "type": "string"
             }
           },
-          "gen_kwargs": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "model": {
-                "type": "string"
-              },
-              "max_tokens": {
-                "type": "number"
-              },
-              "temperature": {
-                "type": "number"
-              },
-              "n": {
-                "oneOf": [
-                  {
-                    "type": "number"
-                  },
-                  {
-                    "type": "string",
-                    "enum": ["scaled"]
-                  }
-                ]
-              },
-              "seed": {
-                "type": "number"
-              },
-              "extra_body": {
-                "type": "object"
-              }
-            }
-          },
           "config": {
             "anyOf": [
               {
@@ -161,6 +129,38 @@
                         "type": "number"
                       }
                     }
+                  },
+                  "gen_kwargs": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "max_tokens": {
+                        "type": "number"
+                      },
+                      "temperature": {
+                        "type": "number"
+                      },
+                      "n": {
+                        "oneOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["scaled"]
+                          }
+                        ]
+                      },
+                      "seed": {
+                        "type": "number"
+                      },
+                      "extra_body": {
+                        "type": "object"
+                      }
+                    }
                   }
                 }
               },
@@ -210,6 +210,38 @@
                     "properties": {
                       "num_samples": {
                         "type": "number"
+                      }
+                    }
+                  },
+                  "gen_kwargs": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "max_tokens": {
+                        "type": "number"
+                      },
+                      "temperature": {
+                        "type": "number"
+                      },
+                      "n": {
+                        "oneOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["scaled"]
+                          }
+                        ]
+                      },
+                      "seed": {
+                        "type": "number"
+                      },
+                      "extra_body": {
+                        "type": "object"
                       }
                     }
                   }

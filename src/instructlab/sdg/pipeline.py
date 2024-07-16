@@ -67,14 +67,13 @@ class Pipeline:
             block_type = _lookup_block_type(block_prop["type"])
             block_config = block_prop["config"]
             drop_columns = block_prop.get("drop_columns", [])
-            gen_kwargs = block_prop.get("gen_kwargs", {})
             drop_duplicates_cols = block_prop.get("drop_duplicates", False)
             block = block_type(self.ctx, self, block_name, **block_config)
 
             logger.info("Running block: %s", block_name)
             logger.info(dataset)
 
-            dataset = block.generate(dataset, **gen_kwargs)
+            dataset = block.generate(dataset)
 
             # If at any point we end up with an empty data set, the pipeline has failed
             if len(dataset) == 0:
