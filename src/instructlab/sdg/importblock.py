@@ -3,7 +3,6 @@
 from datasets import Dataset
 
 # Local
-from . import pipeline
 from .block import Block
 from .logger_config import setup_logger
 
@@ -30,6 +29,21 @@ class ImportBlock(Block):
         """
         super().__init__(ctx, pipe, block_name)
         self.path = path
+
+        # FIXME: find a better fix for this circular import error:
+        #
+        #   src/instructlab/sdg/__init__.py:29: in <module>
+        #     from .importblock import ImportBlock
+        #   src/instructlab/sdg/importblock.py:6: in <module>
+        #     from . import pipeline
+        #   src/instructlab/sdg/pipeline.py:102: in <module>
+        #     "ImportBlock": importblock.ImportBlock,
+        #   E   AttributeError: partially initialized module 'src.instructlab.sdg.importblock' has no attribute 'ImportBlock' (most likely due to a circular import)
+        #
+        # pylint: disable=C0415
+        # Local
+        from . import pipeline
+
         self.pipeline = pipeline.Pipeline.from_file(self.ctx, self.path)
 
     def generate(self, samples) -> Dataset:
