@@ -34,7 +34,7 @@ class SamplePopulatorBlock(Block):
         return samples.map(populate, num_proc=num_proc)
 
     def generate(self, samples) -> Dataset:
-        return self._map_populate_samples(
+        return self._map_populate(
             samples, self.configs, self.column_name, self.ctx.num_procs
         )
 
