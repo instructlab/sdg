@@ -60,6 +60,7 @@ class LLMBlock(Block):
         block_name,
         config_path,
         output_cols,
+        model_prompt=None,
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
@@ -69,7 +70,7 @@ class LLMBlock(Block):
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )
         self.prompt_template = self.prompt_struct.format(**self.block_config)
-        self.model_prompt = _get_model_prompt(self.ctx.model_family)
+        self.model_prompt = model_prompt
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
         self.parser_name = parser_kwargs.get("parser_name", None)
@@ -124,8 +125,20 @@ class LLMBlock(Block):
 
         return matches
 
+    # There are three cases to handle for self.model_prompt
+    # 1. None - no model_prompt specified, look one up based on model family
+    # 2. Non-empty string - the pipeline has specified a custom model prompt
+    # 3. Empty string - the pipeline has specified that no model prompt is needed
     def _format_prompt(self, sample: Dict) -> str:
-        return self.prompt_template.format(**sample).strip()
+        prompt = self.prompt_template.format(**sample).strip()
+
+        model_prompt = None
+        if self.model_prompt is None:
+            model_prompt = _get_model_prompt(self.ctx.model_family)
+        elif self.model_prompt:
+            model_prompt = self.model_prompt
+
+        return prompt if model_prompt is None else model_prompt.format(prompt=prompt)
 
     def _gen_kwargs(self, **gen_kwargs):
         gen_kwargs = {**self.defaults, **gen_kwargs}
@@ -143,10 +156,7 @@ class LLMBlock(Block):
         return n
 
     def _generate(self, samples, **gen_kwargs) -> list:
-        prompts = [
-            self.model_prompt.format(prompt=self._format_prompt(sample))
-            for sample in samples
-        ]
+        prompts = [self._format_prompt(sample) for sample in samples]
         generate_args = self._gen_kwargs(**gen_kwargs)
 
         if self.server_supports_batched:
@@ -227,6 +237,7 @@ class ConditionalLLMBlock(LLMBlock):
         config_paths,
         output_cols,
         selector_column_name,
+        model_prompt=None,
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
@@ -236,6 +247,7 @@ class ConditionalLLMBlock(LLMBlock):
             block_name,
             config_paths[0][0],
             output_cols,
+            model_prompt=model_prompt,
             parser_kwargs=parser_kwargs,
             batch_kwargs=batch_kwargs,
         )

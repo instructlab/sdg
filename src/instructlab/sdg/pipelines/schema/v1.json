@@ -134,6 +134,9 @@
                       "type": "string"
                     }
                   },
+                  "model_prompt": {
+                    "type": "string"
+                  },
                   "parser_kwargs": {
                     "type": "object",
                     "properties": {
@@ -178,6 +181,9 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "model_prompt": {
+                    "type": "string"
                   },
                   "selector_column_name": {
                     "type": "string"
