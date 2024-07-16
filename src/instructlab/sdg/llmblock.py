@@ -50,7 +50,6 @@ def server_supports_batched(client, model_id: str) -> bool:
     return supported
 
 
-# This is part of the public API.
 # pylint: disable=dangerous-default-value
 class LLMBlock(Block):
     # pylint: disable=too-many-instance-attributes
@@ -229,7 +228,6 @@ class LLMBlock(Block):
         return Dataset.from_list(new_data)
 
 
-# This is part of the public API.
 class ConditionalLLMBlock(LLMBlock):
     def __init__(
         self,

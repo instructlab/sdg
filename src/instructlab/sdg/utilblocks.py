@@ -9,7 +9,6 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
-# This is part of the public API.
 class SamplePopulatorBlock(Block):
     def __init__(
         self, ctx, pipe, block_name, config_paths, column_name, post_fix=""
@@ -39,7 +38,6 @@ class SamplePopulatorBlock(Block):
         )
 
 
-# This is part of the public API.
 class SelectorBlock(Block):
     def __init__(
         self, ctx, pipe, block_name, choice_map, choice_col, output_col
@@ -68,7 +66,6 @@ class SelectorBlock(Block):
         )
 
 
-# This is part of the public API.
 class CombineColumnsBlock(Block):
     def __init__(
         self, ctx, pipe, block_name, columns, output_col, separator="\n\n"
