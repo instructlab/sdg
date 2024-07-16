@@ -66,45 +66,47 @@ class Pipeline:
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
         """
-        try:
-            for block_prop in self.chained_blocks:
-                block_name = block_prop["name"]
-                block_type = _lookup_block_type(block_prop["type"])
-                block_config = block_prop["config"]
-                drop_columns = block_prop.get("drop_columns", [])
-                drop_duplicates_cols = block_prop.get("drop_duplicates", False)
-                block = block_type(self.ctx, self, block_name, **block_config)
+        for block_prop in self.chained_blocks:
+            # Parse and instantiate the block
+            block_name = block_prop["name"]
+            block_type = _lookup_block_type(block_prop["type"])
+            block_config = block_prop["config"]
+            drop_columns = block_prop.get("drop_columns", [])
+            drop_duplicates_cols = block_prop.get("drop_duplicates", False)
+            block = block_type(self.ctx, self, block_name, **block_config)
+            logger.info("Running block: %s", block_name)
+            logger.info(dataset)
 
-                logger.info("Running block: %s", block_name)
-                logger.info(dataset)
-
+            # Execute the block and wrap errors with the block name/type
+            try:
                 dataset = block.generate(dataset)
 
-                # If at any point we end up with an empty data set, the pipeline has failed
-                if len(dataset) == 0:
-                    raise EmptyDatasetError(
-                        f"Pipeline stopped: Empty dataset after running block: {block_name}"
-                    )
+            except Exception as err:
+                block_exc_err = (
+                    f"BLOCK ERROR [{block_type.__name__}/{block_name}]: {err}"
+                )
 
-                drop_columns_in_ds = [
-                    e for e in drop_columns if e in dataset.column_names
-                ]
-                if drop_columns:
-                    dataset = dataset.remove_columns(drop_columns_in_ds)
+                # Try to raise the same exception type. This can fail if the
+                # exception is a non-standard type that has a different init
+                # signature, so fall back to raising a RuntimeError in that case.
+                try:
+                    wrapper_err = type(err)(block_exc_err)
+                except TypeError:
+                    wrapper_err = RuntimeError(block_exc_err)
+                raise wrapper_err from err
 
-                if drop_duplicates_cols:
-                    dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
-        except Exception as err:
-            block_exc_err = f"BLOCK ERROR [{block_type.__name__}/{block_name}]: {err}"
+            # If at any point we end up with an empty data set, the pipeline has failed
+            if len(dataset) == 0:
+                raise EmptyDatasetError(
+                    f"Pipeline stopped: Empty dataset after running block: {block_name}"
+                )
 
-            # Try to raise the same exception type. This can fail if the
-            # exception is a non-standard type that has a different init
-            # signature, so fall back to raising a RuntimeError in that case.
-            try:
-                wrapper_err = type(err)(block_exc_err)
-            except TypeError:
-                wrapper_err = RuntimeError(block_exc_err)
-            raise wrapper_err from err
+            drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
+            if drop_columns:
+                dataset = dataset.remove_columns(drop_columns_in_ds)
+
+            if drop_duplicates_cols:
+                dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
 
         return dataset
 
