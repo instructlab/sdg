@@ -1,9 +1,8 @@
 import json
 
 import yaml
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
 from datasets import Dataset, load_dataset
 
 from ..logger_config import setup_logger
@@ -57,40 +56,9 @@ def convert_metadata(sample):
     return sample
 
 
-def make_frequency_table(dataset, key):
-    cat, cnt = np.unique(dataset[key], return_counts=True)
-    df = pd.DataFrame({key: cat, "count": cnt})
-    df = df.sort_values(by="count", ascending=False)
-    df = df.reset_index(drop=True)
-    return df
-
-
-def subplots(*args, **kwargs):
-    fig, ax_or_axes = plt.subplots(*args, tight_layout=True, **kwargs)
-    plt.close(fig)
-    return fig, ax_or_axes
-
-
-def plot_counts_group(ax, dataset, key):
-    df = make_frequency_table(dataset, key)
-    LOGGER.info(f"Plotting {key} distribution ...")
-    LOGGER.info(df)
-    x, y = df[key][::-1], df["count"][::-1]
-    bars = ax.barh(x, y)
-
-    # plot the counts on top of the bars
-    for b in bars:
-        xval = b.get_width()
-        yval = b.get_y() + b.get_height() / 2
-        ax.text(xval + 0.1, yval, round(xval, 1), ha="left", va="center")
-
-    ax.set_xlabel("count")
-    ax.set_ylabel(key)
-
-
 def save(ds, drop_cols, save_dir, filename):
     save_path = f"{save_dir}/{filename}"
-    LOGGER.info(f"Saving datasets and plots to {save_path}")
+    LOGGER.info(f"Saving dataset to {save_path}")
 
     if drop_cols:
         drop_columns_in_ds = [e for e in drop_cols if e in ds.column_names]
@@ -98,20 +66,12 @@ def save(ds, drop_cols, save_dir, filename):
 
     ds.to_json(save_path, orient="records", lines=True)
 
-    fig1, ax1 = subplots(figsize=(7, 0.3 * (len(ds.unique("group")) - 1)))
-    plot_counts_group(ax1, ds, "group")
-
-    fig2, ax2 = subplots(figsize=(7, 0.3 * (len(ds.unique("dataset")) - 1)))
-    plot_counts_group(ax2, ds, "dataset")
-
-    fig1.savefig(f"{save_dir}/group_dist.png", bbox_inches="tight")
-    fig2.savefig(f"{save_dir}/dataset_dist.png", bbox_inches="tight")
-
     # load dataset back to make sure it loads correctly
     new_ds = load_dataset("json", data_files=save_path, split="train")
     LOGGER.info(f"Dataset loaded with {len(new_ds)} samples")
     LOGGER.info(f"Dataset columns: {new_ds.column_names}")
     LOGGER.info(f"Dataset Sample: {ds[0]}")
+    del new_ds
 
 
 def get_populated_recipe(recipe_path, generated_data_path, recipe_output_path):
@@ -128,5 +88,4 @@ def get_populated_recipe(recipe_path, generated_data_path, recipe_output_path):
 
 def generate_train_test_splits(ds):
     ds = ds.train_test_split(test_size=0.1)
-
     return ds["train"], ds["test"]
