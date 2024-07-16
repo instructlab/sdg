@@ -229,7 +229,7 @@ class ConditionalLLMBlock(LLMBlock):
 
         return self.prompt_template.format(**sample).strip()
 
-    def validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
+    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
             prompt_template = prompt_template[input_dict[self.selector_column_name]]
         return super()._validate(prompt_template, input_dict)

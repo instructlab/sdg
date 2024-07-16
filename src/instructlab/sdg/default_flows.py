@@ -11,8 +11,8 @@ import yaml
 
 # Local
 from .filterblock import FilterByValueBlock
-from .llmblock import LLMBlock
-from .utilblocks import CombineColumnsBlock, SamplePopulatorBlock, SelectorBlock
+from .llmblock import LLMBlock, ConditionalLLMBlock
+from .utilblocks import CombineColumnsBlock, SamplePopulatorBlock, SelectorBlock, DuplicateColumns, RenameColumns, FlattenColumnsBlock, SetToMajorityValue
 
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
@@ -43,6 +43,12 @@ BLOCK_TYPE_MAP = {
     "CombineColumnsBlock": CombineColumnsBlock,
     "SamplePopulatorBlock": SamplePopulatorBlock,
     "SelectorBlock": SelectorBlock,
+    "DuplicateColumns": DuplicateColumns,
+    "RenameColumns": RenameColumns,
+    "FlattenColumnsBlock": FlattenColumnsBlock,
+    "ConditionalLLMBlock": ConditionalLLMBlock,
+    "SetToMajorityValue": SetToMajorityValue
+    
 }
 
 MODEL_FAMILY_MAP = {
@@ -115,4 +121,5 @@ DEFAULT_FLOW_FILE_MAP = {
     "SynthKnowledgeFlow": "flows/synth_knowledge.yaml",
     "SynthSkillsFlow": "flows/synth_skills.yaml",
     "SynthGroundedSkillsFlow": "flows/synth_grounded_skills.yaml",
+    "SynthKnowledgeFlow1.5": "flows/synth_knowledge1.5.yaml"
 }
