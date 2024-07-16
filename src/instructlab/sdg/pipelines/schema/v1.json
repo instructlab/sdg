@@ -46,7 +46,15 @@
                 "type": "number"
               },
               "n": {
-                "type": "number"
+                "oneOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string",
+                    "enum": ["scaled"]
+                  }
+                ]
               },
               "seed": {
                 "type": "number"
