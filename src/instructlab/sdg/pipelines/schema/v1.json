@@ -87,6 +87,9 @@
                     "type": "string",
                     "enum": ["float", "int", "bool"]
                   },
+                  "default_value": {
+                    "type": "string"
+                  },
                   "filter_column": {
                     "type": "string"
                   },

@@ -60,6 +60,7 @@ blocks:
     filter_value: 40
     operation: le
     convert_dtype: int
+    default_value: 1000
 - name: import_child
   type: ImportBlock
   config:
