@@ -77,13 +77,6 @@ def _convert_to_hack_fmt(sample: dict, sys_prompt: str):
     sample["user"] = user_query
     sample["assistant"] = response
 
-    metadata = {
-        key: value
-        for key, value in sample.items()
-        if key not in ["system", "user", "assistant"]
-    }
-    sample["metadata"] = json.dumps(metadata)
-
     return sample
 
 
@@ -102,11 +95,5 @@ def _convert_to_messages(sample: dict, sys_prompt: str):
         {"content": user_query, "role": "user"},
         {"content": response, "role": "assistant"},
     ]
-    metadata = {
-        key: value
-        for key, value in sample.items()
-        if key not in ["inputs", "targets"]
-    }
-    sample["metadata"] = json.dumps(metadata)
 
     return sample
