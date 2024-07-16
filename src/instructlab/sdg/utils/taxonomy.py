@@ -32,6 +32,7 @@ rules:
 """
 
 
+# This is part of the public API.
 class TaxonomyReadingException(Exception):
     """An exception raised during reading of the taxonomy."""
 

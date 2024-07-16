@@ -12,6 +12,7 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+# This is part of the public API.
 class FilterByValueBlockError(Exception):
     """An exception raised by the FilterByValue block."""
 
