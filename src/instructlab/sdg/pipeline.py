@@ -14,10 +14,12 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+# This is part of the public API.
 class EmptyDatasetError(Exception):
     pass
 
 
+# This is part of the public API.
 class PipelineContext:
     def __init__(
         self, client, model_family, model_id, num_instructions_to_generate
@@ -30,6 +32,7 @@ class PipelineContext:
         self.num_procs = 8
 
 
+# This is part of the public API.
 class Pipeline:
     def __init__(self, ctx, config_path, chained_blocks: list) -> None:
         """
@@ -113,6 +116,7 @@ _PIPELINE_CONFIG_PARSER_MAJOR = 1
 _PIPELINE_CONFIG_PARSER_MINOR = 0
 
 
+# This is part of the public API.
 class PipelineConfigParserError(Exception):
     """An exception raised while parsing a pipline config file."""
 
@@ -141,5 +145,6 @@ def _parse_pipeline_config_file(pipeline_yaml):
     return content["blocks"]
 
 
+# This is part of the public API.
 SIMPLE_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.simple"
 FULL_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.full"

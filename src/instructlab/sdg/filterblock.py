@@ -12,6 +12,7 @@ from .logger_config import setup_logger
 logger = setup_logger(__name__)
 
 
+# This is part of the public API.
 class FilterByValueBlockError(Exception):
     """An exception raised by the FilterByValue block."""
 
@@ -83,6 +84,7 @@ def _map_dtype(samples, column, dtype, num_proc=1):
     return samples.map(convert_column, num_proc=num_proc)
 
 
+# This is part of the public API.
 class FilterByValueBlock(Block):
     def __init__(
         self,
