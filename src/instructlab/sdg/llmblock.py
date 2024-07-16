@@ -62,6 +62,7 @@ class LLMBlock(Block):
         config_path,
         output_cols,
         model_prompt=None,
+        gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
@@ -77,12 +78,9 @@ class LLMBlock(Block):
         self.parser_name = parser_kwargs.get("parser_name", None)
         self.parsing_pattern = parser_kwargs.get("parsing_pattern", None)
         self.parser_cleanup_tags = parser_kwargs.get("parser_cleanup_tags", None)
-        self.defaults = {
-            "model": self.ctx.model_id,
-            "temperature": 0,
-            "max_tokens": 4096,
-        }
-
+        self.gen_kwargs = self._gen_kwargs(
+            gen_kwargs, model=self.ctx.model_id, temperature=0, max_tokens=4096
+        )
         # Whether the LLM server supports a list of input prompts
         # and supports the n parameter to generate n outputs per input
         self.server_supports_batched = server_supports_batched(
@@ -141,41 +139,39 @@ class LLMBlock(Block):
 
         return prompt if model_prompt is None else model_prompt.format(prompt=prompt)
 
-    def _gen_kwargs(self, **gen_kwargs):
-        gen_kwargs = {**self.defaults, **gen_kwargs}
+    def _gen_kwargs(self, gen_kwargs, **defaults):
+        gen_kwargs = {**defaults, **gen_kwargs}
+        if (
+            "n" in gen_kwargs
+            and isinstance(gen_kwargs["n"], str)
+            and gen_kwargs["n"] == "scaled"
+        ):
+            gen_kwargs["n"] = self.ctx.num_instructions_to_generate
         if "max_tokens" in gen_kwargs:
             gen_kwargs["max_tokens"] = int(gen_kwargs["max_tokens"])
         if "temperature" in gen_kwargs:
             gen_kwargs["temperature"] = float(gen_kwargs["temperature"])
-        gen_kwargs["n"] = self._get_n(gen_kwargs)
         return gen_kwargs
 
-    def _get_n(self, gen_kwargs):
-        n = gen_kwargs.get("n", 1)
-        if isinstance(n, str) and n == "scaled":
-            n = self.ctx.num_instructions_to_generate
-        return n
-
-    def _generate(self, samples, **gen_kwargs) -> list:
+    def _generate(self, samples) -> list:
         prompts = [self._format_prompt(sample) for sample in samples]
-        generate_args = self._gen_kwargs(**gen_kwargs)
 
         if self.server_supports_batched:
             response = self.ctx.client.completions.create(
-                prompt=prompts, **generate_args
+                prompt=prompts, **self.gen_kwargs
             )
             return [choice.text.strip() for choice in response.choices]
 
         results = []
         for prompt in prompts:
-            for _ in range(generate_args["n"]):
+            for _ in range(self.gen_kwargs.get("n", 1)):
                 response = self.ctx.client.completions.create(
-                    prompt=prompt, **generate_args
+                    prompt=prompt, **self.gen_kwargs
                 )
                 results.append(response.choices[0].text.strip())
         return results
 
-    def generate(self, samples: Dataset, **gen_kwargs) -> Dataset:
+    def generate(self, samples: Dataset) -> Dataset:
         """
         Generate the output from the block. This method should first validate the input data,
         then generate the output, and finally parse the generated output before returning it.
@@ -207,10 +203,10 @@ class LLMBlock(Block):
 
         # generate the output
 
-        outputs = self._generate(samples, **gen_kwargs)
+        outputs = self._generate(samples)
         logger.debug("Generated outputs: %s", outputs)
 
-        num_parallel_samples = self._get_n(gen_kwargs)
+        num_parallel_samples = self.gen_kwargs.get("n", 1)
         extended_samples = []
 
         # Duplicate each input sample n times, where n is the number

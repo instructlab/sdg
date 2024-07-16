@@ -7,9 +7,9 @@ blocks:
       output_cols:
         - mmlubench_question
         - mmlubench_answer
-    gen_kwargs:
-      temperature: 0
-      max_tokens: 2048
+      gen_kwargs:
+        temperature: 0
+        max_tokens: 2048
     drop_duplicates:
       - mmlubench_question
   - name: gen_knowledge
@@ -24,8 +24,8 @@ blocks:
         parsing_pattern: '\[(?:Question|QUESTION)\]\s*(.*?)\s*\[(?:Answer|ANSWER)\]\s*(.*?)\s*(?=\[(?:Question|QUESTION)\]|$)'
         parser_cleanup_tags:
           - "[END]"
-    gen_kwargs:
-      max_tokens: 2048
+      gen_kwargs:
+        max_tokens: 2048
     drop_duplicates:
       - question
   - name: eval_faithfulness_qa_pair
@@ -35,8 +35,8 @@ blocks:
       output_cols:
         - explanation
         - judgment
-    gen_kwargs:
-      max_tokens: 2048
+      gen_kwargs:
+        max_tokens: 2048
   - name: filter_faithfulness
     type: FilterByValueBlock
     config:
@@ -53,8 +53,8 @@ blocks:
       output_cols:
         - feedback
         - score
-    gen_kwargs:
-      max_tokens: 2048
+      gen_kwargs:
+        max_tokens: 2048
   - name: filter_relevancy
     type: FilterByValueBlock
     config:
@@ -72,8 +72,8 @@ blocks:
       output_cols:
         - explanation
         - rating
-    gen_kwargs:
-      max_tokens: 2048
+      gen_kwargs:
+        max_tokens: 2048
   - name: filter_verify_question
     type: FilterByValueBlock
     config:

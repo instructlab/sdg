@@ -17,7 +17,7 @@ from instructlab.sdg.utilblocks import (
 )
 
 
-def _noop_generate(self, samples, **gen_kwargs):
+def _noop_generate(self, samples):
     return samples
 
 
