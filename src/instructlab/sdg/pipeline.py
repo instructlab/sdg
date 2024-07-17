@@ -27,8 +27,7 @@ class Pipeline:
         """
         df = dataset.to_pandas()
         df = df.drop_duplicates(subset=cols).reset_index(drop=True)
-        ds = Dataset.from_pandas(df)
-        return ds
+        return Dataset.from_pandas(df)
 
     def generate(self, dataset) -> Dataset:
         """
