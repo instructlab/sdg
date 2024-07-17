@@ -1,11 +1,12 @@
+# Standard
 import json
+
+# Third Party
+from datasets import Dataset, concatenate_datasets, load_dataset
 import yaml
 
-import pandas as pd
-
-from datasets import Dataset, load_dataset, concatenate_datasets
+# First Party
 from instructlab.sdg.logger_config import setup_logger
-
 
 LOGGER = setup_logger(__name__)
 ALLOWED_COLS = ["id", "messages", "metadata"]

@@ -3,16 +3,18 @@
 # Standard
 from enum import Enum
 import json
-import uuid
-import random
-import yaml
 import os
+import random
+import uuid
+
+# Third Party
+from datasets import Dataset, concatenate_datasets
+import yaml
 
 # First Party
 # pylint: disable=ungrouped-imports
 from instructlab.sdg import utils
 from instructlab.sdg.logger_config import setup_logger
-from datasets import Dataset, concatenate_datasets
 
 logger = setup_logger(__name__)
 
