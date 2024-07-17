@@ -9,6 +9,7 @@ import yaml
 
 # Local
 from . import filterblock, importblock, llmblock, utilblocks
+from .block import Block
 from .logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -30,6 +31,32 @@ class PipelineContext:
         self.num_instructions_to_generate = num_instructions_to_generate
         # FIXME: base this on the available number of CPUs
         self.num_procs = 8
+
+
+# This is part of the public API.
+class BlockGenerationError(Exception):
+    """A BlockGenerationError occurs when a block generates an exception during
+    generation. It contains information about which block failed and why.
+    """
+
+    def __init__(self, block: Block, exception: Exception):
+        self.block = block
+        self.exception = exception
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.block_type}/{self.block_name}): {self.exception_message}"
+
+    @property
+    def block_name(self) -> str:
+        return self.block.block_name
+
+    @property
+    def block_type(self) -> str:
+        return self.block.__class__.__name__
+
+    @property
+    def exception_message(self) -> str:
+        return str(self.exception)
 
 
 # This is part of the public API.
@@ -80,20 +107,8 @@ class Pipeline:
             # Execute the block and wrap errors with the block name/type
             try:
                 dataset = block.generate(dataset)
-
             except Exception as err:
-                block_exc_err = (
-                    f"BLOCK ERROR [{block_type.__name__}/{block_name}]: {err}"
-                )
-
-                # Try to raise the same exception type. This can fail if the
-                # exception is a non-standard type that has a different init
-                # signature, so fall back to raising a RuntimeError in that case.
-                try:
-                    wrapper_err = type(err)(block_exc_err)
-                except TypeError:
-                    wrapper_err = RuntimeError(block_exc_err)
-                raise wrapper_err from err
+                raise BlockGenerationError(block=block, exception=err) from err
 
             # If at any point we end up with an empty data set, the pipeline has failed
             if len(dataset) == 0:
