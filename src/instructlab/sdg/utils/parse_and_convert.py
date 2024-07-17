@@ -155,7 +155,8 @@ def create_summary_dataset(generated_dataset: Dataset):
                     {"role": "assistant", "content": rec["response"]}]
         metadata = json.dumps({
             "summary_type": rec["summary_type"],
-            "raw_document": rec["context"]
+            "raw_document": rec["context"],
+            "dataset": f"document_summary_{rec['summary_type']}"
         })
         return {"messages": messages, "metadata": metadata, "id":  str(uuid.uuid4())}
     unique_document_summary = unique_document_summary.map(__create_summary_ds, remove_columns=unique_document_summary.column_names)
@@ -171,7 +172,8 @@ def generate_knowledge_qa_dataset(generated_dataset: Dataset, keep_context_separ
             "raw_document": rec["raw_document"],
             "summary_type": rec["summary_type"],
             "sdg_document": rec["document"],
-            "domain": rec["domain"]
+            "domain": rec["domain"],
+            "dataset": f"document_knowledge_qa"
         })
         if keep_context_separate:
             messages = [{"role": "user", "content": f"{instruction}"},
@@ -207,6 +209,9 @@ def build_raft_dataset(ds: Dataset, p, num_doc_in_context=4):
         user_inst = user_msg["content"]
         rec["messages"][user_idx]["content"] = f"{docs}\n\n{user_inst}"
         rec["messages"] = rec["messages"]
+        metadata = json.loads(rec['metadata'])
+        metadata['dataset'] += f"_raft_p{p}"
+        rec['metadata'] = json.dumps(metadata)
         return rec
     ds = ds.map(__pick_documents, fn_kwargs={"p": p}, remove_columns=["context"])
     return ds
