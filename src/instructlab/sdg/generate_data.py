@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 import json
@@ -11,7 +11,7 @@ import time
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
-from datasets import concatenate_datasets, Dataset
+from datasets import Dataset, concatenate_datasets
 import httpx
 import openai
 
@@ -24,23 +24,21 @@ from instructlab.sdg.default_flows import (
     MODEL_FAMILY_MIXTRAL,
     Flow,
 )
+from instructlab.sdg.logger_config import setup_logger
 from instructlab.sdg.pipeline import Pipeline
 from instructlab.sdg.utils import models
+from instructlab.sdg.utils.datamixing import Recipe
+from instructlab.sdg.utils.parse_and_convert import (
+    _convert_to_hack_fmt,
+    _convert_to_messages,
+    _unescape,
+    create_phase07_ds,
+    create_phase10_ds,
+)
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
 )
-from instructlab.sdg.utils.parse_and_convert import (
-    _unescape,
-    _convert_to_messages,
-    _convert_to_hack_fmt,
-    create_phase07_ds,
-    create_phase10_ds
-)
-from instructlab.sdg.utils.datamixing import (
-    Recipe,
-)
-from instructlab.sdg.logger_config import setup_logger
 
 # Constants
 logger = setup_logger(__name__)
@@ -53,9 +51,6 @@ def _sdg_init(pipeline, client, num_instructions_to_generate):
     grounded_skill_flows = []
 
     if pipeline == "full":
-        knowledge_flows.append(
-            Flow(client).get_flow_from_file(DEFAULT_FLOW_FILE_MAP["MMLUBenchFlow"])
-        )
         knowledge_flows.append(
             Flow(client).get_flow_from_file(DEFAULT_FLOW_FILE_MAP["SynthKnowledgeFlow"])
         )
@@ -96,7 +91,9 @@ def _sdg_init(pipeline, client, num_instructions_to_generate):
     sdg_knowledge = SDG([Pipeline(flow) for flow in knowledge_flows])
     sdg_freeform_skill = SDG([Pipeline(flow) for flow in freeform_skill_flows])
     sdg_grounded_skill = SDG([Pipeline(flow) for flow in grounded_skill_flows])
-    return sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill
+    sdg_mmlubench = SDG([Pipeline(Flow(client).get_flow_from_file(DEFAULT_FLOW_FILE_MAP["MMLUBenchFlow"]))])
+                        
+    return sdg_knowledge, sdg_mmlubench, sdg_freeform_skill, sdg_grounded_skill
 
 
 def get_taxonomy_data(
@@ -204,11 +201,13 @@ def generate_data(
     # TODO -- llama-cpp doesn't support batching, we need to get a hint from the CLI
     # about whether we can turn this on (whether vllm is used or not)
 
-    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
+    sdg_knowledge, sdg_mmlubench, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
         pipeline,
         client,
         num_instructions_to_generate,
     )
+
+    mmlubench_data = []
 
     if console_output:
         logger.info(
@@ -255,6 +254,10 @@ def generate_data(
             
             knowledge_recipe.add_dataset(knowledge_fpath)
             skills_recipe.add_dataset(skills_fpath)
+
+            # generate mmlubench data for the current leaf node 
+            mmlubench_data.append(sdg_mmlubench.generate(ds))
+
         else:
             messages = generated_data.map(
                 _convert_to_messages,
@@ -270,6 +273,10 @@ def generate_data(
     if knowledge_recipe.dataset_added:
         knowledge_recipe.save_recipe(f"{output_dir}/knowledge_recipe_{date_suffix}.yaml")
         knowledge_recipe.save_mixed_dataset(f"{output_dir}/knowledge_train_msgs_{date_suffix}.jsonl")
+
+        all_nodes_mmlubench_data = concatenate_datasets(mmlubench_data)
+        # convert to lmeval harness mmlubench format
+        
                                                                                  
     if skills_recipe.dataset_added:
         skills_recipe.save_recipe(f"{output_dir}/skills_recipe_{date_suffix}.yaml")
