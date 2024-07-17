@@ -139,6 +139,8 @@ def create_summary_dataset(generated_dataset: Dataset):
     "Extract all the atomic facts from the given document.",
     "List all the key takeaways from the provided text."
     ]
+    if "summary_type" not in generated_dataset.column_names:
+        return None
     summary_ds = generated_dataset.filter(lambda x: x["summary_type"] != "summary_base_document")
     unique_document_summary = summary_ds.to_pandas().drop_duplicates(subset=["document"])
     unique_document_summary = Dataset.from_pandas(unique_document_summary).remove_columns(["icl_query_1", "icl_response_1", "icl_query_2", "icl_response_2", "icl_query_3", "icl_response_3", "route", "__index_level_0__", "question", "response"])
@@ -168,13 +170,15 @@ def generate_knowledge_qa_dataset(generated_dataset: Dataset, keep_context_separ
         context = rec["document"]
         instruction = rec["question"]
         response = rec["response"]
-        metadata = json.dumps({
-            "raw_document": rec["raw_document"],
-            "summary_type": rec["summary_type"],
+        metadata = {
             "sdg_document": rec["document"],
             "domain": rec["domain"],
             "dataset": f"document_knowledge_qa"
-        })
+        }
+        if "raw_document" in rec and "summary_type" in rec:
+            metadata.update({"raw_document": rec["raw_document"],
+            "summary_type": rec["summary_type"],})
+        metadata = json.dumps(metadata)
         if keep_context_separate:
             messages = [{"role": "user", "content": f"{instruction}"},
                             {"role": "assistant", "content": response}]
@@ -227,18 +231,26 @@ def _conv_pretrain(rec):
 
 def create_phase10_ds(generated_dataset: Dataset):
     # Phase 1.0
-    summary_dataset = create_summary_dataset(generated_dataset)
     knowledge_ds = generate_knowledge_qa_dataset(generated_dataset, keep_context_separate=True)
     knowledge_ds = build_raft_dataset(knowledge_ds, p=0.4)
-    phase10 = concatenate_datasets([knowledge_ds, summary_dataset])
+    
+    summary_dataset = create_summary_dataset(generated_dataset)
+    if summary_dataset is not None:
+        phase10 = concatenate_datasets([knowledge_ds, summary_dataset])
+    else:
+        phase10 = knowledge_ds
     return phase10
 
 
 def create_phase07_ds(generated_dataset: Dataset):
     # Phase 0.7
-    summary_dataset = create_summary_dataset(generated_dataset)
     knowledge_ds = generate_knowledge_qa_dataset(generated_dataset, keep_context_separate=False)
-    summary_dataset = summary_dataset.map(_conv_pretrain)
     knowledge_ds = knowledge_ds.map(_conv_pretrain)
-    phase07 = concatenate_datasets([knowledge_ds, summary_dataset])
+    
+    summary_dataset = create_summary_dataset(generated_dataset)
+    if summary_dataset is not None:
+        summary_dataset = summary_dataset.map(_conv_pretrain)
+        phase07 = concatenate_datasets([knowledge_ds, summary_dataset])
+    else:
+        phase07 = knowledge_ds
     return phase07
