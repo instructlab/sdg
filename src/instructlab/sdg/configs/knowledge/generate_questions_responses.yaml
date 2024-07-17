@@ -48,18 +48,6 @@ examples: |
   {icl_response_3}
   [END]
 
-  [QUESTION]
-  {icl_query_4}
-  [ANSWER]
-  {icl_response_4}
-  [END]
-
-  [QUESTION]
-  {icl_query_5}
-  [ANSWER]
-  {icl_response_5}
-  [END]
-
 generation: |
   Here is the document:
   
