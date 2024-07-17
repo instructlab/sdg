@@ -26,7 +26,7 @@ class Pipeline:
         Drop duplicates from the dataset based on the columns provided.
         """
         df = dataset.to_pandas()
-        df.drop_duplicates(subset=cols, inplace=True)
+        df = df.drop_duplicates(subset=cols).reset_index(drop=True)
         return Dataset.from_pandas(df)
 
     def generate(self, dataset) -> Dataset:
