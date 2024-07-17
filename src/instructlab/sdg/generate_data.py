@@ -34,6 +34,8 @@ from instructlab.sdg.utils.parse_and_convert import (
     _unescape,
     _convert_to_messages,
     _convert_to_hack_fmt,
+    create_phase07_ds,
+    create_phase10_ds
 )
 from instructlab.sdg.utils.datamixing import (
     Recipe,
@@ -153,8 +155,8 @@ def generate_data(
     logger = setup_logger(__name__)
     generate_start = time.time()
 
-    knowledge_recipe = Recipe("/shiv/sdg-ad/src/instructlab/sdg/configs/knowledge/data_recipe/default_recipe.yaml")
-    skills_recipe = Recipe("/shiv/sdg-ad/src/instructlab/sdg/configs/skills/data_recipe/default_recipe.yaml")
+    knowledge_recipe = Recipe("src/instructlab/sdg/configs/knowledge/data_recipe/default_recipe.yaml")
+    skills_recipe = Recipe("src/instructlab/sdg/configs/skills/data_recipe/default_recipe.yaml")
 
     sys_prompt = knowledge_recipe.sys_prompt    
     logger.info(f"System prompt: {sys_prompt}")
@@ -180,9 +182,10 @@ def generate_data(
     # this file needs to be revisted later - retaining for now
     output_file_test = f"test_{name}_{date_suffix}.jsonl"
     
-    taxonomy_ds = get_taxonomy_data(leaf_nodes, sys_prompt=sys_prompt)
-    logger.info(f"Generating to: {os.path.join(output_dir, output_file_test)}")
-    taxonomy_ds.to_json(os.path.join(output_dir, output_file_test))
+    #TODO: AB change this to handle new knowledge
+    # taxonomy_ds = get_taxonomy_data(leaf_nodes, sys_prompt=sys_prompt)
+    # logger.info(f"Generating to: {os.path.join(output_dir, output_file_test)}")
+    # taxonomy_ds.to_json(os.path.join(output_dir, output_file_test))
 
     orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
     cert = tuple(item for item in orig_cert if item)
@@ -239,19 +242,19 @@ def generate_data(
             # add to 1.0 recipe
         
 
-        generated_data = sdg.generate(ds)
+        generated_data = sdg.generate(ds, cache_dataset_path='ds.jsonl')
 
         if is_knowledge:
-            # pretraining_data = generated_data.map(...)
-            # qa_data_in_skills = generate_data.map(...)
-
-            # pretraining_data.to_json(...)
-            # qa_data_in_skills.to_json(...)
-
-            # knowledge_recipe.add_dataset(...)
-            # skills_recipe.add_dataset(...)
-            pass
-        
+            knowledge_phase_data = create_phase07_ds(generated_data)
+            skills_phase_data = create_phase10_ds(generated_data)
+            
+            knowledge_fpath = os.path.join(output_dir, f"node_datasets_{date_suffix}/node_{i}_p07.jsonl")
+            skills_fpath = os.path.join(output_dir, f"node_datasets_{date_suffix}/node_{i}_p10.jsonl")
+            knowledge_phase_data.to_json(knowledge_fpath, orient="records", lines=True)
+            skills_phase_data.to_json(skills_fpath, orient="records", lines=True)
+            
+            knowledge_recipe.add_dataset(knowledge_fpath)
+            skills_recipe.add_dataset(skills_fpath)
         else:
             messages = generated_data.map(
                 _convert_to_messages,
