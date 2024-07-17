@@ -1,11 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from importlib import resources
-from typing import Optional
+from typing import Iterable, Optional
+import math
 import os.path
 
 # Third Party
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets
+from openai import OpenAI
 import yaml
 
 # Local
@@ -22,16 +26,46 @@ class EmptyDatasetError(Exception):
 
 
 # This is part of the public API.
-class PipelineContext:
-    def __init__(
-        self, client, model_family, model_id, num_instructions_to_generate
-    ) -> None:
-        self.client = client
-        self.model_family = model_family
-        self.model_id = model_id
-        self.num_instructions_to_generate = num_instructions_to_generate
-        # FIXME: base this on the available number of CPUs
-        self.num_procs = 8
+@dataclass
+class PipelineContext:  # pylint: disable=too-many-instance-attributes
+    """
+    A PipelineContext holds the common attributes needed between blocks in a
+    pipeline
+
+    client: The OpenAI client handle
+    model_id: The ID of the teacher model to be used for client calls
+    model_family: The family identifier for the model being updated
+    num_instructions_to_generate: The total number of instructions the user
+        wants to generate during this run
+    batch_size: The size of the dataset batches for parallel generation
+    batch_num_workers: The number of worker threads/processes to maintain in the
+        central executor pool
+    dataset_num_procs: The number of processes to use when performing parallel
+       map operations on individual datasets
+    """
+
+    # The default batch size of 8 has been determined as a good default for
+    # standard instructlab workloads when running with vllm batching.
+    DEFAULT_BATCH_SIZE = 8
+
+    # The default number of processes to use when performing parallel operations
+    # on individual datasets
+    DEFAULT_DATASET_NUM_PROCS = 8
+
+    client: OpenAI
+    model_family: str
+    model_id: str
+    num_instructions_to_generate: int
+    dataset_num_procs: Optional[int] = DEFAULT_DATASET_NUM_PROCS
+    batch_size: Optional[int] = DEFAULT_BATCH_SIZE
+    batch_num_workers: Optional[int] = None
+
+    @property
+    def batching_enabled(self) -> bool:
+        """Batching is enabled IFF the batch size is specified and the number of
+        workers is not set explicitly to 1
+        """
+        return self.batch_size is not None and self.batch_num_workers != 1
 
 
 # This is part of the public API.

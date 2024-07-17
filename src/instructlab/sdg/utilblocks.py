@@ -35,7 +35,7 @@ class SamplePopulatorBlock(Block):
 
     def generate(self, samples) -> Dataset:
         return self._map_populate(
-            samples, self.configs, self.column_name, self.ctx.num_procs
+            samples, self.configs, self.column_name, self.ctx.dataset_num_procs
         )
 
 
@@ -64,7 +64,7 @@ class SelectorBlock(Block):
             self.choice_map,
             self.choice_col,
             self.output_col,
-            self.ctx.num_procs,
+            self.ctx.dataset_num_procs,
         )
 
 
@@ -89,5 +89,9 @@ class CombineColumnsBlock(Block):
 
     def generate(self, samples: Dataset) -> Dataset:
         return self._map_combine(
-            samples, self.columns, self.output_col, self.separator, self.ctx.num_procs
+            samples,
+            self.columns,
+            self.output_col,
+            self.separator,
+            self.ctx.dataset_num_procs,
         )

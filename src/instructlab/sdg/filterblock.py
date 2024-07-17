@@ -178,9 +178,13 @@ class FilterByValueBlock(Block):
                 samples,
                 self.column_name,
                 self.dtype,
-                self.ctx.num_procs,
+                self.ctx.dataset_num_procs,
             )
 
         return _filter_by_values(
-            samples, self.column_name, self.operation, self.value, self.ctx.num_procs
+            samples,
+            self.column_name,
+            self.operation,
+            self.value,
+            self.ctx.dataset_num_procs,
         )

@@ -12,7 +12,7 @@ from instructlab.sdg.utilblocks import SamplePopulatorBlock
 class TestFilterByValueBlock(unittest.TestCase):
     def setUp(self):
         self.ctx = MagicMock()
-        self.ctx.num_procs = 1
+        self.ctx.dataset_num_procs = 1
         self.pipe = MagicMock()
 
     @patch("instructlab.sdg.block.Block._load_config")
