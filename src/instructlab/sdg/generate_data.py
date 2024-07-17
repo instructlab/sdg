@@ -231,7 +231,7 @@ def generate_data(
             # add to 0.7 recipe
             # add to 1.0 recipe
 
-        elif samples[0].get("context"):
+        elif samples[0].get("seed_context"):
             sdg = sdg_grounded_skill
             logger.info(f"Generating data for leaf node {i} with grounded skill pipeline.")
             # add to 1.0 recipe
