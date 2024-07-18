@@ -18,7 +18,6 @@ import gitdb
 import yaml
 
 # First Party
-from instructlab.sdg import utils
 from instructlab.sdg.utils import chunking
 
 logger = logging.getLogger(__name__)
