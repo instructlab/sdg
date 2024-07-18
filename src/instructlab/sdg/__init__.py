@@ -12,6 +12,7 @@ __all__ = (
     "ImportBlock",
     "LLMBlock",
     "Pipeline",
+    "PipelineBlockError",
     "PipelineConfigParserError",
     "PipelineContext",
     "SamplePopulatorBlock",
@@ -33,6 +34,7 @@ from .pipeline import (
     SIMPLE_PIPELINES_PACKAGE,
     EmptyDatasetError,
     Pipeline,
+    PipelineBlockError,
     PipelineConfigParserError,
     PipelineContext,
 )

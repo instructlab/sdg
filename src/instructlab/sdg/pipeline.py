@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
 from importlib import resources
+from typing import Optional
 import os.path
 
 # Third Party
@@ -9,6 +10,7 @@ import yaml
 
 # Local
 from . import filterblock, importblock, llmblock, utilblocks
+from .block import Block
 from .logger_config import setup_logger
 
 logger = setup_logger(__name__)
@@ -30,6 +32,33 @@ class PipelineContext:
         self.num_instructions_to_generate = num_instructions_to_generate
         # FIXME: base this on the available number of CPUs
         self.num_procs = 8
+
+
+# This is part of the public API.
+class PipelineBlockError(Exception):
+    """A PipelineBlockError occurs when a block generates an exception during
+    generation. It contains information about which block failed and why.
+    """
+
+    def __init__(
+        self,
+        exception: Exception,
+        *,
+        block: Optional[Block] = None,
+        block_name: Optional[str] = None,
+        block_type: Optional[str] = None,
+    ):
+        self.exception = exception
+        self.block = block
+        self.block_name = block_name or (block.block_name if block else None)
+        self.block_type = block_type or (block.__class__.__name__ if block else None)
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.block_type}/{self.block_name}): {self.exception_message}"
+
+    @property
+    def exception_message(self) -> str:
+        return str(self.exception)
 
 
 # This is part of the public API.
@@ -67,17 +96,28 @@ class Pipeline:
         dataset: the input dataset
         """
         for block_prop in self.chained_blocks:
-            block_name = block_prop["name"]
-            block_type = _lookup_block_type(block_prop["type"])
-            block_config = block_prop["config"]
-            drop_columns = block_prop.get("drop_columns", [])
-            drop_duplicates_cols = block_prop.get("drop_duplicates", False)
-            block = block_type(self.ctx, self, block_name, **block_config)
+            # Initialize arguments for error handling to None
+            block, block_name, block_type = None, None, None
+            try:
+                # Parse and instantiate the block
+                block_name = block_prop["name"]
+                block_type = _lookup_block_type(block_prop["type"])
+                block_config = block_prop["config"]
+                drop_columns = block_prop.get("drop_columns", [])
+                drop_duplicates_cols = block_prop.get("drop_duplicates", False)
+                block = block_type(self.ctx, self, block_name, **block_config)
+                logger.info("Running block: %s", block_name)
+                logger.info(dataset)
 
-            logger.info("Running block: %s", block_name)
-            logger.info(dataset)
-
-            dataset = block.generate(dataset)
+                # Execute the block and wrap errors with the block name/type
+                dataset = block.generate(dataset)
+            except Exception as err:
+                raise PipelineBlockError(
+                    exception=err,
+                    block=block,
+                    block_name=block_name,
+                    block_type=block_type,
+                ) from err
 
             # If at any point we end up with an empty data set, the pipeline has failed
             if len(dataset) == 0:
