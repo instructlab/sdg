@@ -3,16 +3,21 @@
 # Standard
 from enum import Enum
 import json
-import uuid
+import os
 import random
+import uuid
+
+# Third Party
+from datasets import Dataset, concatenate_datasets
 import yaml
 import os
+import re
+from typing import Any
 
 # First Party
 # pylint: disable=ungrouped-imports
 from instructlab.sdg import utils
 from instructlab.sdg.logger_config import setup_logger
-from datasets import Dataset, concatenate_datasets
 
 logger = setup_logger(__name__)
 
@@ -221,3 +226,82 @@ def create_phase07_ds(generated_dataset: Dataset):
     else:
         phase07 = knowledge_ds
     return phase07
+
+
+def post_process_mcq(ds: Dataset, is_mmlu_eval: bool=False) -> Dataset:
+    """Filters out badly generated data, adds dataset type column
+
+    Args:
+        ds (Dataset): mcq generated dataset from mmmlu pipeline
+        is_mmlu_eval (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        Dataset: Hf Dataset with new column, filtered dataset
+    """
+    ds = ds.filter(lambda x: ")" in x["mmlubench_answer"])
+    ds = ds.filter(lambda x: "A)" in x["mmlubench_question"])
+    ds = ds.add_column("dataset_type", ["mcq_qa"] * ds.num_rows)
+    if is_mmlu_eval:
+        return format_mmlu_style(ds)
+    return ds
+
+
+def extract_options(text: str) -> list[Any]:
+    """regex to extract options from mcq
+
+    Args:
+        text (str): question with options/mcq choices 
+
+    Returns:
+        list[Any]: options under question that match the pattern.
+    """
+    # Use a regular expression to find patterns and capture the text after the letter and parenthesis
+    pattern = r"\b[A-Z]\) (.+)"
+    matches = re.findall(pattern, text)
+    return matches
+
+
+def format_mmlu_style(ds: Dataset) -> Dataset:
+    """Format the dataset according to lm-harness mmlu requirement.
+
+    Args:
+        ds (Dataset): input dataset
+
+    Returns:
+        Dataset: formated hf dataset
+    """
+    ds = ds.map(lambda x: {"answer": x["mmlubench_answer"][: x["mmlubench_answer"].index(")")]})
+    ds = ds.map(lambda x: {"choices": extract_options(x["mmlubench_question"])})
+    ds = ds.map(lambda x: {"question": x["mmlubench_question"][: x["mmlubench_question"].index("A)")].strip()})
+    ds = ds.rename_columns({"domain": "subject"})
+    ds = ds.filter(lambda x: x["choices"])
+    ds = ds.filter(lambda x: len(x["choices"]) == 4)
+    ds = ds.filter(lambda x: x["answer"] in ["A", "B", "C", "D"])
+    ds = ds.class_encode_column("answer")
+    return ds
+
+
+def create_mmlu_evaluation_dataset(generate_mcq_dataset: Dataset) -> Dataset :
+    """Filter, format and return mcq dataset that is compatible with lm-harness for doing mmlu-style evaluation
+
+    Args:
+        generate_mcq_dataset (Dataset): sdg generated mcq dataset
+    Returns:
+        Dataset: MMLU MCQ datast
+    """
+    mmlu_dataset = post_process_mcq(generate_mcq_dataset, is_mmlu_eval=True)
+    return mmlu_dataset
+
+
+def create_mmlu_evaluation_yaml(task_name, eval_data_file_path, yaml_file_path):
+    """
+    Prepare Task Yaml that will be used in lm_eval_harness to evaluate knowledge using mmlu style metric
+    """
+    task_yaml = {
+        "task": task_name,
+        "dataset_kwargs": {"data_files": {"test": eval_data_file_path}},
+        "include": "_default_mmlu_pr_template_yaml",
+        "group": "mmlu_pr",
+    }
+    with open(yaml_file_path, "w") as yaml_file:
+                yaml.dump(task_yaml, yaml_file, default_flow_style=False) 

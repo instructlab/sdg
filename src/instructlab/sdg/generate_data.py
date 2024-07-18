@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from enum import Enum
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 import json
@@ -11,7 +11,7 @@ import time
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
-from datasets import concatenate_datasets, Dataset
+from datasets import Dataset, concatenate_datasets
 import httpx
 import openai
 
@@ -24,23 +24,23 @@ from instructlab.sdg.default_flows import (
     MODEL_FAMILY_MIXTRAL,
     Flow,
 )
+from instructlab.sdg.logger_config import setup_logger
 from instructlab.sdg.pipeline import Pipeline
 from instructlab.sdg.utils import models
+from instructlab.sdg.utils.datamixing import Recipe
+from instructlab.sdg.utils.parse_and_convert import (
+    _convert_to_hack_fmt,
+    _convert_to_messages,
+    _unescape,
+    create_phase07_ds,
+    create_phase10_ds,
+    create_mmlu_evaluation_dataset,
+    create_mmlu_evaluation_yaml
+)
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
 )
-from instructlab.sdg.utils.parse_and_convert import (
-    _unescape,
-    _convert_to_messages,
-    _convert_to_hack_fmt,
-    create_phase07_ds,
-    create_phase10_ds
-)
-from instructlab.sdg.utils.datamixing import (
-    Recipe,
-)
-from instructlab.sdg.logger_config import setup_logger
 
 # Constants
 logger = setup_logger(__name__)
@@ -53,9 +53,6 @@ def _sdg_init(pipeline, client, num_instructions_to_generate):
     grounded_skill_flows = []
 
     if pipeline == "full":
-        knowledge_flows.append(
-            Flow(client).get_flow_from_file(DEFAULT_FLOW_FILE_MAP["MMLUBenchFlow"])
-        )
         knowledge_flows.append(
             Flow(client).get_flow_from_file(DEFAULT_FLOW_FILE_MAP["SynthKnowledgeFlow"])
         )
@@ -96,7 +93,9 @@ def _sdg_init(pipeline, client, num_instructions_to_generate):
     sdg_knowledge = SDG([Pipeline(flow) for flow in knowledge_flows])
     sdg_freeform_skill = SDG([Pipeline(flow) for flow in freeform_skill_flows])
     sdg_grounded_skill = SDG([Pipeline(flow) for flow in grounded_skill_flows])
-    return sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill
+    sdg_mmlubench = SDG([Pipeline(Flow(client).get_flow_from_file(DEFAULT_FLOW_FILE_MAP["MMLUBenchFlow"]))])
+                        
+    return sdg_knowledge, sdg_mmlubench, sdg_freeform_skill, sdg_grounded_skill
 
 
 def get_taxonomy_data(
@@ -204,7 +203,7 @@ def generate_data(
     # TODO -- llama-cpp doesn't support batching, we need to get a hint from the CLI
     # about whether we can turn this on (whether vllm is used or not)
 
-    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
+    sdg_knowledge, sdg_mmlubench, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
         pipeline,
         client,
         num_instructions_to_generate,
@@ -216,8 +215,8 @@ def generate_data(
         )
 
     is_knowledge = False
-
-    for i, leaf_node in enumerate(leaf_nodes.values()):
+    for i, (leaf_node_path, leaf_node) in enumerate(leaf_nodes.items()):
+        leaf_node_path = '__'.join([f"{idx+1}{e}" for idx, e in enumerate(leaf_node_path.split('->'))])
         samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
         ds = Dataset.from_list(samples)
 
@@ -226,19 +225,19 @@ def generate_data(
 
         if samples[0].get("document"):
             sdg = sdg_knowledge
-            logger.info(f"Generating data for leaf node {i} with knowledge pipeline.")
+            logger.info(f"Generating data for leaf node {leaf_node_path} with knowledge pipeline.")
             is_knowledge = True
             # add to 0.7 recipe
             # add to 1.0 recipe
 
         elif samples[0].get("seed_context"):
             sdg = sdg_grounded_skill
-            logger.info(f"Generating data for leaf node {i} with grounded skill pipeline.")
+            logger.info(f"Generating data for leaf node {leaf_node_path} with grounded skill pipeline.")
             # add to 1.0 recipe
 
         else:
             sdg = sdg_freeform_skill
-            logger.info(f"Generating data for leaf node {i} with freeform skill pipeline.")
+            logger.info(f"Generating data for leaf node {leaf_node_path} with freeform skill pipeline.")
             # add to 1.0 recipe
         
 
@@ -248,13 +247,28 @@ def generate_data(
             knowledge_phase_data = create_phase07_ds(generated_data)
             skills_phase_data = create_phase10_ds(generated_data)
             
-            knowledge_fpath = os.path.join(output_dir, f"node_datasets_{date_suffix}/node_{i}_p07.jsonl")
-            skills_fpath = os.path.join(output_dir, f"node_datasets_{date_suffix}/node_{i}_p10.jsonl")
+            knowledge_fpath = os.path.join(output_dir, f"node_datasets_{date_suffix}/{leaf_node_path}_p07.jsonl")
+            skills_fpath = os.path.join(output_dir, f"node_datasets_{date_suffix}/{leaf_node_path}_p10.jsonl")
             knowledge_phase_data.to_json(knowledge_fpath, orient="records", lines=True)
             skills_phase_data.to_json(skills_fpath, orient="records", lines=True)
             
             knowledge_recipe.add_dataset(knowledge_fpath)
             skills_recipe.add_dataset(skills_fpath)
+
+            # generate mmlubench data for the current leaf node 
+            mmlubench_data = create_mmlu_evaluation_dataset(sdg_mmlubench.generate(ds))
+            eval_data_file_path=f"{output_dir}/node_datasets_{date_suffix}/mmlubench_{date_suffix}_{leaf_node_path}.jsonl"
+            logger.info(f"Saving MMLU Dataset {eval_data_file_path}")
+            mmlubench_data.to_json(eval_data_file_path, orient='records', lines=True)
+            yaml_file_path=f"{output_dir}/node_datasets_{date_suffix}
+            /{leaf_node_path}_{date_suffix}_{leaf_node_path}_task.yaml"
+            logger.info(f"Saving MMLU Task yaml {yaml_file_path}")
+            create_mmlu_evaluation_yaml(task_name=leaf_node_path, 
+                                                    eval_data_file_path=eval_data_file_path,
+                                                    yaml_file_path=yaml_file_path)
+           
+            
+
         else:
             messages = generated_data.map(
                 _convert_to_messages,
@@ -270,6 +284,7 @@ def generate_data(
     if knowledge_recipe.dataset_added:
         knowledge_recipe.save_recipe(f"{output_dir}/knowledge_recipe_{date_suffix}.yaml")
         knowledge_recipe.save_mixed_dataset(f"{output_dir}/knowledge_train_msgs_{date_suffix}.jsonl")
+        
                                                                                  
     if skills_recipe.dataset_added:
         skills_recipe.save_recipe(f"{output_dir}/skills_recipe_{date_suffix}.yaml")
