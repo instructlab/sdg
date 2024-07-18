@@ -208,13 +208,17 @@ def _sdg_init(
                 )
             _check_pipeline_dir(pipeline)
 
+    extra_kwargs = {}
+    if batch_size is not None:
+        extra_kwargs["batch_size"] = batch_size
+        extra_kwargs["batch_num_workers"] = batch_num_workers
+
     ctx = PipelineContext(
         client=client,
         model_family=model_family,
         model_id=model_id,
         num_instructions_to_generate=num_instructions_to_generate,
-        batch_size=batch_size,
-        batch_num_workers=batch_num_workers,
+        **extra_kwargs,
     )
 
     def load_pipeline(yaml_basename):
@@ -260,7 +264,7 @@ def generate_data(
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
     pipeline: Optional[str] = "simple",
-    batch_size: Optional[int] = PipelineContext.DEFAULT_BATCH_SIZE,
+    batch_size: Optional[int] = None,
 ) -> None:
     """Generate data for training and testing a model.
 
@@ -316,17 +320,14 @@ def generate_data(
     else:
         model_family = MODEL_FAMILY_MERLINITE
 
-    # TODO -- llama-cpp doesn't support batching, we need to get a hint from the CLI
-    # about whether we can turn this on (whether vllm is used or not)
-
     sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
         pipeline,
         client,
         model_family,
         model_name,
         num_instructions_to_generate,
-        batch_num_workers=num_cpus,
         batch_size=batch_size,
+        batch_num_workers=num_cpus,
     )
 
     if console_output:

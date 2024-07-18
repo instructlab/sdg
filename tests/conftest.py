@@ -23,7 +23,7 @@ def get_ctx(**kwargs) -> PipelineContext:
 
 
 def get_single_threaded_ctx(**kwargs) -> PipelineContext:
-    kwargs["batch_size"] = None
+    kwargs["batch_size"] = 0
     return get_ctx(**kwargs)
 
 

@@ -32,16 +32,17 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     A PipelineContext holds the common attributes needed between blocks in a
     pipeline
 
-    client: The OpenAI client handle
-    model_id: The ID of the teacher model to be used for client calls
-    model_family: The family identifier for the model being updated
+    client: The OpenAI client handle.
+    model_id: The ID of the teacher model to be used for client calls.
+    model_family: The family identifier for the model being updated.
     num_instructions_to_generate: The total number of instructions the user
-        wants to generate during this run
-    batch_size: The size of the dataset batches for parallel generation
+        wants to generate during this run.
+    batch_size: The size of the dataset batches for parallel generation. Set to
+        0 to disable batching.
     batch_num_workers: The number of worker threads/processes to maintain in the
-        central executor pool
+        central executor pool.
     dataset_num_procs: The number of processes to use when performing parallel
-       map operations on individual datasets
+       map operations on individual datasets.
     """
 
     # The default batch size of 8 has been determined as a good default for
@@ -57,7 +58,7 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     model_id: str
     num_instructions_to_generate: int
     dataset_num_procs: Optional[int] = DEFAULT_DATASET_NUM_PROCS
-    batch_size: Optional[int] = DEFAULT_BATCH_SIZE
+    batch_size: int = DEFAULT_BATCH_SIZE
     batch_num_workers: Optional[int] = None
 
     @property
@@ -65,7 +66,7 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
         """Batching is enabled IFF the batch size is specified and the number of
         workers is not set explicitly to 1
         """
-        return self.batch_size is not None and self.batch_num_workers != 1
+        return self.batch_size > 0 and self.batch_num_workers != 1
 
 
 # This is part of the public API.
