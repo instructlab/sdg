@@ -260,8 +260,7 @@ def generate_data(
             eval_data_file_path=f"{output_dir}/node_datasets_{date_suffix}/mmlubench_{date_suffix}_{leaf_node_path}.jsonl"
             logger.info(f"Saving MMLU Dataset {eval_data_file_path}")
             mmlubench_data.to_json(eval_data_file_path, orient='records', lines=True)
-            yaml_file_path=f"{output_dir}/node_datasets_{date_suffix}
-            /{leaf_node_path}_{date_suffix}_{leaf_node_path}_task.yaml"
+            yaml_file_path=f"{output_dir}/node_datasets_{date_suffix}/{leaf_node_path}_{date_suffix}_{leaf_node_path}_task.yaml"
             logger.info(f"Saving MMLU Task yaml {yaml_file_path}")
             create_mmlu_evaluation_yaml(task_name=leaf_node_path, 
                                                     eval_data_file_path=eval_data_file_path,
