@@ -186,7 +186,9 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
 
     def load_pipeline(yaml_basename):
         if pipeline_pkg:
-            with resources.path(pipeline_pkg, yaml_basename) as yaml_path:
+            with resources.as_file(
+                resources.files(pipeline_pkg).joinpath(yaml_basename)
+            ) as yaml_path:
                 return Pipeline.from_file(ctx, yaml_path)
         else:
             return Pipeline.from_file(ctx, os.path.join(pipeline, yaml_basename))
