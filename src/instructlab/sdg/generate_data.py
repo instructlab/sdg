@@ -173,7 +173,15 @@ def _check_pipeline_dir(pipeline):
             )
 
 
-def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_generate):
+def _sdg_init(
+    pipeline: Pipeline,
+    client: openai.OpenAI,
+    model_family: str,
+    model_id: str,
+    num_instructions_to_generate: int,
+    batch_num_workers: Optional[int],
+    batch_size: Optional[int],
+):
     pipeline_pkg = None
 
     # Search for the pipeline in User and Site data directories
@@ -200,7 +208,18 @@ def _sdg_init(pipeline, client, model_family, model_id, num_instructions_to_gene
                 )
             _check_pipeline_dir(pipeline)
 
-    ctx = PipelineContext(client, model_family, model_id, num_instructions_to_generate)
+    extra_kwargs = {}
+    if batch_size is not None:
+        extra_kwargs["batch_size"] = batch_size
+        extra_kwargs["batch_num_workers"] = batch_num_workers
+
+    ctx = PipelineContext(
+        client=client,
+        model_family=model_family,
+        model_id=model_id,
+        num_instructions_to_generate=num_instructions_to_generate,
+        **extra_kwargs,
+    )
 
     def load_pipeline(yaml_basename):
         if pipeline_pkg:
@@ -227,8 +246,6 @@ def generate_data(
     api_key: Optional[str] = None,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
-    # TODO - not used -- when batching is enabled, this is relevant.
-    # Right now the code hard codes 8 cpus for batching
     num_cpus: Optional[int] = None,
     num_instructions_to_generate: Optional[int] = 30,
     taxonomy: Optional[str] = None,
@@ -247,6 +264,7 @@ def generate_data(
     tls_client_key: Optional[str] = None,
     tls_client_passwd: Optional[str] = None,
     pipeline: Optional[str] = "simple",
+    batch_size: Optional[int] = None,
 ) -> None:
     """Generate data for training and testing a model.
 
@@ -263,6 +281,10 @@ def generate_data(
                     "freeform_skills.yaml", and "grounded_skills.yaml".
     """
     generate_start = time.time()
+
+    # FIXME: remove this when ilab knows to pass batch_size=0 with llama.cpp
+    if batch_size is None:
+        batch_size = 0
 
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
@@ -302,15 +324,14 @@ def generate_data(
     else:
         model_family = MODEL_FAMILY_MERLINITE
 
-    # TODO -- llama-cpp doesn't support batching, we need to get a hint from the CLI
-    # about whether we can turn this on (whether vllm is used or not)
-
     sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
         pipeline,
         client,
         model_family,
         model_name,
         num_instructions_to_generate,
+        batch_size=batch_size,
+        batch_num_workers=num_cpus,
     )
 
     if console_output:

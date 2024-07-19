@@ -11,11 +11,14 @@ from datasets import Dataset, Features, Value
 from instructlab.sdg.importblock import ImportBlock
 from instructlab.sdg.pipeline import Pipeline
 
+# Local
+from .conftest import get_single_threaded_ctx
+
 
 class TestImportBlockWithMockPipeline(unittest.TestCase):
     @patch("instructlab.sdg.pipeline.Pipeline")
     def setUp(self, mock_pipeline):
-        self.ctx = MagicMock()
+        self.ctx = get_single_threaded_ctx()
         self.pipe = MagicMock()
         self.block_name = "test_block"
         self.path = "/path/to/config"
@@ -79,8 +82,7 @@ blocks:
 
 class TestImportBlockWithFilterByValue(unittest.TestCase):
     def setUp(self):
-        self.ctx = MagicMock()
-        self.ctx.num_procs = 1
+        self.ctx = get_single_threaded_ctx()
         self.child_yaml = self._write_tmp_yaml(_CHILD_YAML)
         self.parent_yaml = self._write_tmp_yaml(_PARENT_YAML_FMT % self.child_yaml)
         self.dataset = Dataset.from_dict(

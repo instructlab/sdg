@@ -1,11 +1,15 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from importlib import resources
-from typing import Optional
+from typing import Iterable, Optional
+import math
 import os.path
 
 # Third Party
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets
+from openai import OpenAI
 import yaml
 
 # Local
@@ -22,16 +26,47 @@ class EmptyDatasetError(Exception):
 
 
 # This is part of the public API.
-class PipelineContext:
-    def __init__(
-        self, client, model_family, model_id, num_instructions_to_generate
-    ) -> None:
-        self.client = client
-        self.model_family = model_family
-        self.model_id = model_id
-        self.num_instructions_to_generate = num_instructions_to_generate
-        # FIXME: base this on the available number of CPUs
-        self.num_procs = 8
+@dataclass
+class PipelineContext:  # pylint: disable=too-many-instance-attributes
+    """
+    A PipelineContext holds the common attributes needed between blocks in a
+    pipeline
+
+    client: The OpenAI client handle.
+    model_id: The ID of the teacher model to be used for client calls.
+    model_family: The family identifier for the model being updated.
+    num_instructions_to_generate: The total number of instructions the user
+        wants to generate during this run.
+    batch_size: The size of the dataset batches for parallel generation. Set to
+        0 to disable batching.
+    batch_num_workers: The number of worker threads/processes to maintain in the
+        central executor pool.
+    dataset_num_procs: The number of processes to use when performing parallel
+       map operations on individual datasets.
+    """
+
+    # The default batch size of 8 has been determined as a good default for
+    # standard instructlab workloads when running with vllm batching.
+    DEFAULT_BATCH_SIZE = 8
+
+    # The default number of processes to use when performing parallel operations
+    # on individual datasets
+    DEFAULT_DATASET_NUM_PROCS = 8
+
+    client: OpenAI
+    model_family: str
+    model_id: str
+    num_instructions_to_generate: int
+    dataset_num_procs: Optional[int] = DEFAULT_DATASET_NUM_PROCS
+    batch_size: int = DEFAULT_BATCH_SIZE
+    batch_num_workers: Optional[int] = None
+
+    @property
+    def batching_enabled(self) -> bool:
+        """Batching is enabled IFF the batch size is specified and the number of
+        workers is not set explicitly to 1
+        """
+        return self.batch_size > 0 and self.batch_num_workers != 1
 
 
 # This is part of the public API.
@@ -63,7 +98,12 @@ class PipelineBlockError(Exception):
 
 # This is part of the public API.
 class Pipeline:
-    def __init__(self, ctx, config_path, chained_blocks: list) -> None:
+    def __init__(
+        self,
+        ctx: PipelineContext,
+        config_path: str,
+        chained_blocks: list[dict],
+    ) -> None:
         """
         Initialize the Pipeline class with a configuration dictionary.
         config_dict: the run config py or yaml loaded into a dictionary
@@ -81,20 +121,40 @@ class Pipeline:
             pipeline_yaml = os.path.join(resources.files(__package__), pipeline_yaml)
         return cls(ctx, pipeline_yaml, _parse_pipeline_config_file(pipeline_yaml))
 
-    def _drop_duplicates(self, dataset, cols):
-        """
-        Drop duplicates from the dataset based on the columns provided.
-        """
-        df = dataset.to_pandas()
-        df = df.drop_duplicates(subset=cols).reset_index(drop=True)
-        ds = Dataset.from_pandas(df)
-        return ds
-
     def generate(self, dataset) -> Dataset:
         """
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
         """
+        # If not batching, simply delegate to _generate_single
+        if not self.ctx.batching_enabled:
+            logger.info("Running pipeline single-threaded")
+            return self._generate_single(dataset)
+
+        # Otherwise, split the dataset into batches and run each batch as a
+        # future in the thread pool
+        logger.info(
+            "Running pipeline with multi-threaded batching. Using %s workers for batches of size %s",
+            self.ctx.batch_num_workers,
+            self.ctx.batch_size,
+        )
+        input_splits = self._split_dataset(dataset)
+        with ThreadPoolExecutor(max_workers=self.ctx.batch_num_workers) as executor:
+            futures = [
+                executor.submit(self._generate_single, input_split)
+                for input_split in input_splits
+            ]
+
+            # Collect the results of each batch as they finish. This needs to
+            # wait for them all, so the order of waiting doesn't matter
+            output_splits = [future.result() for future in futures]
+
+        return concatenate_datasets(output_splits)
+
+    ## Implementation Details ##
+
+    def _generate_single(self, dataset) -> Dataset:
+        """Generate a single dataset by running the pipeline steps."""
         for block_prop in self.chained_blocks:
             # Initialize arguments for error handling to None
             block, block_name, block_type = None, None, None
@@ -133,6 +193,39 @@ class Pipeline:
                 dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
 
         return dataset
+
+    def _drop_duplicates(self, dataset, cols):
+        """
+        Drop duplicates from the dataset based on the columns provided.
+        """
+        df = dataset.to_pandas()
+        df = df.drop_duplicates(subset=cols).reset_index(drop=True)
+        ds = Dataset.from_pandas(df)
+        return ds
+
+    def _split_dataset(self, dataset: Dataset) -> list[Dataset]:
+        """Split the dataset into smaller batches."""
+        assert (
+            self.ctx.batch_size is not None
+        ), "Programming Error: Should not call _split_dataset if batching disabled"
+        total_size = len(dataset)
+        num_batches = math.ceil(total_size / self.ctx.batch_size)
+        batches = [
+            dataset.select(self._get_batch_indices(i, total_size))
+            for i in range(num_batches)
+        ]
+        return batches
+
+    def _get_batch_indices(self, batch_index: int, total_size: int) -> Iterable[int]:
+        assert (
+            self.ctx.batch_size is not None
+        ), "Programming Error: Should not call _get_batch_indices if batching disabled"
+        return range(
+            # Start index offset by the batch size
+            batch_index * self.ctx.batch_size,
+            # End index is the next batch offset or the end of the dataset
+            min((batch_index + 1) * self.ctx.batch_size, total_size),
+        )
 
 
 _block_types = {

@@ -14,7 +14,7 @@ from instructlab.sdg.pipeline import PipelineContext
 class TestFilterByValueBlock(unittest.TestCase):
     def setUp(self):
         self.ctx = MagicMock()
-        self.ctx.num_procs = 1
+        self.ctx.dataset_num_procs = 1
         self.pipe = MagicMock()
         self.block = FilterByValueBlock(
             self.ctx,
