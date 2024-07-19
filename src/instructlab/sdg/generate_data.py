@@ -282,6 +282,10 @@ def generate_data(
     """
     generate_start = time.time()
 
+    # FIXME: remove this when ilab knows to pass batch_size=0 with llama.cpp
+    if batch_size is None:
+        batch_size = 0
+
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
