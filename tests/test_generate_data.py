@@ -22,7 +22,7 @@ def test_sdg_init_batch_size_optional():
         1,
         batch_size=None,
         batch_num_workers=None,
-    )
+    )[1:]
     assert all(
         pipe.ctx.batch_size == PipelineContext.DEFAULT_BATCH_SIZE
         for sdg in sdgs
@@ -40,5 +40,5 @@ def test_sdg_init_batch_size_optional():
         1,
         batch_size=20,
         batch_num_workers=32,
-    )
+    )[1:]
     assert all(pipe.ctx.batch_size == 20 for sdg in sdgs for pipe in sdg.pipelines)

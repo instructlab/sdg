@@ -281,3 +281,4 @@ def _parse_pipeline_config_file(pipeline_yaml):
 # This is part of the public API.
 SIMPLE_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.simple"
 FULL_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.full"
+EVAL_PIPELINES_PKG = "instructlab.sdg.pipelines.eval"

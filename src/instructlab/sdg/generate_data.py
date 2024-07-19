@@ -17,6 +17,8 @@ import openai
 import platformdirs
 
 # First Party
+from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
+
 # pylint: disable=ungrouped-imports
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
@@ -251,6 +253,7 @@ def _sdg_init(
             return Pipeline.from_file(ctx, os.path.join(pipeline, yaml_basename))
 
     return (
+        ctx,
         SDG([load_pipeline("knowledge.yaml")]),
         SDG([load_pipeline("freeform_skills.yaml")]),
         SDG([load_pipeline("grounded_skills.yaml")]),
@@ -344,7 +347,7 @@ def generate_data(
     else:
         model_family = MODEL_FAMILY_MERLINITE
 
-    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
+    ctx, sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
         pipeline,
         client,
         model_family,
@@ -353,6 +356,8 @@ def generate_data(
         batch_size=batch_size,
         batch_num_workers=num_cpus,
     )
+
+    mmlu_bench_pipe = mmlubench_pipe_init(ctx)
 
     if console_output:
         logger.info(
@@ -384,6 +389,17 @@ def generate_data(
         )
         logger.info("Generated %d samples" % len(generated_data))
         logger.debug("Generated data: %s" % generated_data)
+
+        if samples[0].get("document"):
+            # generate mmlubench data for the current leaf node
+            leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
+            generate_eval_task_data(
+                mmlu_bench_pipe,
+                leaf_node_path,
+                new_generated_data,
+                output_dir,
+                date_suffix,
+            )
 
     if generated_data is None:
         generated_data = []
