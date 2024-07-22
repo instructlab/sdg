@@ -22,6 +22,8 @@ from instructlab.sdg.utils import chunking
 
 logger = logging.getLogger(__name__)
 
+MIN_KNOWLEDGE_VERSION = 3
+
 DEFAULT_YAML_RULES = """\
 extends: relaxed
 
@@ -200,6 +202,13 @@ def _validate_yaml(contents: Mapping[str, Any], taxonomy_path: Path) -> int:
         logger.info(
             f"Cannot determine schema name from path {taxonomy_path}. Using {schema_name} schema."
         )
+
+    if schema_name == "knowledge" and version < MIN_KNOWLEDGE_VERSION:
+        logger.error(
+            f"Version {version} is not supported for knowledge taxonomy. Minimum supported version is {MIN_KNOWLEDGE_VERSION}."
+        )
+        errors += 1
+        return errors
 
     try:
         schema_resource = retrieve(f"{schema_name}.json")
