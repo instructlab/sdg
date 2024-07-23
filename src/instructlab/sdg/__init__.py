@@ -5,9 +5,11 @@ __all__ = (
     "Block",
     "CombineColumnsBlock",
     "ConditionalLLMBlock",
+    "DuplicateColumnsBlock",
     "EmptyDatasetError",
     "FilterByValueBlock",
     "FilterByValueBlockError",
+    "FlattenColumnsBlock",
     "GenerateException",
     "ImportBlock",
     "LLMBlock",
@@ -15,8 +17,10 @@ __all__ = (
     "PipelineBlockError",
     "PipelineConfigParserError",
     "PipelineContext",
+    "RenameColumnsBlock",
     "SamplePopulatorBlock",
     "SelectorBlock",
+    "SetToMajorityValueBlock",
     "SDG",
     "SIMPLE_PIPELINES_PACKAGE",
     "FULL_PIPELINES_PACKAGE",
@@ -39,6 +43,14 @@ from .pipeline import (
     PipelineContext,
 )
 from .sdg import SDG
-from .utilblocks import CombineColumnsBlock, SamplePopulatorBlock, SelectorBlock
+from .utilblocks import (
+    CombineColumnsBlock,
+    DuplicateColumnsBlock,
+    FlattenColumnsBlock,
+    RenameColumnsBlock,
+    SamplePopulatorBlock,
+    SelectorBlock,
+    SetToMajorityValueBlock,
+)
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException
