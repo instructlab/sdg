@@ -9,7 +9,7 @@ from datasets import Dataset, Features, Value
 from instructlab.sdg.utilblocks import SamplePopulatorBlock
 
 
-class TestFilterByValueBlock(unittest.TestCase):
+class TestSamplePopulatorBlock(unittest.TestCase):
     def setUp(self):
         self.ctx = MagicMock()
         self.ctx.dataset_num_procs = 1

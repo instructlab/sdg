@@ -12,6 +12,9 @@ import pytest
 # First Party
 from instructlab.sdg.pipeline import PipelineContext
 
+# Local
+from .taxonomy import MockTaxonomy
+
 
 def get_ctx(**kwargs) -> PipelineContext:
     kwargs.setdefault("client", mock.MagicMock())
@@ -39,10 +42,16 @@ def single_threaded_ctx() -> PipelineContext:
 
 
 @pytest.fixture
-def threaded_ctx() -> PipelineContext:
-    return get_threaded_ctx()
+def sample_dataset():
+    return Dataset.from_list([{"foo": i} for i in range(10)])
 
 
 @pytest.fixture
-def sample_dataset():
-    return Dataset.from_list([{"foo": i} for i in range(10)])
+def taxonomy_dir(tmp_path):
+    with MockTaxonomy(tmp_path) as taxonomy:
+        yield taxonomy
+
+
+@pytest.fixture
+def threaded_ctx() -> PipelineContext:
+    return get_threaded_ctx()
