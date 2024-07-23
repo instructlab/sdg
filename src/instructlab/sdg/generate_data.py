@@ -17,6 +17,8 @@ import openai
 import platformdirs
 
 # First Party
+from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
+
 # pylint: disable=ungrouped-imports
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
@@ -193,8 +195,7 @@ def _check_pipeline_dir(pipeline):
             )
 
 
-def _sdg_init(
-    pipeline: Pipeline,
+def _context_init(
     client: openai.OpenAI,
     model_family: str,
     model_id: str,
@@ -202,6 +203,21 @@ def _sdg_init(
     batch_num_workers: Optional[int],
     batch_size: Optional[int],
 ):
+    extra_kwargs = {}
+    if batch_size is not None:
+        extra_kwargs["batch_size"] = batch_size
+        extra_kwargs["batch_num_workers"] = batch_num_workers
+
+    return PipelineContext(
+        client=client,
+        model_family=model_family,
+        model_id=model_id,
+        num_instructions_to_generate=num_instructions_to_generate,
+        **extra_kwargs,
+    )
+
+
+def _sdg_init(ctx, pipeline):
     pipeline_pkg = None
 
     # Search for the pipeline in User and Site data directories
@@ -227,19 +243,6 @@ def _sdg_init(
                     f"Error: pipeline directory ({pipeline}) does not exist."
                 )
             _check_pipeline_dir(pipeline)
-
-    extra_kwargs = {}
-    if batch_size is not None:
-        extra_kwargs["batch_size"] = batch_size
-        extra_kwargs["batch_num_workers"] = batch_num_workers
-
-    ctx = PipelineContext(
-        client=client,
-        model_family=model_family,
-        model_id=model_id,
-        num_instructions_to_generate=num_instructions_to_generate,
-        **extra_kwargs,
-    )
 
     def load_pipeline(yaml_basename):
         if pipeline_pkg:
@@ -344,8 +347,7 @@ def generate_data(
     else:
         model_family = MODEL_FAMILY_MERLINITE
 
-    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
-        pipeline,
+    ctx = _context_init(
         client,
         model_family,
         model_name,
@@ -353,6 +355,10 @@ def generate_data(
         batch_size=batch_size,
         batch_num_workers=num_cpus,
     )
+
+    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(ctx, pipeline)
+
+    mmlu_bench_pipe = mmlubench_pipe_init(ctx)
 
     if console_output:
         logger.info(
@@ -384,6 +390,17 @@ def generate_data(
         )
         logger.info("Generated %d samples" % len(generated_data))
         logger.debug("Generated data: %s" % generated_data)
+
+        if samples[0].get("document"):
+            # generate mmlubench data for the current leaf node
+            leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
+            generate_eval_task_data(
+                mmlu_bench_pipe,
+                leaf_node_path,
+                new_generated_data,
+                output_dir,
+                date_suffix,
+            )
 
     if generated_data is None:
         generated_data = []

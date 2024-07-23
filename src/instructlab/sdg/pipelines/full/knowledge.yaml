@@ -1,17 +1,5 @@
 version: "1.0"
 blocks:
-  - name: gen_mmlu_knowledge
-    type: LLMBlock
-    config:
-      config_path: ../../configs/knowledge/mcq_generation.yaml
-      output_cols:
-        - mmlubench_question
-        - mmlubench_answer
-      gen_kwargs:
-        temperature: 0
-        max_tokens: 2048
-    drop_duplicates:
-      - mmlubench_question
   - name: gen_knowledge
     type: LLMBlock
     config:
