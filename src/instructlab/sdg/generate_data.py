@@ -195,8 +195,7 @@ def _check_pipeline_dir(pipeline):
             )
 
 
-def _sdg_init(
-    pipeline: Pipeline,
+def _context_init(
     client: openai.OpenAI,
     model_family: str,
     model_id: str,
@@ -204,6 +203,21 @@ def _sdg_init(
     batch_num_workers: Optional[int],
     batch_size: Optional[int],
 ):
+    extra_kwargs = {}
+    if batch_size is not None:
+        extra_kwargs["batch_size"] = batch_size
+        extra_kwargs["batch_num_workers"] = batch_num_workers
+
+    return PipelineContext(
+        client=client,
+        model_family=model_family,
+        model_id=model_id,
+        num_instructions_to_generate=num_instructions_to_generate,
+        **extra_kwargs,
+    )
+
+
+def _sdg_init(ctx, pipeline):
     pipeline_pkg = None
 
     # Search for the pipeline in User and Site data directories
@@ -230,19 +244,6 @@ def _sdg_init(
                 )
             _check_pipeline_dir(pipeline)
 
-    extra_kwargs = {}
-    if batch_size is not None:
-        extra_kwargs["batch_size"] = batch_size
-        extra_kwargs["batch_num_workers"] = batch_num_workers
-
-    ctx = PipelineContext(
-        client=client,
-        model_family=model_family,
-        model_id=model_id,
-        num_instructions_to_generate=num_instructions_to_generate,
-        **extra_kwargs,
-    )
-
     def load_pipeline(yaml_basename):
         if pipeline_pkg:
             with resources.as_file(
@@ -253,7 +254,6 @@ def _sdg_init(
             return Pipeline.from_file(ctx, os.path.join(pipeline, yaml_basename))
 
     return (
-        ctx,
         SDG([load_pipeline("knowledge.yaml")]),
         SDG([load_pipeline("freeform_skills.yaml")]),
         SDG([load_pipeline("grounded_skills.yaml")]),
@@ -347,8 +347,7 @@ def generate_data(
     else:
         model_family = MODEL_FAMILY_MERLINITE
 
-    ctx, sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(
-        pipeline,
+    ctx = _context_init(
         client,
         model_family,
         model_name,
@@ -356,6 +355,8 @@ def generate_data(
         batch_size=batch_size,
         batch_num_workers=num_cpus,
     )
+
+    sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(ctx, pipeline)
 
     mmlu_bench_pipe = mmlubench_pipe_init(ctx)
 
