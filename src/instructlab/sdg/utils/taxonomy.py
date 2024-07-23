@@ -357,7 +357,7 @@ def _read_taxonomy_file(file_path: str, yaml_rules: Optional[str] = None):
                 seed_instruction_data.append(
                     {
                         "questions_and_answers": question_answer_list,
-                        "input": context,
+                        "context": context,
                         "taxonomy_path": tax_path,
                         "document": documents,
                         "domain": domain,
@@ -467,7 +467,7 @@ def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count
                 for idx, val in enumerate(icl_["questions_and_answers"])
             }
             samples_row = {
-                "icl_document": icl_["input"],
+                "icl_document": icl_["context"],
                 "document": chunk,
                 "document_outline": icl_["document_outline"],
                 "domain": domain,

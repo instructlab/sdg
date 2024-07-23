@@ -142,7 +142,7 @@ def _gen_train_data(
 def _knowledge_seed_example_to_test_data(seed_example):
     res = []
     for qna in seed_example["questions_and_answers"]:
-        user = qna["question"] + "\n" + seed_example["input"]  # context
+        user = qna["question"] + "\n" + seed_example["context"]
         res.append(
             {
                 "system": _SYS_PROMPT,
