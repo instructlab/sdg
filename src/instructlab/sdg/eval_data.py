@@ -95,11 +95,13 @@ def _create_mmlu_evaluation_task(task_name, eval_data_file_path, yaml_file_path)
         "doc_to_choice": "{{[choices[0], choices[1], choices[2], choices[3]]}}",
         "doc_to_target": "{{answer}}",
         "output_type": "multiple_choice",
-        "metric_list": {
-            "metric": "acc",
-            "aggregation": "mean",
-            "higher_is_better": "true",
-        },
+        "metric_list": [
+            {
+                "metric": "acc",
+                "aggregation": "mean",
+                "higher_is_better": "true",
+            }
+        ],
         "dataset_kwargs": {"data_files": {"test": eval_data_file_path}},
         "group": "mmlu_pr",
     }
