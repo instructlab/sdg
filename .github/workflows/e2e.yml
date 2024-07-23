@@ -76,6 +76,13 @@ jobs:
           # config contains DEFAULT_MODEL
           key: huggingface-${{ hashFiles('src/instructlab/configuration.py') }}
 
+      - name: Switch instructlab to PR 1790 (TEMPORARY)
+        run: |
+          cd instructlab
+          git fetch origin pull/1790/head:pr1790
+          git checkout pr1790
+          cd ..
+
       - name: Install instructlab and instructlab-sdg
         run: |
           export PATH="/home/runner/.local/bin:/usr/local/cuda/bin:$PATH"

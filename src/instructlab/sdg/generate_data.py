@@ -139,6 +139,20 @@ def _gen_train_data(
             outfile.write("\n")
 
 
+def _knowledge_seed_example_to_test_data(seed_example):
+    res = []
+    for qna in seed_example["questions_and_answers"]:
+        user = qna["question"] + "\n" + seed_example["context"]
+        res.append(
+            {
+                "system": _SYS_PROMPT,
+                "user": _unescape(user),
+                "assistant": _unescape(qna["answer"]),
+            }
+        )
+    return res
+
+
 def _gen_test_data(
     leaf_nodes,
     output_file_test,
@@ -146,6 +160,12 @@ def _gen_test_data(
     test_data = []
     for _, leaf_node in leaf_nodes.items():
         for seed_example in leaf_node:
+            if "questions_and_answers" in seed_example:
+                test_data.extend(_knowledge_seed_example_to_test_data(seed_example))
+                continue
+
+            # skill seed example
+
             user = seed_example["instruction"]  # question
 
             if len(seed_example["input"]) > 0:

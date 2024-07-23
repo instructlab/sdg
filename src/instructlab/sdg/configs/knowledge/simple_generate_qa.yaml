@@ -13,6 +13,9 @@ principles: |
   7. The output should be an appropriate response to the input and the instruction. Long outputs are preferable.
 
 examples: |
+  Here is a sample section of the document as an example:
+  {icl_document}
+
   Here are some examples to help you understand the type of questions that are asked for this document:
 
   {icl_query_1}
@@ -25,6 +28,8 @@ examples: |
   {icl_response_3}
 
   Here is the document:
+
+  {document_outline}
   {document}
 
 generation: |

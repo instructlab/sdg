@@ -18,10 +18,11 @@ import gitdb
 import yaml
 
 # First Party
-from instructlab.sdg import utils
 from instructlab.sdg.utils import chunking
 
 logger = logging.getLogger(__name__)
+
+MIN_KNOWLEDGE_VERSION = 3
 
 DEFAULT_YAML_RULES = """\
 extends: relaxed
@@ -202,6 +203,13 @@ def _validate_yaml(contents: Mapping[str, Any], taxonomy_path: Path) -> int:
             f"Cannot determine schema name from path {taxonomy_path}. Using {schema_name} schema."
         )
 
+    if schema_name == "knowledge" and version < MIN_KNOWLEDGE_VERSION:
+        logger.error(
+            f"Version {version} is not supported for knowledge taxonomy. Minimum supported version is {MIN_KNOWLEDGE_VERSION}."
+        )
+        errors += 1
+        return errors
+
     try:
         schema_resource = retrieve(f"{schema_name}.json")
         schema = schema_resource.contents
@@ -335,7 +343,7 @@ def _read_taxonomy_file(file_path: str, yaml_rules: Optional[str] = None):
 
         # get seed instruction data
         tax_path = "->".join(taxonomy_path.parent.parts)
-        task_description = contents.get("task_description")
+        task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
         if documents:
@@ -343,20 +351,34 @@ def _read_taxonomy_file(file_path: str, yaml_rules: Optional[str] = None):
             logger.debug("Content from git repo fetched")
 
         for seed_example in contents.get("seed_examples"):
-            question = seed_example.get("question")
-            answer = seed_example.get("answer")
             context = seed_example.get("context", "")
-            seed_instruction_data.append(
-                {
-                    "instruction": question,
-                    "input": context,
-                    "output": answer,
-                    "taxonomy_path": tax_path,
-                    "task_description": task_description,
-                    "document": documents,
-                    "domain": domain,
-                }
-            )
+            if "questions_and_answers" in seed_example:
+                question_answer_list = seed_example.get("questions_and_answers")
+                seed_instruction_data.append(
+                    {
+                        "questions_and_answers": question_answer_list,
+                        "context": context,
+                        "taxonomy_path": tax_path,
+                        "document": documents,
+                        "domain": domain,
+                        "document_outline": contents.get("document_outline"),
+                    }
+                )
+            else:
+                question = seed_example.get("question")
+                answer = seed_example.get("answer")
+
+                seed_instruction_data.append(
+                    {
+                        "instruction": question,
+                        "input": context,
+                        "output": answer,
+                        "taxonomy_path": tax_path,
+                        "task_description": task_description,
+                        "document": documents,
+                        "domain": domain,
+                    }
+                )
     except Exception as e:
         errors += 1
         raise TaxonomyReadingException(f"Exception {e} raised in {file_path}") from e
@@ -418,8 +440,7 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules):
 
 
 def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count):
-    samples = [{}]
-
+    samples = []
     # document is the same for the whole leaf node
     chunks = (
         chunking.chunk_document(
@@ -436,38 +457,24 @@ def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count
 
     for chunk in chunks:
         # pylint: disable=consider-using-enumerate
-        for i in range(len(leaf_node)):
-            samples[-1].setdefault("task_description", leaf_node[i]["task_description"])
-            samples[-1].setdefault("domain", domain)
-            samples[-1].setdefault("document", chunk)
-            if samples[-1].get("document") and not samples[-1].get("domain"):
-                raise utils.GenerateException(
-                    "Error: No domain provided for knowledge document in leaf node"
-                )
-            if "icl_query_3" in samples[-1]:
-                samples.append({})
-            if "icl_query_1" not in samples[-1]:
-                samples[-1]["icl_query_1"] = leaf_node[i]["instruction"]
-                samples[-1]["icl_response_1"] = leaf_node[i]["output"]
-            elif "icl_query_2" not in samples[-1]:
-                samples[-1]["icl_query_2"] = leaf_node[i]["instruction"]
-                samples[-1]["icl_response_2"] = leaf_node[i]["output"]
-            else:
-                samples[-1]["icl_query_3"] = leaf_node[i]["instruction"]
-                samples[-1]["icl_response_3"] = leaf_node[i]["output"]
-
-        # wrap back around to the beginning if the number of examples was not
-        # evenly divisble by 3
-        if "icl_query_2" not in samples[-1]:
-            samples[-1]["icl_query_2"] = leaf_node[0]["instruction"]
-            samples[-1]["icl_response_2"] = leaf_node[0]["output"]
-        if "icl_query_3" not in samples[-1]:
-            samples[-1]["icl_query_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
-                "instruction"
-            ]
-            samples[-1]["icl_response_3"] = leaf_node[1 if len(leaf_node) > 1 else 0][
-                "output"
-            ]
+        for icl_ in leaf_node:
+            icl_query = {
+                f"icl_query_{idx+1}": val["question"]
+                for idx, val in enumerate(icl_["questions_and_answers"])
+            }
+            icl_resp = {
+                f"icl_response_{idx+1}": val["answer"]
+                for idx, val in enumerate(icl_["questions_and_answers"])
+            }
+            samples_row = {
+                "icl_document": icl_["context"],
+                "document": chunk,
+                "document_outline": icl_["document_outline"],
+                "domain": domain,
+            }
+            samples_row.update(icl_query)
+            samples_row.update(icl_resp)
+            samples.append(samples_row)
 
     return samples
 
