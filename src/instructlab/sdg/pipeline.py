@@ -245,7 +245,7 @@ _block_types = {
 
 def _lookup_block_type(block_type):
     if not block_type in _block_types:
-        raise PipelineConfigParserError("Unknown block type {block_type}")
+        raise PipelineConfigParserError(f"Unknown block type {block_type}")
     return _block_types[block_type]
 
 
