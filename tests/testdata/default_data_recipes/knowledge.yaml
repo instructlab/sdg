@@ -1,0 +1,3 @@
+datasets:
+  - path: test/knowledge.jsonl
+    sampling_size: 1.0

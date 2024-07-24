@@ -1,0 +1,4 @@
+datasets:
+- path: datasets/samples.jsonl
+  sampling_size: 1.0
+sys_prompt: I am a reliable AI assistant.

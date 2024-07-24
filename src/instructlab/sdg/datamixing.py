@@ -7,6 +7,7 @@ import uuid
 
 # Third Party
 from datasets import Dataset, concatenate_datasets, load_dataset
+import yaml
 
 # First Party
 from instructlab.sdg.logger_config import setup_logger
@@ -27,18 +28,12 @@ def _adjust_train_sample_size(ds: Dataset, num_samples: int):
     return pandas.dataset_from_pandas_dataframe(df)
 
 
-def _load_ds(path, sampling_size, num_proc):
+def _sample_ds(dataset, sampling_size, num_proc):
     """
-    Load a dataset from the given file path and select sampling_size
-    number/ratio of samples from it, ensuring the loaded dataset has only
-    ALLOWED_COLS columns in it with any additional columns moved to the
-    metadata section.
+    Select sampling_size number/ratio of samples from a dataset, ensuring
+    the returned dataset has only ALLOWED_COLS columns in it with any
+    additional columns moved to the metadata section.
     """
-    logger.info(f"Loading dataset from {path} ...")
-    dataset = load_dataset("json", data_files=path, split="train")
-    logger.info(f"Dataset columns: {dataset.column_names}")
-    logger.info(f"Dataset loaded with {len(dataset)} samples")
-
     if sampling_size != 1.0:
         if isinstance(sampling_size, int):
             num_samples = sampling_size
@@ -94,29 +89,63 @@ class Recipe:
     """
 
     def __init__(
-        self, initial_datasets: Optional[list] = None, sys_prompt: Optional[str] = ""
+        self, recipe_path: Optional[str] = None, sys_prompt: Optional[str] = ""
     ):
-        self.recipe = {
-            "datasets": initial_datasets or [],
-            "sys_prompt": sys_prompt,
-        }
-        self.sys_prompt = self.recipe.get("sys_prompt", "")
+        self.recipe_path = recipe_path or ""
+        self.sys_prompt = sys_prompt
+
+        # Defaults if no recipe path given or these values don't
+        # exist in the given recipe file
+        self.datasets = []
+        if recipe_path is not None:
+            recipe = self._load_recipe()
+            if "datasets" in recipe:
+                self.datasets = recipe["datasets"]
+
         self.dataset_added = False
+
+    def _load_recipe(self):
+        with open(self.recipe_path, encoding="utf-8") as fp:
+            return yaml.safe_load(fp)
+
+    def _load_ds(self, path):
+        """
+        Load a dataset from the given location. If a jsonl file is
+        given, we load the dataset from disk. Otherwise, we load the
+        path given from HuggingFace. Relative paths are resolved
+        respective to the directory the recipe yaml itself resides in.
+        """
+        if not os.path.isabs(path):
+            path = os.path.join(os.path.dirname(self.recipe_path), path)
+        logger.info(f"Loading dataset from {path} ...")
+        dataset = load_dataset("json", data_files=path, split="train")
+        logger.info(f"Dataset columns: {dataset.column_names}")
+        logger.info(f"Dataset loaded with {len(dataset)} samples")
+        return dataset
+
+    def _load_and_sample_datasets(self, num_proc):
+        """
+        Load and sample all the datasets in this recipe, taking
+        into account the desired sampling size from each individual
+        dataset to control the overall mix of samples in the final
+        dataset.
+        """
+        return [
+            _sample_ds(
+                self._load_ds(dataset["path"]), dataset["sampling_size"], num_proc
+            )
+            for dataset in self.datasets
+        ]
 
     def _create_mixed_dataset(self, num_proc):
         """
-        Create the mixed dataset from its list of included datasets, taking
-        into account the desired sampling size from each individual dataset
-        to control the overall mix of samples in the final dataset.
+        Create the final mixed dataset by loading, sampling, and
+        concatenating all datasets in this recipe
         """
         if not self.dataset_added:
             logger.error("No dataset added to the recipe")
 
-        mixed_ds = [
-            _load_ds(dataset["path"], dataset["sampling_size"], num_proc)
-            for dataset in self.recipe["datasets"]
-        ]
-
+        mixed_ds = self._load_and_sample_datasets(num_proc)
         mixed_ds = concatenate_datasets(mixed_ds)
         mixed_ds = mixed_ds.map(
             _add_system_message,
@@ -143,7 +172,20 @@ class Recipe:
                            of the samples, and so on.
         """
         self.dataset_added = True
-        self.recipe["datasets"].append({"path": path, "sampling_size": sampling_size})
+        self.datasets.append({"path": path, "sampling_size": sampling_size})
+
+    def save_recipe(self, output_path):
+        recipe = {
+            "datasets": self.datasets,
+            "metadata": {"sys_prompt": self.sys_prompt},
+        }
+        with open(output_path, "w", encoding="utf-8") as fp:
+            yaml.dump(recipe, fp)
+        # Update this instance's recipe_path to reflect the path we
+        # just saved it to so that any subsequent loading of datasets
+        # (like via save_mixed_dataset) pulls from relative to the
+        # saved recipe_path.
+        self.recipe_path = output_path
 
     def save_mixed_dataset(self, output_path, num_proc):
         """
@@ -398,17 +440,33 @@ class DataMixer:
     # once.
     NUM_SYNTH_SKILLS = 30
 
-    def __init__(self, output_dir, date_suffix, sys_prompt, num_procs):
+    def __init__(self, data_dirs, output_dir, date_suffix, sys_prompt, num_procs):
+        self.data_dirs = data_dirs
         self.output_dir = output_dir
         self.sys_prompt = sys_prompt
         self.date_suffix = date_suffix
         self.num_procs = num_procs
 
-        self.knowledge_recipe = Recipe(sys_prompt=self.sys_prompt)
-        self.skills_recipe = Recipe(sys_prompt=self.sys_prompt)
+        self.knowledge_recipe = self._load_default_recipe("knowledge.yaml")
+        self.skills_recipe = self._load_default_recipe("skills.yaml")
 
+        self.output_file_knowledge_recipe = f"knowledge_recipe_{date_suffix}.yaml"
+        self.output_file_skills_recipe = f"skills_recipe_{date_suffix}.yaml"
         self.output_file_mixed_knowledge = f"knowledge_train_msgs_{date_suffix}.jsonl"
         self.output_file_mixed_skills = f"skills_train_msgs_{date_suffix}.jsonl"
+
+    def _load_default_recipe(self, yaml_basename):
+        """
+        Load a default system recipe from e.g. /usr/share/instructlab/sdg/default_data_recipes
+        if it exists, otherwise return an empty recipe.
+        """
+        for d in self.data_dirs:
+            default_recipe_path = os.path.join(d, "default_data_recipes", yaml_basename)
+            if os.path.exists(default_recipe_path):
+                return Recipe(
+                    recipe_path=default_recipe_path, sys_prompt=self.sys_prompt
+                )
+        return Recipe(sys_prompt=self.sys_prompt)
 
     def _gen_leaf_node_data(
         self, leaf_node_data, recipe, output_file_leaf_node, sampling_size=1.0
@@ -420,7 +478,7 @@ class DataMixer:
         """
         output_file = os.path.join(self.output_dir, output_file_leaf_node)
         leaf_node_data.to_json(output_file, orient="records", lines=True)
-        recipe.add_dataset(output_file, sampling_size)
+        recipe.add_dataset(output_file_leaf_node, sampling_size)
 
     def collect(self, leaf_node_path, new_generated_data, is_knowledge):
         if is_knowledge:
@@ -459,20 +517,27 @@ class DataMixer:
                 sampling_size=self.NUM_SYNTH_SKILLS,
             )
 
-    def _gen_mixed_data(self, recipe, output_file_mixed):
+    def _gen_mixed_data(self, recipe, output_file_recipe, output_file_data):
         """
         Mix the generated leaf node data into a single dataset and write it to
         disk. The heavy lifting is delegated to the Recipe class.
         """
         if recipe.dataset_added:
+            full_recipe_path = os.path.join(self.output_dir, output_file_recipe)
+            recipe.save_recipe(full_recipe_path)
             recipe.save_mixed_dataset(
-                os.path.join(self.output_dir, output_file_mixed),
+                os.path.join(self.output_dir, output_file_data),
                 self.num_procs,
             )
 
     def generate(self):
-        self._gen_mixed_data(self.knowledge_recipe, self.output_file_mixed_knowledge)
+        self._gen_mixed_data(
+            self.knowledge_recipe,
+            self.output_file_knowledge_recipe,
+            self.output_file_mixed_knowledge,
+        )
         self._gen_mixed_data(
             self.skills_recipe,
+            self.output_file_skills_recipe,
             self.output_file_mixed_skills,
         )
