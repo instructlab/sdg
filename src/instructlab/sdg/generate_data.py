@@ -17,9 +17,9 @@ import openai
 import platformdirs
 
 # First Party
-from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
-
 # pylint: disable=ungrouped-imports
+from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
+from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
 from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
@@ -34,52 +34,20 @@ from instructlab.sdg.utils.taxonomy import (
     read_taxonomy_leaf_nodes,
 )
 
-_SYS_PROMPT = "You are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior."
+_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 
 
 def _unescape(s):
-    return bytes(s, "utf-8").decode("utf-8")
-
-
-# This is a hack because the simple workflow returns a q/a pair as a single output.
-# We could possibly try to ask for them separately, but it would cost twice the inference
-# API calls. All of this is because the smallest models we use on small environments
-# for testing and demos weren't good enough to follow the strict formatting instructions used
-# in the full pipeline.
-def _get_question(logger, synth_example):
-    if "question" in synth_example:
-        return synth_example["question"]
-
-    if not synth_example.get("output"):
-        raise GenerateException(
-            f"Error: output not found in synth_example: {synth_example}"
-        )
-
-    parts = synth_example["output"].split("?", 1)
-    if len(parts) != 2:
-        logger.warning(f"Failed to split generated q&a: {synth_example['output']}")
-    return parts[0].strip() + "?" if len(parts) == 2 else ""
-
-
-# This is also a hack. See the comment above _get_question.
-def _get_response(logger, synth_example):
-    if "response" in synth_example:
-        return synth_example["response"]
-
-    if "output" not in synth_example:
-        raise GenerateException(
-            f"Error: output not found in synth_example: {synth_example}"
-        )
-
-    parts = synth_example["output"].split("?", 1)
-    if len(parts) != 2:
-        logger.warning(f"Failed to split generated q&a: {synth_example['output']}")
-    return parts[1].strip() if len(parts) == 2 else parts[0].strip()
+    return bytes(s, "utf-8").decode("utf-8").strip()
 
 
 def _convert_to_messages(sample):
     """
     Convert a sample dictionary to contain 'messages' and 'metadata' columns required for training.
+
+    Note that this is for the legacy messages format, used before data
+    mixing was introduced. Once we can drop the older `messages_*.jsonl`
+    output files, this can go away.
     """
     # Create user query message
     user_query = sample["inputs"]
@@ -107,16 +75,24 @@ def _convert_to_messages(sample):
 def _gen_train_data(
     logger, machine_instruction_data, output_file_train, output_file_messages
 ):
+    """
+    Generate training data in the legacy system/user/assistant format
+    used in train_*.jsonl as well as the legacy messages format used
+    in messages_*.jsonl files.
+
+    This can be dropped once we no longer need those formats and are fully
+    using the new data mixing messages format.
+    """
     train_data = []
     messages_data = []
 
     for output_dataset in machine_instruction_data:
         for synth_example in output_dataset:
             logger.debug(synth_example)
-            user = _get_question(logger, synth_example)
+            user = _get_question_hack(synth_example)
             if len(synth_example.get("context", "")) > 0:
                 user += "\n" + synth_example["context"]
-            assistant = _unescape(_get_response(logger, synth_example))
+            assistant = _unescape(_get_response_hack(synth_example))
             train_entry = {
                 "system": _SYS_PROMPT,
                 "user": _unescape(user),
@@ -159,6 +135,10 @@ def _gen_test_data(
     leaf_nodes,
     output_file_test,
 ):
+    """
+    Generate test data in the format needed by the legacy Linux training
+    in instructlab/instructlab.
+    """
     test_data = []
     for _, leaf_node in leaf_nodes.items():
         for seed_example in leaf_node:
@@ -324,7 +304,6 @@ def generate_data(
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
     output_file_messages = f"messages_{name}_{date_suffix}.jsonl"
     output_file_test = f"test_{name}_{date_suffix}.jsonl"
-    # train data in messages format that will be mixed and split up into train test eventually
     output_file_train = f"train_{name}_{date_suffix}.jsonl"
 
     _gen_test_data(
@@ -362,6 +341,8 @@ def generate_data(
 
     mmlu_bench_pipe = mmlubench_pipe_init(ctx)
 
+    mixer = DataMixer(output_dir, date_suffix, _SYS_PROMPT, ctx.dataset_num_procs)
+
     if console_output:
         logger.info(
             "Synthesizing new instructions. If you aren't satisfied with the generated instructions, interrupt training (Ctrl-C) and try adjusting your YAML files. Adding more examples may help."
@@ -369,6 +350,8 @@ def generate_data(
 
     generated_data = None
     for leaf_node in leaf_nodes.values():
+        is_knowledge = False
+        leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
         samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
 
         if not samples:
@@ -376,8 +359,11 @@ def generate_data(
 
         if samples[0].get("document"):
             sdg = sdg_knowledge
+            is_knowledge = True
+
         elif samples[0].get("seed_context"):
             sdg = sdg_grounded_skill
+
         else:
             sdg = sdg_freeform_skill
 
@@ -393,9 +379,8 @@ def generate_data(
         logger.info("Generated %d samples" % len(generated_data))
         logger.debug("Generated data: %s" % generated_data)
 
-        if samples[0].get("document"):
+        if is_knowledge:
             # generate mmlubench data for the current leaf node
-            leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
             generate_eval_task_data(
                 mmlu_bench_pipe,
                 leaf_node_path,
@@ -403,6 +388,8 @@ def generate_data(
                 output_dir,
                 date_suffix,
             )
+
+        mixer.collect(leaf_node_path, new_generated_data, is_knowledge)
 
     if generated_data is None:
         generated_data = []
@@ -414,11 +401,7 @@ def generate_data(
         os.path.join(output_dir, output_file_messages),
     )
 
-    # TODO
-    # This is for backwards compatibility. The file existing previously, so we'll keep it for now.
-    # I believe the github bot assumes it is present for presenting generated data to a taxonomy
-    # reviewer or contributor. Otherwise, I don't see a consumer of it in this repo or the
-    # `ilab` CLI.
+    mixer.generate()
 
     generate_duration = time.time() - generate_start
     logger.info(f"Generation took {generate_duration:.2f}s")
