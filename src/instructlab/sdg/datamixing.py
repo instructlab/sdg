@@ -10,7 +10,7 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 
 # First Party
 from instructlab.sdg.logger_config import setup_logger
-from instructlab.sdg.utils import GenerateException
+from instructlab.sdg.utils import GenerateException, pandas
 
 ALLOWED_COLS = ["id", "messages", "metadata"]
 logger = setup_logger(__name__)
@@ -23,8 +23,8 @@ def _adjust_train_sample_size(ds: Dataset, num_samples: int):
     """
     logger.info(f"Rebalancing dataset to have {num_samples} samples ...")
     df = ds.to_pandas()
-    df = df.sample(n=num_samples, random_state=42, replace=True).reset_index(drop=True)
-    return Dataset.from_pandas(df)
+    df = df.sample(n=num_samples, random_state=42, replace=True)
+    return pandas.dataset_from_pandas_dataframe(df)
 
 
 def _load_ds(path, sampling_size, num_proc):
