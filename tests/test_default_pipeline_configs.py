@@ -12,6 +12,9 @@ from instructlab.sdg.llmblock import ConditionalLLMBlock, LLMBlock
 from instructlab.sdg.pipeline import Pipeline, PipelineContext
 from instructlab.sdg.utilblocks import (
     CombineColumnsBlock,
+    DuplicateColumnsBlock,
+    FlattenColumnsBlock,
+    RenameColumnsBlock,
     SamplePopulatorBlock,
     SelectorBlock,
 )
@@ -23,8 +26,11 @@ def _noop_generate(self, samples):
 
 @patch.object(CombineColumnsBlock, "generate", _noop_generate)
 @patch.object(ConditionalLLMBlock, "generate", _noop_generate)
+@patch.object(DuplicateColumnsBlock, "generate", _noop_generate)
 @patch.object(FilterByValueBlock, "generate", _noop_generate)
+@patch.object(FlattenColumnsBlock, "generate", _noop_generate)
 @patch.object(LLMBlock, "generate", _noop_generate)
+@patch.object(RenameColumnsBlock, "generate", _noop_generate)
 @patch.object(SamplePopulatorBlock, "generate", _noop_generate)
 @patch.object(SelectorBlock, "generate", _noop_generate)
 @patch("instructlab.sdg.llmblock.server_supports_batched", lambda c, m: True)

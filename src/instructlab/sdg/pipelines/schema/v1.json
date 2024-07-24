@@ -364,6 +364,23 @@
           }
         }
       }
+    },
+    "datamixing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "auxiliary_instructions": {
+          "type": "object",
+          "patternProperties": {
+            ".*": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

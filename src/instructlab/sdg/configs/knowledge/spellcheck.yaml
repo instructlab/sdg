@@ -1,0 +1,17 @@
+system: You are an AI assistant that is an expert at fixing spelling errors in documents.
+
+introduction: |
+  Give me a copy of the below document with all spelling errors corrected.
+
+principles: |
+  Do not add any new information.
+  Do not leave out any information.
+
+examples: ""
+
+generation: |
+  Document:
+  {document}
+
+start_tags: [""]
+end_tags: [""]
