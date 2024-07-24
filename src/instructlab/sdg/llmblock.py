@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Standard
+from collections import ChainMap
 from typing import Any, Dict
 import re
 
@@ -224,6 +225,25 @@ class LLMBlock(Block):
 
         return Dataset.from_list(new_data)
 
+    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
+        """
+        Validate the input data for this block. This method should be implemented by subclasses
+        to define how the block validates its input data.
+
+        :return: True if the input data is valid, False otherwise.
+        """
+
+        class Default(dict):
+            def __missing__(self, key: str) -> None:
+                raise KeyError(key)
+
+        try:
+            prompt_template.format_map(ChainMap(input_dict, Default()))
+            return True
+        except KeyError as e:
+            logger.error("Missing key: {}".format(e))
+            return False
+
 
 # This is part of the public API.
 class ConditionalLLMBlock(LLMBlock):
@@ -269,7 +289,7 @@ class ConditionalLLMBlock(LLMBlock):
 
         return self.prompt_template.format(**sample).strip()
 
-    def validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
+    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
             prompt_template = prompt_template[input_dict[self.selector_column_name]]
         return super()._validate(prompt_template, input_dict)
