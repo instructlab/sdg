@@ -303,6 +303,59 @@
                     }
                   }
                 }
+              },
+              {
+                "type": "object",
+                "description": "FlattenColumnsBlock",
+                "required": ["value_name", "var_cols", "var_name"],
+                "additionalProperties": false,
+                "properties": {
+                  "value_name": {
+                    "type": "string"
+                  },
+                  "var_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "var_name": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "DuplicateColumnsBlock",
+                "required": ["columns_map"],
+                "additionalProperties": false,
+                "properties": {
+                  "columns_map": {
+                    "type": "object"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "RenameColumnsBlock",
+                "required": ["columns_map"],
+                "additionalProperties": false,
+                "properties": {
+                  "columns_map": {
+                    "type": "object"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "SetToMajorityValueBlock",
+                "required": ["col_name"],
+                "additionalProperties": false,
+                "properties": {
+                  "col_name": {
+                    "type": "string"
+                  }
+                }
               }
             ]
           }
