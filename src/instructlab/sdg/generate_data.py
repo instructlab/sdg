@@ -24,6 +24,7 @@ from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRA
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
+    EmptyDatasetError,
     Pipeline,
     PipelineContext,
 )
@@ -371,6 +372,10 @@ def generate_data(
         ds = Dataset.from_list(samples)
         logger.debug("Dataset: %s" % ds)
         new_generated_data = sdg.generate(ds)
+        if len(new_generated_data) == 0:
+            raise EmptyDatasetError(
+                "Pipeline stopped: Empty dataset after running pipe"
+            )
         generated_data = (
             [new_generated_data]
             if generated_data is None
@@ -384,7 +389,7 @@ def generate_data(
             generate_eval_task_data(
                 mmlu_bench_pipe,
                 leaf_node_path,
-                new_generated_data,
+                ds,
                 output_dir,
                 date_suffix,
             )

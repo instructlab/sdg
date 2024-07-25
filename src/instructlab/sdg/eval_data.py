@@ -55,7 +55,11 @@ def _format_mmlu_style(ds: Dataset) -> Dataset:
     ds = ds.filter(lambda x: x["choices"])
     ds = ds.filter(lambda x: len(x["choices"]) == 4)
     ds = ds.filter(lambda x: x["answer"] in ["A", "B", "C", "D"])
-    ds = ds.class_encode_column("answer")
+    # We filter out a lot of the dataset above (and in _post_process_mcq)
+    # if we've managed to filter out all of the results we don't want to run class_encode_column
+    # as the answer column might not exist
+    if len(ds):
+        ds = ds.class_encode_column("answer")
     return ds
 
 
@@ -113,7 +117,8 @@ def generate_eval_task_data(
     mmlubench_pipe, task_name, samples, output_dir, date_suffix
 ):
     mmlubench_data = mmlubench_pipe.generate(samples)
-    mmlubench_data = _post_process_mcq(mmlubench_data)
+    if len(mmlubench_data):
+        mmlubench_data = _post_process_mcq(mmlubench_data)
 
     eval_data_file_path = (
         f"{output_dir}/node_datasets_{date_suffix}/mmlubench_{task_name}.jsonl"
