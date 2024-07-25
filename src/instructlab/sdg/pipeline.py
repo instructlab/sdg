@@ -12,6 +12,9 @@ from datasets import Dataset, concatenate_datasets
 from openai import OpenAI
 import yaml
 
+# First Party
+from instructlab.sdg.utils import pandas
+
 # Local
 from . import filterblock, importblock, llmblock, utilblocks
 from .block import Block
@@ -199,8 +202,9 @@ class Pipeline:
         Drop duplicates from the dataset based on the columns provided.
         """
         df = dataset.to_pandas()
-        df = df.drop_duplicates(subset=cols).reset_index(drop=True)
-        ds = Dataset.from_pandas(df)
+        df = df.drop_duplicates(subset=cols)
+        ds = pandas.dataset_from_pandas_dataframe(df)
+
         return ds
 
     def _split_dataset(self, dataset: Dataset) -> list[Dataset]:

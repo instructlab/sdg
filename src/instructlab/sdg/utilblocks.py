@@ -2,6 +2,9 @@
 # Third Party
 from datasets import Dataset
 
+# First Party
+from instructlab.sdg.utils import pandas
+
 # Local
 from .block import Block
 from .logger_config import setup_logger
@@ -123,7 +126,7 @@ class FlattenColumnsBlock(Block):
             value_name=self.value_name,
             var_name=self.var_name,
         )
-        return Dataset.from_pandas(flatten_df)
+        return pandas.dataset_from_pandas_dataframe(flatten_df)
 
 
 class DuplicateColumnsBlock(Block):
@@ -173,4 +176,4 @@ class SetToMajorityValueBlock(Block):
     def generate(self, samples: Dataset):
         samples = samples.to_pandas()
         samples[self.col_name] = samples[self.col_name].mode()[0]
-        return Dataset.from_pandas(samples)
+        return pandas.dataset_from_pandas_dataframe(samples)
