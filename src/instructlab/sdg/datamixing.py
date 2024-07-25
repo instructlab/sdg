@@ -262,41 +262,48 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
     `keep_context_separate` equal to True. When this finishes, the `context`
     column is removed from the dataset and all context moved to the user
     messages.
+
+    This is inspired by the concepts of Retrieval Augmented FineTuning (RAFT)
+    from https://arxiv.org/abs/2403.10131
     """
-    all_context = ds["context"]
-    all_context = [
-        " ".join(e.split(" ")[: random.randint(100, 500)]) for e in all_context
-    ]
-    ds = ds.add_column("row_idx", range(ds.num_rows))
+    all_context = list(set(ds["context"]))
 
     def __pick_documents(rec, p):
-        # Loop until we find enough other documents to add to the context
-        # for this document. Exit the loop early if we have fewer total
-        # documents than the number of documents we want in our context
-        # so that we don't end up looping forever. This handles edge
-        # cases where the number of generated instructions is very low,
-        # like in CI or user's testing small sizes.
-        while True:
-            selected_docs = random.choices(range(ds.num_rows), k=num_doc_in_context)
-            if ds.num_rows <= num_doc_in_context:
-                break
-            if rec["row_idx"] not in selected_docs:
-                break
-        if random.uniform(0, 1) < p:
-            docs = [
-                all_context[idx] for idx in selected_docs[: num_doc_in_context - 1]
-            ] + [rec["context"]]
-            # rec['indicator'] ='golden'
+        answer_document = [rec["context"]]
+        selected_docs = [e for e in all_context if e != answer_document]
+        if len(selected_docs) > 0:
+            if len(selected_docs) < num_doc_in_context:
+                logger.debug(
+                    f"Number of unique documents is {len(selected_docs)} which is less than {num_doc_in_context}. Using all the documents in the expanded context."
+                )
+            if random.uniform(0, 1) < p:
+                # golden/answer + distractor documents
+                docs = (
+                    random.sample(selected_docs, k=num_doc_in_context)
+                    if len(selected_docs) >= num_doc_in_context
+                    else selected_docs + [answer_document]
+                )
+            else:
+                # distractor documents
+                docs = (
+                    random.sample(selected_docs, k=num_doc_in_context)
+                    if len(selected_docs) >= num_doc_in_context
+                    else selected_docs
+                )
         else:
-            docs = [all_context[idx] for idx in selected_docs]
-            # rec['indicator'] = 'distractor'
+            logger.warning(
+                "Only 1 unique document found. Disabling expanded context injection, which may lead to poorer knowledge retention results."
+            )
+            docs = [answer_document]
         random.shuffle(docs)
         docs = "\n".join(([f"Document:\n{e}\n\n" for idx, e in enumerate(docs)]))
-        user_idx, user_msg = [
+        user_idx_msgs = [
             (idx, rec_msg)
             for idx, rec_msg in enumerate(rec["messages"])
             if rec_msg["role"] == "user"
-        ][0]
+        ]
+        assert len(user_idx_msgs) > 0, "No user role found in dataset"
+        user_idx, user_msg = user_idx_msgs[0]
         user_inst = user_msg["content"]
         rec["messages"][user_idx]["content"] = f"{docs}\n\n{user_inst}"
         rec["messages"] = rec["messages"]
