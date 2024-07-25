@@ -184,9 +184,7 @@ class Pipeline:
 
             # If at any point we end up with an empty data set, the pipeline has failed
             if len(dataset) == 0:
-                raise EmptyDatasetError(
-                    f"Pipeline stopped: Empty dataset after running block: {block_name}"
-                )
+                return dataset
 
             drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
             if drop_columns:
