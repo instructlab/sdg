@@ -115,11 +115,13 @@ def generate_eval_task_data(
     mmlubench_data = mmlubench_pipe.generate(samples)
     mmlubench_data = _post_process_mcq(mmlubench_data)
 
-    eval_data_file_path = f"{output_dir}/node_datasets_{date_suffix}/mmlubench_{date_suffix}_{task_name}.jsonl"
+    eval_data_file_path = (
+        f"{output_dir}/node_datasets_{date_suffix}/mmlubench_{task_name}.jsonl"
+    )
     logger.info(f"Saving MMLU Dataset {eval_data_file_path}")
     mmlubench_data.to_json(eval_data_file_path, orient="records", lines=True)
 
-    yaml_file_path = f"{output_dir}/node_datasets_{date_suffix}/{task_name}_{date_suffix}_{task_name}_task.yaml"
+    yaml_file_path = f"{output_dir}/node_datasets_{date_suffix}/{task_name}_task.yaml"
     logger.info(f"Saving MMLU Task yaml {yaml_file_path}")
     _create_mmlu_evaluation_task(
         task_name=task_name,
