@@ -176,7 +176,10 @@
                   "config_paths": {
                     "type": "array",
                     "items": {
-                      "type": "string"
+                      "type": "array",
+                      "items":{
+                        "type": "string"
+                      }
                     }
                   },
                   "output_cols": {
