@@ -384,7 +384,7 @@ def generate_data(
             generate_eval_task_data(
                 mmlu_bench_pipe,
                 leaf_node_path,
-                new_generated_data,
+                ds,
                 output_dir,
                 date_suffix,
             )
