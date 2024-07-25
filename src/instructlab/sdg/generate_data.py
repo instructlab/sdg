@@ -207,9 +207,9 @@ def _sdg_init(ctx, pipeline):
         appname=os.path.join("instructlab", "sdg"), multipath=True
     )
     for d in pd.iter_data_dirs():
-        if os.path.exists(os.path.join(d, pipeline)):
-            pipeline = os.path.join(d, pipeline)
-            _check_pipeline_dir(pipeline)
+        pipeline_path = os.path.join(d, "pipelines", pipeline)
+        if os.path.exists(pipeline_path):
+            _check_pipeline_dir(pipeline_path)
             break
     else:
         if pipeline == "full":
