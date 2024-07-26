@@ -5,6 +5,7 @@ from datetime import datetime
 from importlib import resources
 from pathlib import Path
 from typing import Optional
+import dataclasses
 import json
 import os
 import time
@@ -181,6 +182,8 @@ def _context_init(
     model_family: str,
     model_id: str,
     num_instructions_to_generate: int,
+    checkpoint_dir: str,
+    save_freq: int,
     batch_num_workers: Optional[int],
     batch_size: Optional[int],
 ):
@@ -194,6 +197,8 @@ def _context_init(
         model_family=model_family,
         model_id=model_id,
         num_instructions_to_generate=num_instructions_to_generate,
+        checkpoint_dir=checkpoint_dir,
+        save_freq=save_freq,
         **extra_kwargs,
     )
 
@@ -284,6 +289,7 @@ def generate_data(
     client: Optional[openai.OpenAI] = None,
     pipeline: Optional[str] = "simple",
     batch_size: Optional[int] = None,
+    checkpoint_dir: Optional[str] = None,
 ) -> None:
     """Generate data for training and testing a model.
 
@@ -348,13 +354,17 @@ def generate_data(
         model_family,
         model_name,
         num_instructions_to_generate,
+        checkpoint_dir,
+        1,  # save_freq
         batch_size=batch_size,
         batch_num_workers=num_cpus,
     )
 
     sdg_knowledge, sdg_freeform_skill, sdg_grounded_skill = _sdg_init(ctx, pipeline)
 
-    mmlu_bench_pipe = mmlubench_pipe_init(ctx)
+    # Make sure checkpointing is disabled (we don't want this pipeline to load checkpoints from the main pipeline)
+    mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
+    mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
 
     mixer = _mixer_init(ctx, output_dir, date_suffix)
 
