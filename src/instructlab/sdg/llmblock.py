@@ -256,6 +256,7 @@ class ConditionalLLMBlock(LLMBlock):
         output_cols,
         selector_column_name,
         model_prompt=None,
+        gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
@@ -266,6 +267,7 @@ class ConditionalLLMBlock(LLMBlock):
             config_paths[0][0],
             output_cols,
             model_prompt=model_prompt,
+            gen_kwargs=gen_kwargs,
             parser_kwargs=parser_kwargs,
             batch_kwargs=batch_kwargs,
         )
