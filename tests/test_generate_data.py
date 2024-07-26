@@ -19,6 +19,8 @@ def test_context_init_batch_size_optional():
         "mixtral",
         "foo.bar",
         1,
+        "/checkpoint/dir",
+        1,
         batch_size=None,
         batch_num_workers=None,
     )
@@ -31,6 +33,8 @@ def test_context_init_batch_size_optional():
         None,
         "mixtral",
         "foo.bar",
+        1,
+        "/checkpoint/dir",
         1,
         batch_size=20,
         batch_num_workers=32,

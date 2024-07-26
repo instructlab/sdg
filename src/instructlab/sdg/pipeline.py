@@ -13,6 +13,7 @@ from openai import OpenAI
 import yaml
 
 # First Party
+from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
 
 # Local
@@ -61,6 +62,8 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     model_id: str
     num_instructions_to_generate: int
     dataset_num_procs: Optional[int] = DEFAULT_DATASET_NUM_PROCS
+    checkpoint_dir: Optional[str] = None
+    save_freq: Optional[int] = 1
     batch_size: int = DEFAULT_BATCH_SIZE
     batch_num_workers: Optional[int] = None
 
@@ -129,6 +132,12 @@ class Pipeline:
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
         """
+
+        # The checkpointer allows us to resume from where we left off
+        # Saving the output of pipe instances along the way
+        checkpointer = Checkpointer(self.ctx.checkpoint_dir, self.ctx.save_freq)
+        dataset, pre_generated_data = checkpointer.load(dataset)
+
         # If not batching, simply delegate to _generate_single
         if not self.ctx.batching_enabled:
             logger.info("Running pipeline single-threaded")
@@ -142,6 +151,7 @@ class Pipeline:
             self.ctx.batch_size,
         )
         input_splits = self._split_dataset(dataset)
+        output_splits = []
         with ThreadPoolExecutor(max_workers=self.ctx.batch_num_workers) as executor:
             futures = [
                 executor.submit(self._generate_single, input_split)
@@ -150,8 +160,13 @@ class Pipeline:
 
             # Collect the results of each batch as they finish. This needs to
             # wait for them all, so the order of waiting doesn't matter
-            output_splits = [future.result() for future in futures]
-
+            for future in futures:
+                ds = future.result()
+                output_splits.append(ds)
+                checkpointer.checkpoint(ds)
+        checkpointer.done()
+        if pre_generated_data:
+            output_splits.append(pre_generated_data)
         return concatenate_datasets(output_splits)
 
     ## Implementation Details ##
