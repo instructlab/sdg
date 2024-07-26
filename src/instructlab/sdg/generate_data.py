@@ -241,6 +241,20 @@ def _sdg_init(ctx, pipeline):
     )
 
 
+def _mixer_init(ctx, output_dir, date_suffix):
+    pd = platformdirs.PlatformDirs(
+        appname=os.path.join("instructlab", "sdg"), multipath=True
+    )
+    data_dirs = list(pd.iter_data_dirs())
+    return DataMixer(
+        data_dirs,
+        output_dir,
+        date_suffix,
+        _SYS_PROMPT,
+        ctx.dataset_num_procs,
+    )
+
+
 # This is part of the public API, and used by instructlab.
 # TODO - parameter removal needs to be done in sync with a CLI change.
 # pylint: disable=unused-argument
@@ -342,7 +356,7 @@ def generate_data(
 
     mmlu_bench_pipe = mmlubench_pipe_init(ctx)
 
-    mixer = DataMixer(output_dir, date_suffix, _SYS_PROMPT, ctx.dataset_num_procs)
+    mixer = _mixer_init(ctx, output_dir, date_suffix)
 
     if console_output:
         logger.info(
