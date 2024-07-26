@@ -80,8 +80,7 @@ class Checkpointer:
         generated_df = generated_data_common.to_pandas()
 
         # Identify missing rows
-        missing_df = seed_df[
-            ~seed_df.apply(tuple, 1).isin(generated_df.apply(tuple, 1))
-        ]
+        missing_rows = ~seed_df.apply(tuple, 1).isin(generated_df.apply(tuple, 1))
 
+        missing_df = seed_data.to_pandas()[missing_rows]
         return pandas.dataset_from_pandas_dataframe(missing_df)
