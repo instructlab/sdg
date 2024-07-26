@@ -1,6 +1,7 @@
 # Standard
 from importlib import resources
 from typing import Any
+import logging
 import re
 
 # Third Party
@@ -10,10 +11,7 @@ import yaml
 # First Party
 from instructlab.sdg.pipeline import EVAL_PIPELINES_PKG, Pipeline
 
-# Local
-from .logger_config import setup_logger
-
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _extract_options(text: str) -> list[Any]:

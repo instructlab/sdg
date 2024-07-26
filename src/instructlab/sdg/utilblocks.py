@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
+# Standard
+import logging
+
 # Third Party
 from datasets import Dataset
 
@@ -7,9 +10,8 @@ from instructlab.sdg.utils import pandas
 
 # Local
 from .block import Block
-from .logger_config import setup_logger
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # This is part of the public API.

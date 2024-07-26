@@ -76,9 +76,7 @@ def _convert_to_messages(sample):
     return sample
 
 
-def _gen_train_data(
-    machine_instruction_data, output_file_train, output_file_messages
-):
+def _gen_train_data(machine_instruction_data, output_file_train, output_file_messages):
     """
     Generate training data in the legacy system/user/assistant format
     used in train_*.jsonl as well as the legacy messages format used
