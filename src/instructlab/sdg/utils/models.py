@@ -19,10 +19,10 @@ MODEL_FAMILY_MAPPINGS = {
 }
 
 
-def get_model_family(forced, model_path):
-    forced = MODEL_FAMILY_MAPPINGS.get(forced, forced)
-    if forced and forced.lower() not in MODEL_FAMILIES:
-        raise GenerateException("Unknown model family: %s" % forced)
+def get_model_family(model_family, model_path):
+    model_family_retrieved = MODEL_FAMILY_MAPPINGS.get(model_family, model_family)
+    if model_family_retrieved and model_family_retrieved.lower() not in MODEL_FAMILIES:
+        raise GenerateException("Unknown model family: %s" % model_family_retrieved)
 
     # Try to guess the model family based on the model's filename
     guess = re.match(r"^\w*", os.path.basename(model_path)).group(0).lower()
