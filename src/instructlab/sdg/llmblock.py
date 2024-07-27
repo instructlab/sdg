@@ -2,6 +2,7 @@
 # Standard
 from collections import ChainMap
 from typing import Any, Dict
+import logging
 import re
 
 # Third Party
@@ -10,9 +11,8 @@ import openai
 
 # Local
 from .block import Block
-from .logger_config import setup_logger
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"

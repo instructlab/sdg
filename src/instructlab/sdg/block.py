@@ -2,15 +2,13 @@
 # Standard
 from abc import ABC
 from typing import Any, Dict, Union
+import logging
 import os.path
 
 # Third Party
 import yaml
 
-# Local
-from .logger_config import setup_logger
-
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # This is part of the public API.

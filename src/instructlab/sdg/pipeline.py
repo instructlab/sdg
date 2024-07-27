@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from importlib import resources
 from typing import Iterable, Optional
+import logging
 import math
 import os.path
 
@@ -19,9 +20,8 @@ from instructlab.sdg.utils import pandas
 # Local
 from . import filterblock, importblock, llmblock, utilblocks
 from .block import Block
-from .logger_config import setup_logger
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 # This is part of the public API.

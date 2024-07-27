@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Optional
 import dataclasses
 import json
+import logging
 import os
 import time
 
@@ -35,6 +36,8 @@ from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
 )
+
+logger = logging.getLogger(__name__)
 
 _SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 
@@ -74,9 +77,7 @@ def _convert_to_messages(sample):
     return sample
 
 
-def _gen_train_data(
-    logger, machine_instruction_data, output_file_train, output_file_messages
-):
+def _gen_train_data(machine_instruction_data, output_file_train, output_file_messages):
     """
     Generate training data in the legacy system/user/assistant format
     used in train_*.jsonl as well as the legacy messages format used
@@ -262,9 +263,9 @@ def _mixer_init(ctx, output_dir, date_suffix):
 
 # This is part of the public API, and used by instructlab.
 # TODO - parameter removal needs to be done in sync with a CLI change.
-# pylint: disable=unused-argument
+# to be removed: logger, prompt_file_path, rouge_threshold, tls_*
 def generate_data(
-    logger,
+    logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
     api_base: Optional[str] = None,
     api_key: Optional[str] = None,
     model_family: Optional[str] = None,
@@ -275,9 +276,9 @@ def generate_data(
     taxonomy_base: Optional[str] = None,
     output_dir: Optional[str] = None,
     # TODO - not used and should be removed from the CLI
-    prompt_file_path: Optional[str] = None,
+    prompt_file_path: Optional[str] = None,  # pylint: disable=unused-argument
     # TODO - probably should be removed
-    rouge_threshold: Optional[float] = None,
+    rouge_threshold: Optional[float] = None,  # pylint: disable=unused-argument
     console_output=True,
     yaml_rules: Optional[str] = None,
     chunk_word_count=None,
@@ -392,9 +393,9 @@ def generate_data(
         else:
             sdg = sdg_freeform_skill
 
-        logger.debug("Samples: %s" % samples)
+        logger.debug("Samples: %s", samples)
         ds = Dataset.from_list(samples)
-        logger.debug("Dataset: %s" % ds)
+        logger.debug("Dataset: %s", ds)
         new_generated_data = sdg.generate(ds)
         if len(new_generated_data) == 0:
             raise EmptyDatasetError(
@@ -405,8 +406,8 @@ def generate_data(
             if generated_data is None
             else generated_data + [new_generated_data]
         )
-        logger.info("Generated %d samples" % len(generated_data))
-        logger.debug("Generated data: %s" % generated_data)
+        logger.info("Generated %d samples", len(generated_data))
+        logger.debug("Generated data: %s", generated_data)
 
         if is_knowledge:
             # generate mmlubench data for the current leaf node
@@ -424,7 +425,6 @@ def generate_data(
         generated_data = []
 
     _gen_train_data(
-        logger,
         generated_data,
         os.path.join(output_dir, output_file_train),
         os.path.join(output_dir, output_file_messages),

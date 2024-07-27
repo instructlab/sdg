@@ -1,6 +1,7 @@
 # Standard
 from typing import Optional
 import json
+import logging
 import os.path
 import random
 import uuid
@@ -10,11 +11,10 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 import yaml
 
 # First Party
-from instructlab.sdg.logger_config import setup_logger
 from instructlab.sdg.utils import GenerateException, pandas
 
 ALLOWED_COLS = ["id", "messages", "metadata"]
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def _adjust_train_sample_size(ds: Dataset, num_samples: int):
