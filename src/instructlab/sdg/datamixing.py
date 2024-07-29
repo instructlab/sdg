@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from typing import Optional
+from typing import Dict, List, Optional
 import json
 import logging
 import os.path
@@ -14,6 +14,7 @@ import yaml
 
 # First Party
 from instructlab.sdg.utils import GenerateException, pandas
+from instructlab.sdg.utils.pandas import dataset_from_pandas_dataframe
 
 ALLOWED_COLS = ["id", "messages", "metadata"]
 logger = logging.getLogger(__name__)
@@ -376,7 +377,68 @@ def _conv_pretrain(rec):
     return rec
 
 
-def _create_phase10_ds(generated_dataset: Dataset):
+def _create_auxiliary_dataset(
+    generated_dataset: Dataset, auxiliary_inst: Optional[Dict[str, List[str]]]
+):
+    # Samples that went through the auxiliary generation pipeline will
+    # have a dataset_type column created by that pipeline. If that's
+    # not present, then we may be running in a pipeline without any
+    # auxiliary dataset generation enabled.
+    if "dataset_type" not in generated_dataset.column_names:
+        return None
+    # If we didn't find any auxiliary instructions to load, then
+    # that's also another sign that we're not running with any
+    # auxiliary datasets enabled.
+    if auxiliary_inst is None:
+        return None
+    # This "base_document" dataset_type is set in the knowledge
+    # pipeline config, and represents samples that do not have the
+    # auxiliary generated document attached, so we filter those out.
+    auxiliary_ds = generated_dataset.filter(
+        lambda x: x["dataset_type"] != "base_document"
+    )
+    unique_document_auxiliary = auxiliary_ds.to_pandas().drop_duplicates(
+        subset=["document"]
+    )
+    unique_document_auxiliary = dataset_from_pandas_dataframe(unique_document_auxiliary)
+    unique_document_auxiliary = unique_document_auxiliary.select_columns(
+        [
+            "raw_document",
+            "document_outline",
+            "domain",
+            "dataset_type",
+            "document",
+        ]
+    )
+    unique_document_auxiliary = unique_document_auxiliary.rename_columns(
+        {"raw_document": "context", "document": "response"}
+    )
+
+    def __create_auxiliary_ds(rec):
+        instruction = random.choice(auxiliary_inst[rec["dataset_type"]])
+        messages = [
+            {"role": "user", "content": f"{rec['context']}\n\n{instruction}"},
+            {"role": "assistant", "content": rec["response"]},
+        ]
+        metadata = json.dumps(
+            {
+                "dataset_type": rec["dataset_type"],
+                "raw_document": rec["context"],
+                "dataset": f"document_{rec['dataset_type']}",
+                "domain": rec["domain"],
+            }
+        )
+        return {"messages": messages, "metadata": metadata, "id": str(uuid.uuid4())}
+
+    unique_document_auxiliary = unique_document_auxiliary.map(
+        __create_auxiliary_ds, remove_columns=unique_document_auxiliary.column_names
+    )
+    return unique_document_auxiliary
+
+
+def _create_phase10_ds(
+    generated_dataset: Dataset, auxiliary_inst: Optional[Dict[str, List[str]]]
+):
     """
     Create a dataset for Phase 1.0 of downstream training.
 
@@ -389,10 +451,17 @@ def _create_phase10_ds(generated_dataset: Dataset):
     )
     knowledge_ds = _add_extra_contexts_to_samples(knowledge_ds, p=0.4)
 
-    return knowledge_ds
+    auxiliary_dataset = _create_auxiliary_dataset(generated_dataset, auxiliary_inst)
+    if auxiliary_dataset is not None:
+        phase10 = concatenate_datasets([knowledge_ds, auxiliary_dataset])
+    else:
+        phase10 = knowledge_ds
+    return phase10
 
 
-def _create_phase07_ds(generated_dataset: Dataset):
+def _create_phase07_ds(
+    generated_dataset: Dataset, auxiliary_inst: Optional[Dict[str, List[str]]]
+):
     """
     Create a dataset for Phase 0.7 of downstream training.
 
@@ -406,7 +475,13 @@ def _create_phase07_ds(generated_dataset: Dataset):
     )
     knowledge_ds = knowledge_ds.map(_conv_pretrain)
 
-    return knowledge_ds
+    auxiliary_dataset = _create_auxiliary_dataset(generated_dataset, auxiliary_inst)
+    if auxiliary_dataset is not None:
+        auxiliary_dataset = auxiliary_dataset.map(_conv_pretrain)
+        phase07 = concatenate_datasets([knowledge_ds, auxiliary_dataset])
+    else:
+        phase07 = knowledge_ds
+    return phase07
 
 
 def _convert_to_leaf_node_messages(sample: dict, sys_prompt: str):
@@ -442,12 +517,21 @@ class DataMixer:
     # once.
     NUM_SYNTH_SKILLS = 30
 
-    def __init__(self, data_dirs, output_dir, date_suffix, sys_prompt, num_procs):
+    def __init__(
+        self,
+        data_dirs,
+        output_dir,
+        date_suffix,
+        sys_prompt,
+        num_procs,
+        auxiliary_inst=None,
+    ):
         self.data_dirs = data_dirs
         self.output_dir = output_dir
         self.sys_prompt = sys_prompt
         self.date_suffix = date_suffix
         self.num_procs = num_procs
+        self.auxiliary_inst = auxiliary_inst
 
         self.knowledge_recipe = self._load_default_recipe("knowledge.yaml")
         self.skills_recipe = self._load_default_recipe("skills.yaml")
@@ -484,7 +568,9 @@ class DataMixer:
 
     def collect(self, leaf_node_path, new_generated_data, is_knowledge):
         if is_knowledge:
-            knowledge_phase_data = _create_phase07_ds(new_generated_data)
+            knowledge_phase_data = _create_phase07_ds(
+                new_generated_data, self.auxiliary_inst
+            )
             output_file_leaf_knowledge = (
                 f"node_datasets_{self.date_suffix}/{leaf_node_path}_p07.jsonl"
             )
@@ -494,7 +580,9 @@ class DataMixer:
                 output_file_leaf_knowledge,
             )
 
-            skills_phase_data = _create_phase10_ds(new_generated_data)
+            skills_phase_data = _create_phase10_ds(
+                new_generated_data, self.auxiliary_inst
+            )
             output_file_leaf_skills = (
                 f"node_datasets_{self.date_suffix}/{leaf_node_path}_p10.jsonl"
             )

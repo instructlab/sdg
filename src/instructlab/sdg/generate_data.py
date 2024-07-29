@@ -247,7 +247,7 @@ def _sdg_init(ctx, pipeline):
     )
 
 
-def _mixer_init(ctx, output_dir, date_suffix):
+def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
     pd = platformdirs.PlatformDirs(
         appname=os.path.join("instructlab", "sdg"), multipath=True
     )
@@ -258,6 +258,7 @@ def _mixer_init(ctx, output_dir, date_suffix):
         date_suffix,
         _SYS_PROMPT,
         ctx.dataset_num_procs,
+        knowledge_auxiliary_inst,
     )
 
 
@@ -367,7 +368,10 @@ def generate_data(
     mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
     mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
 
-    mixer = _mixer_init(ctx, output_dir, date_suffix)
+    # FIXME: remove SDG https://github.com/instructlab/sdg/pull/64
+    mixer = _mixer_init(
+        ctx, output_dir, date_suffix, sdg_knowledge.pipelines[0].auxiliary_inst
+    )
 
     if console_output:
         logger.info(
