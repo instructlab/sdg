@@ -398,7 +398,7 @@ def generate_data(
         logger.debug("Samples: %s", samples)
         ds = Dataset.from_list(samples)
         logger.debug("Dataset: %s", ds)
-        new_generated_data = pipe.generate(ds)
+        new_generated_data = pipe.generate(ds, leaf_node_path)
         if len(new_generated_data) == 0:
             raise EmptyDatasetError(
                 "Pipeline stopped: Empty dataset after running pipe"

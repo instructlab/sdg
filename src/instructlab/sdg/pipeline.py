@@ -131,15 +131,21 @@ class Pipeline:
             pipeline_yaml = os.path.join(resources.files(__package__), pipeline_yaml)
         return cls(ctx, pipeline_yaml, *_parse_pipeline_config_file(pipeline_yaml))
 
-    def generate(self, dataset) -> Dataset:
+    def generate(self, dataset, checkpoint_name=None) -> Dataset:
         """
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
+        checkpoint_name: unique subdir name for the checkpoint within checkpoint_dir
         """
 
         # The checkpointer allows us to resume from where we left off
         # Saving the output of pipe instances along the way
-        checkpointer = Checkpointer(self.ctx.checkpoint_dir, self.ctx.save_freq)
+        checkpoint_dir = None
+        if self.ctx.checkpoint_dir is not None and checkpoint_name is not None:
+            # Separate checkpoints with sub directories
+            checkpoint_dir = os.path.join(self.ctx.checkpoint_dir, checkpoint_name)
+
+        checkpointer = Checkpointer(checkpoint_dir, self.ctx.save_freq)
         dataset, pre_generated_data = checkpointer.load(dataset)
 
         # If not batching, simply delegate to _generate_single
