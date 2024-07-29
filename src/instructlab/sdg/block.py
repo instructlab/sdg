@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: Apache-2.0
+
 # Standard
 from abc import ABC
 from typing import Any, Dict, Union
