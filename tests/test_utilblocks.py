@@ -61,7 +61,7 @@ class TestUtilBlock(unittest.TestCase):
         assert new_samples["edible"] == ["yes", "yes", "yes", "yes"]
 
     def test_flatten(self):
-        """Test that the FlattenColumnsBlock cancorrectly melt/transform a data from a wide format to a long format
+        """Test that the FlattenColumnsBlock can correctly melt/transform a data from a wide format to a long format
         see pandas.melt for a description"""
         flatten_block = FlattenColumnsBlock(
             self.mock_ctx,

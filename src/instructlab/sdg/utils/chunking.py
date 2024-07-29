@@ -57,7 +57,7 @@ def chunk_document(documents: List, server_ctx_size, chunk_word_count) -> List[s
     chunk_size = _num_chars_from_tokens(no_tokens_per_doc)
     chunk_overlap = _DEFAULT_CHUNK_OVERLAP
 
-    # Using Markdown as default, document-specific chunking will be implemented in seperate pr.
+    # Using Markdown as default, document-specific chunking will be implemented in separate pr.
     text_splitter = RecursiveCharacterTextSplitter.from_language(
         language=Language.MARKDOWN,
         chunk_size=chunk_size,
