@@ -134,7 +134,7 @@ class FilterByValueBlock(Block):
         - le: less than or equal to
         - contains: filter_column contains filter_value (only for string columns)
 
-        Note that the sematics of all operations are:
+        Note that the semantics of all operations are:
           - filter_column operation filter_value
 
         Example: FilterByValueBlock(ctx, "filter_by_age", "age", 30, "eq", "int")

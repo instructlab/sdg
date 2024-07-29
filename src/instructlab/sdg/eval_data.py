@@ -70,7 +70,7 @@ def _post_process_mcq(ds: Dataset) -> Dataset:
     Filters out badly generated data, adds dataset type column
 
     Args:
-        ds (Dataset): mcq generated dataset from mmmlu pipeline
+        ds (Dataset): mcq generated dataset from mmlu pipeline
 
     Returns:
         Dataset: Hf Dataset with new column, filtered dataset

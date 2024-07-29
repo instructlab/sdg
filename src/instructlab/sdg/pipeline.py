@@ -273,7 +273,7 @@ _PIPELINE_CONFIG_PARSER_MINOR = 0
 
 # This is part of the public API.
 class PipelineConfigParserError(Exception):
-    """An exception raised while parsing a pipline config file."""
+    """An exception raised while parsing a pipeline config file."""
 
 
 def _parse_pipeline_config_file(pipeline_yaml):

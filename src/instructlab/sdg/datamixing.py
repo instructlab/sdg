@@ -167,7 +167,7 @@ class Recipe:
 
         Args:
             path: The file path to the dataset's samples, as jsonl
-            sampling_size: An int or float that specifices the number of
+            sampling_size: An int or float that specifies the number of
                            samples (if int) or the ratio of samples (if
                            float) to include in the mixed dataset. A value
                            of 1.0 means include all samples, 0.5 means half

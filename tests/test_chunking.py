@@ -13,7 +13,7 @@ from .testdata import testdata
 class TestChunking:
     """Test collection in instructlab.utils.chunking."""
 
-    def test_chunk_docs_wc_exeeds_ctx_window(self):
+    def test_chunk_docs_wc_exceeds_ctx_window(self):
         with pytest.raises(ValueError) as exc:
             chunking.chunk_document(
                 documents=testdata.documents,
