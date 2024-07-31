@@ -5,21 +5,20 @@ Unit tests for the top-level generate_data module.
 # Standard
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
+import glob
+import os
 import shutil
 import tempfile
 import unittest
 
 # Third Party
-from datasets import Dataset
+from datasets import load_dataset
 import pytest
 
 # First Party
 from instructlab.sdg.generate_data import _context_init, generate_data
-from instructlab.sdg.pipeline import Pipeline, PipelineContext
-
-# Local
-from .conftest import get_single_threaded_ctx
-from .taxonomy import MockTaxonomy
+from instructlab.sdg.llmblock import LLMBlock
+from instructlab.sdg.pipeline import PipelineContext
 
 TEST_VALID_COMPOSITIONAL_SKILL_YAML = """created_by: rafael-vasquez
 version: 1
@@ -50,44 +49,39 @@ rules:
     max: 180
 """
 
-
-def _noop_generate(self, dataset):
-    return dataset
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
 
-def _noop_get_question_hack(synth_example):
-    return ""
+def _noop_llmblock_generate(self, samples):
+    generated_output_list = []
+    generated_output_file = os.path.join(
+        TEST_DATA_DIR, "llmblock_compositional_generated.txt"
+    )
+    with open(generated_output_file, "r", encoding="utf-8") as listfile:
+        for line in listfile:
+            generated_output_list.append(line)
+    return generated_output_list
 
 
-def _noop_get_response_hack(synth_example):
-    return ""
-
-
-def _noop_gen_train_data(
-    machine_instruction_data, output_file_train, output_file_messages
-):
-    return
-
-
-@patch.object(Pipeline, "generate", _noop_generate)
-@patch("instructlab.sdg.datamixing._get_question_hack", _noop_get_question_hack)
-@patch("instructlab.sdg.datamixing._get_response_hack", _noop_get_response_hack)
-@patch("instructlab.sdg.generate_data._gen_train_data", _noop_gen_train_data)
+@patch.object(LLMBlock, "_generate", _noop_llmblock_generate)
 class TestGenerateData(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def _init_taxonomy(self, taxonomy_dir):
         self.test_taxonomy = taxonomy_dir
 
     def setUp(self):
-        self.ctx = get_single_threaded_ctx
         self.tmp_path = tempfile.TemporaryDirectory().name
-        tracked_file = "compositional_skills/tracked/qna.yaml"
-        untracked_file = "compositional_skills/new/qna.yaml"
+        tracked_compositional_file = os.path.join(
+            "compositional_skills", "tracked", "qna.yaml"
+        )
+        untracked_compositional_file = os.path.join(
+            "compositional_skills", "new", "qna.yaml"
+        )
         self.test_taxonomy.add_tracked(
-            tracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
+            tracked_compositional_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
         )
         self.test_taxonomy.create_untracked(
-            untracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
+            untracked_compositional_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
         )
 
     def test_generate(self):
@@ -105,11 +99,26 @@ class TestGenerateData(unittest.TestCase):
                 pipeline="simple",
             )
 
+        node_file = os.path.join("node_datasets_*", "compositional_skills_new.jsonl")
+        for name in [
+            "test_*.jsonl",
+            "train_*.jsonl",
+            "messages_*.jsonl",
+            "skills_recipe_*.yaml",
+            "skills_train_*.jsonl",
+            node_file,
+        ]:
+            file_name = os.path.join(self.tmp_path, name)
+            print(f"Testing that generated file ({file_name}) exists")
+            files = glob.glob(file_name)
+            assert len(files) == 1
+
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its
         subdirectories and files.
         """
         shutil.rmtree(self.tmp_path)
+        return
 
     def __enter__(self):
         return self
