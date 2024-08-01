@@ -6,6 +6,7 @@ Unit tests for the top-level generate_data module.
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 import glob
+import json
 import os
 import shutil
 import tempfile
@@ -304,6 +305,20 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 files = glob.glob(file_name)
                 assert len(files) == 1
 
+            # Test contents of generated files for contributed context
+            for name in ["test_*.jsonl", "train_*.jsonl", "skills_train_*.jsonl"]:
+                file_name = os.path.join(self.tmp_path, name)
+                print(f"Testing contents of ({file_name})")
+                files = glob.glob(file_name)
+                with open(files[0], "r", encoding="utf-8") as jsonfile:
+                    data_as_str = jsonfile.read()
+                    generated_content_exists = False
+                    if "This is a valid YAM" in data_as_str:
+                        generated_content_exists = True
+                    else:
+                        print(f'"This is a valid YAM" not in data: {data_as_str}')
+                    assert generated_content_exists is True
+
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its
         subdirectories and files.
@@ -375,6 +390,25 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 print(f"Testing that generated file ({file_name}) exists")
                 files = glob.glob(file_name)
                 assert len(files) == 1
+
+            # Test contents of generated files for contributed context
+            for name in [
+                "test_*.jsonl",
+                "train_*.jsonl",
+                "skills_train_*.jsonl",
+                "knowledge_train_*.jsonl",
+            ]:
+                file_name = os.path.join(self.tmp_path, name)
+                print(f"Testing contents of ({file_name})")
+                files = glob.glob(file_name)
+                with open(files[0], "r", encoding="utf-8") as jsonfile:
+                    data_as_str = jsonfile.read()
+                    generated_content_exists = False
+                    if "tonsil" in data_as_str:
+                        generated_content_exists = True
+                    else:
+                        print(f"tonsil not in data: {data_as_str}")
+                    assert generated_content_exists is True
 
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its
