@@ -256,6 +256,33 @@ def validate_legacy_dataset(dataset_file_name, expected_samples):
         assert ds[idx]["assistant"] == sample["assistant"]
 
 
+def validate_messages_dataset(dataset_file_name, expected_samples):
+    """Test dataset in the Hugging Face messages format
+
+    See MessageSample in instructlab/instructlab.
+
+      messages:
+        content: str
+        # one of: "user", "assistant", or "system"
+        role: str
+    """
+    ds = load_dataset("json", data_files=dataset_file_name, split="train")
+    assert len(ds.features) == 2
+    assert len(ds.features["messages"]) == 1
+    assert len(ds.features["messages"][0]) == 2
+    assert ds.features["messages"][0]["content"].dtype == "string"
+    assert ds.features["messages"][0]["role"].dtype == "string"
+    assert ds.features["metadata"].dtype == "string"
+
+    for idx, sample in enumerate(expected_samples):
+        assert len(ds[idx]["messages"]) == 2
+        assert ds[idx]["messages"][0]["role"] == "user"
+        assert ds[idx]["messages"][0]["content"] == sample["user"]
+        assert ds[idx]["messages"][1]["role"] == "assistant"
+        assert ds[idx]["messages"][1]["content"] == sample["assistant"]
+        assert ds[idx]["metadata"] == json.dumps({"system": _SYS_PROMPT})
+
+
 def generate_test_samples(taxonomy_yaml):
     """Convert questions and answers from the taxonomy format into the
     user/assistant format used by the legacy training methods such as
@@ -412,19 +439,20 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 pipeline="simple",
             )
 
-            for name in ["test_*.jsonl", "train_*.jsonl"]:
+            for name in ["test_*.jsonl", "train_*.jsonl", "messages_*.jsonl"]:
                 matches = glob.glob(os.path.join(self.tmp_path, name))
                 assert len(matches) == 1
                 if name.startswith("test_"):
                     validate_legacy_dataset(matches[0], self.expected_test_samples)
                 elif name.startswith("train_"):
                     validate_legacy_dataset(matches[0], self.expected_train_samples)
+                elif name.startswith("messages_"):
+                    validate_messages_dataset(matches[0], self.expected_train_samples)
 
             node_file = os.path.join(
                 "node_datasets_*", "compositional_skills_new.jsonl"
             )
             for name in [
-                "messages_*.jsonl",
                 "skills_recipe_*.yaml",
                 "skills_train_*.jsonl",
                 node_file,
@@ -502,16 +530,17 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 pipeline="simple",
             )
 
-            for name in ["test_*.jsonl", "train_*.jsonl"]:
+            for name in ["test_*.jsonl", "train_*.jsonl", "messages_*.jsonl"]:
                 matches = glob.glob(os.path.join(self.tmp_path, name))
                 assert len(matches) == 1
                 if name.startswith("test_"):
                     validate_legacy_dataset(matches[0], self.expected_test_samples)
                 elif name.startswith("train_"):
                     validate_legacy_dataset(matches[0], self.expected_train_samples)
+                elif name.startswith("messages_"):
+                    validate_messages_dataset(matches[0], self.expected_train_samples)
 
             for name in [
-                "messages_*.jsonl",
                 "skills_recipe_*.yaml",
                 "skills_train_*.jsonl",
                 "knowledge_recipe_*.yaml",
