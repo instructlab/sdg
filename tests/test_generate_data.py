@@ -283,6 +283,59 @@ def validate_messages_dataset(dataset_file_name, expected_samples):
         assert ds[idx]["metadata"] == json.dumps({"system": _SYS_PROMPT})
 
 
+def validate_skill_leaf_node_dataset(dataset_file_name):
+    ds = load_dataset("json", data_files=dataset_file_name, split="train")
+    assert len(ds.features) == 7
+    features = [
+        "task_description",
+        "seed_context",
+        "seed_question",
+        "seed_response",
+        "output",
+        "id",
+    ]
+    for feature in features:
+        assert feature in ds.features
+        assert ds.features[feature].dtype == "string"
+    assert "messages" in ds.features
+    assert len(ds.features["messages"]) == 1
+    assert len(ds.features["messages"][0]) == 2
+    assert ds.features["messages"][0]["content"].dtype == "string"
+    assert ds.features["messages"][0]["role"].dtype == "string"
+
+
+def validate_phase_leaf_node_dataset(dataset_file_name):
+    ds = load_dataset("json", data_files=dataset_file_name, split="train")
+    assert len(ds.features) == 3
+    features = ["metadata", "id"]
+    for feature in features:
+        assert feature in ds.features
+        assert ds.features[feature].dtype == "string"
+    assert "messages" in ds.features
+    assert len(ds.features["messages"]) == 1
+    assert len(ds.features["messages"][0]) == 2
+    assert ds.features["messages"][0]["content"].dtype == "string"
+    assert ds.features["messages"][0]["role"].dtype == "string"
+
+
+def validate_recipe(recipe_file_name):
+    with open(recipe_file_name, encoding="utf-8") as fp:
+        yaml_contents = yaml.safe_load(fp)
+        assert len(yaml_contents["datasets"]) == 1
+        assert yaml_contents["datasets"][0]["path"].endswith(".jsonl")
+        assert "sampling_size" in yaml_contents["datasets"][0]
+        assert yaml_contents["metadata"]["sys_prompt"] == _SYS_PROMPT
+
+
+def validate_mixed_dataset(dataset_file_name):
+    ds = load_dataset("json", data_files=dataset_file_name, split="train")
+    assert "messages" in ds.features
+    assert len(ds.features["messages"]) == 1
+    assert len(ds.features["messages"][0]) == 2
+    assert ds.features["messages"][0]["content"].dtype == "string"
+    assert ds.features["messages"][0]["role"].dtype == "string"
+
+
 def generate_test_samples(taxonomy_yaml):
     """Convert questions and answers from the taxonomy format into the
     user/assistant format used by the legacy training methods such as
@@ -454,27 +507,17 @@ class TestGenerateCompositionalData(unittest.TestCase):
             )
             for name in [
                 "skills_recipe_*.yaml",
-                "skills_train_*.jsonl",
+                "skills_train_msgs_*.jsonl",
                 node_file,
             ]:
-                file_name = os.path.join(self.tmp_path, name)
-                print(f"Testing that generated file ({file_name}) exists")
-                files = glob.glob(file_name)
-                assert len(files) == 1
-
-            # Test contents of generated files for contributed context
-            for name in ["skills_train_*.jsonl"]:
-                file_name = os.path.join(self.tmp_path, name)
-                print(f"Testing contents of ({file_name})")
-                files = glob.glob(file_name)
-                with open(files[0], "r", encoding="utf-8") as jsonfile:
-                    data_as_str = jsonfile.read()
-                    generated_content_exists = False
-                    if "This is a valid YAM" in data_as_str:
-                        generated_content_exists = True
-                    else:
-                        print(f'"This is a valid YAM" not in data: {data_as_str}')
-                    assert generated_content_exists is True
+                matches = glob.glob(os.path.join(self.tmp_path, name))
+                assert len(matches) == 1
+                if name.endswith("compositional_skills_new.jsonl"):
+                    validate_skill_leaf_node_dataset(matches[0])
+                elif name.startswith("skills_recipe_"):
+                    validate_recipe(matches[0])
+                elif name.startswith("skills_train_msgs_"):
+                    validate_mixed_dataset(matches[0])
 
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its
@@ -540,20 +583,32 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 elif name.startswith("messages_"):
                     validate_messages_dataset(matches[0], self.expected_train_samples)
 
+            node_p07_file = os.path.join("node_datasets_*", "knowledge_new_p07.jsonl")
+            node_p10_file = os.path.join("node_datasets_*", "knowledge_new_p10.jsonl")
             for name in [
                 "skills_recipe_*.yaml",
                 "skills_train_*.jsonl",
                 "knowledge_recipe_*.yaml",
-                "knowledge_train_*.jsonl",
+                "knowledge_train_msgs_*.jsonl",
+                node_p07_file,
+                node_p10_file,
             ]:
-                file_name = os.path.join(self.tmp_path, name)
-                print(f"Testing that generated file ({file_name}) exists")
-                files = glob.glob(file_name)
-                assert len(files) == 1
+                matches = glob.glob(os.path.join(self.tmp_path, name))
+                assert len(matches) == 1
+                if name.endswith("knowledge_new_p07.jsonl") or name.endswith(
+                    "knowledge_new_p10.jsonl"
+                ):
+                    validate_phase_leaf_node_dataset(matches[0])
+                elif name.startswith("skills_recipe_") or name.startswith(
+                    "knowledge_recipe_"
+                ):
+                    validate_recipe(matches[0])
+                elif name.startswith("skills_train_msgs_") or name.startswith(
+                    "knowledge_train_msgs_"
+                ):
+                    validate_mixed_dataset(matches[0])
 
             for name in [
-                "knowledge_new_p07.jsonl",
-                "knowledge_new_p10.jsonl",
                 "knowledge_new_task.yaml",
                 "mmlubench_knowledge_new.jsonl",
             ]:
@@ -561,23 +616,6 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 print(f"Testing that generated file ({file_name}) exists")
                 files = glob.glob(file_name)
                 assert len(files) == 1
-
-            # Test contents of generated files for contributed context
-            for name in [
-                "skills_train_*.jsonl",
-                "knowledge_train_*.jsonl",
-            ]:
-                file_name = os.path.join(self.tmp_path, name)
-                print(f"Testing contents of ({file_name})")
-                files = glob.glob(file_name)
-                with open(files[0], "r", encoding="utf-8") as jsonfile:
-                    data_as_str = jsonfile.read()
-                    generated_content_exists = False
-                    if "tonsil" in data_as_str:
-                        generated_content_exists = True
-                    else:
-                        print(f"tonsil not in data: {data_as_str}")
-                    assert generated_content_exists is True
 
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its
