@@ -15,9 +15,10 @@ import unittest
 # Third Party
 from datasets import load_dataset
 import pytest
+import yaml
 
 # First Party
-from instructlab.sdg.generate_data import _context_init, generate_data
+from instructlab.sdg.generate_data import _SYS_PROMPT, _context_init, generate_data
 from instructlab.sdg.llmblock import LLMBlock
 from instructlab.sdg.pipeline import PipelineContext
 
@@ -231,6 +232,105 @@ rules:
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
 
+def validate_legacy_dataset(dataset_file_name, expected_samples):
+    """Test dataset in the "legacy message sample" format.
+
+    See LegacyMessageSample in instructlab/instructlab.
+
+      system: str
+      user: str
+      assistant: str
+
+    This is what is currently used by the legacy training methods such as Linux training and MacOS training.
+    """
+    ds = load_dataset("json", data_files=dataset_file_name, split="train")
+    features = ["system", "user", "assistant"]
+    assert len(ds.features) == len(features)
+    for feature in features:
+        assert feature in ds.features
+        assert ds.features[feature].dtype == "string"
+
+    for idx, sample in enumerate(expected_samples):
+        assert ds[idx]["system"] == _SYS_PROMPT
+        assert ds[idx]["user"] == sample["user"]
+        assert ds[idx]["assistant"] == sample["assistant"]
+
+
+def generate_test_samples(taxonomy_yaml):
+    """Convert questions and answers from the taxonomy format into the
+    user/assistant format used by the legacy training methods such as
+    Linux training and MacOS training.
+
+    This mirrors what _gen_test_data() does.
+    """
+    test_samples = []
+    yaml_contents = yaml.safe_load(taxonomy_yaml)
+    is_knowledge = "document" in yaml_contents
+    for seed_example in yaml_contents["seed_examples"]:
+        if is_knowledge:
+            for qna in seed_example["questions_and_answers"]:
+                test_samples.append(
+                    {
+                        "user": qna["question"]
+                        + "\n"
+                        + seed_example["context"].strip(),
+                        "assistant": qna["answer"].strip(),
+                    }
+                )
+
+        else:
+            # FIXME: handle freeform skills - no context
+            test_samples.append(
+                {
+                    "user": seed_example["question"] + "\n" + seed_example["context"],
+                    "assistant": seed_example["answer"],
+                }
+            )
+    return test_samples
+
+
+def generate_train_samples(taxonomy_yaml):
+    """Generate expected training samples in the user/assistant format
+    used by the legacy training methods such as Linux training and MacOS
+    training.
+
+    Mirroring _noop_llmblock_generate() below, we generate 10 samples
+    per input, and then follow _gen_train_data()'s output format.
+    """
+
+    def add_q(q):
+        return (q + "?") if not "?" in q else q
+
+    train_samples = []
+    yaml_contents = yaml.safe_load(taxonomy_yaml)
+    is_knowledge = "document" in yaml_contents
+    for seed_example in yaml_contents["seed_examples"]:
+        for i in range(10):
+            if is_knowledge:
+                train_samples.append(
+                    {
+                        "user": seed_example["context"]
+                        + f" (q{i}) "
+                        + add_q(
+                            seed_example["questions_and_answers"][0]["question"].strip()
+                        ),
+                        "assistant": f"(a{i}) "
+                        + seed_example["questions_and_answers"][0]["answer"].strip(),
+                    }
+                )
+            else:
+                # FIXME: handle freeform skills - no context
+                train_samples.append(
+                    {
+                        "user": seed_example["context"]
+                        + f" (q{i}) "
+                        + add_q(seed_example["question"]),
+                        "assistant": f"(a{i}) " + seed_example["answer"],
+                    }
+                )
+    return train_samples
+
+
 def _noop_llmblock_generate(self, samples):
     """Generate mock output based on input samples.
 
@@ -290,6 +390,12 @@ class TestGenerateCompositionalData(unittest.TestCase):
         self.test_taxonomy.create_untracked(
             untracked_compositional_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
         )
+        self.expected_test_samples = generate_test_samples(
+            TEST_VALID_COMPOSITIONAL_SKILL_YAML
+        )
+        self.expected_train_samples = generate_train_samples(
+            TEST_VALID_COMPOSITIONAL_SKILL_YAML
+        )
 
     def test_generate(self):
         with patch("logging.Logger.info") as mocked_logger:
@@ -306,12 +412,18 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 pipeline="simple",
             )
 
+            for name in ["test_*.jsonl", "train_*.jsonl"]:
+                matches = glob.glob(os.path.join(self.tmp_path, name))
+                assert len(matches) == 1
+                if name.startswith("test_"):
+                    validate_legacy_dataset(matches[0], self.expected_test_samples)
+                elif name.startswith("train_"):
+                    validate_legacy_dataset(matches[0], self.expected_train_samples)
+
             node_file = os.path.join(
                 "node_datasets_*", "compositional_skills_new.jsonl"
             )
             for name in [
-                "test_*.jsonl",
-                "train_*.jsonl",
                 "messages_*.jsonl",
                 "skills_recipe_*.yaml",
                 "skills_train_*.jsonl",
@@ -323,7 +435,7 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 assert len(files) == 1
 
             # Test contents of generated files for contributed context
-            for name in ["test_*.jsonl", "train_*.jsonl", "skills_train_*.jsonl"]:
+            for name in ["skills_train_*.jsonl"]:
                 file_name = os.path.join(self.tmp_path, name)
                 print(f"Testing contents of ({file_name})")
                 files = glob.glob(file_name)
@@ -366,6 +478,12 @@ class TestGenerateKnowledgeData(unittest.TestCase):
         self.test_taxonomy.create_untracked(
             untracked_knowledge_file, TEST_VALID_KNOWLEDGE_SKILL_YAML
         )
+        self.expected_test_samples = generate_test_samples(
+            TEST_VALID_KNOWLEDGE_SKILL_YAML
+        )
+        self.expected_train_samples = generate_train_samples(
+            TEST_VALID_KNOWLEDGE_SKILL_YAML
+        )
 
     def test_generate(self):
         with patch("logging.Logger.info") as mocked_logger:
@@ -383,9 +501,16 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 client=MagicMock(),
                 pipeline="simple",
             )
+
+            for name in ["test_*.jsonl", "train_*.jsonl"]:
+                matches = glob.glob(os.path.join(self.tmp_path, name))
+                assert len(matches) == 1
+                if name.startswith("test_"):
+                    validate_legacy_dataset(matches[0], self.expected_test_samples)
+                elif name.startswith("train_"):
+                    validate_legacy_dataset(matches[0], self.expected_train_samples)
+
             for name in [
-                "test_*.jsonl",
-                "train_*.jsonl",
                 "messages_*.jsonl",
                 "skills_recipe_*.yaml",
                 "skills_train_*.jsonl",
@@ -410,8 +535,6 @@ class TestGenerateKnowledgeData(unittest.TestCase):
 
             # Test contents of generated files for contributed context
             for name in [
-                "test_*.jsonl",
-                "train_*.jsonl",
                 "skills_train_*.jsonl",
                 "knowledge_train_*.jsonl",
             ]:
