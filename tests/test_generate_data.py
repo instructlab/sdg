@@ -231,29 +231,46 @@ rules:
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
 
-def _noop_llmblock_compositional_generate(self, samples):
-    generated_output_list = []
-    generated_output_file = os.path.join(
-        TEST_DATA_DIR, "llmblock_compositional_generated.txt"
-    )
-    with open(generated_output_file, "r", encoding="utf-8") as listfile:
-        for line in listfile:
-            generated_output_list.append(line)
-    return generated_output_list
+def _noop_llmblock_generate(self, samples):
+    """Generate mock output based on input samples.
+
+    Simply return the seed question and response from the input sample,
+    joined using '?' and with an integer discriminator.
+
+    _get_question_hack() and _get_response_hack() is the code that later
+    splits these using the '?' separator.
+
+    Return 10 output samples per input samples, since the LLMBlock in the
+    simple pipeline is configured with 'n: scaled' and we pass
+    num_instructions_to_generate=10 to generate_data.
+    """
+
+    def strip_q(q):
+        return q.strip().rstrip("?")
+
+    output = []
+    for sample in samples:
+        for i in range(10):
+            if "domain" in sample:  # knowledge
+                output.append(
+                    sample["icl_document"]
+                    + f" (q{i}) "
+                    + strip_q(sample["icl_query_1"])
+                    + f" ? (a{i}) "
+                    + sample["icl_response_1"]
+                )
+            else:
+                output.append(
+                    sample["seed_context"]
+                    + f" (q{i}) "
+                    + strip_q(sample["seed_question"])
+                    + f" ? (a{i}) "
+                    + sample["seed_response"]
+                )
+    return output
 
 
-def _noop_llmblock_knowledge_generate(self, samples):
-    generated_output_list = []
-    generated_output_file = os.path.join(
-        TEST_DATA_DIR, "llmblock_knowledge_generated.txt"
-    )
-    with open(generated_output_file, "r", encoding="utf-8") as listfile:
-        for line in listfile:
-            generated_output_list.append(line)
-    return generated_output_list
-
-
-@patch.object(LLMBlock, "_generate", _noop_llmblock_compositional_generate)
+@patch.object(LLMBlock, "_generate", _noop_llmblock_generate)
 class TestGenerateCompositionalData(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def _init_taxonomy(self, taxonomy_dir):
@@ -333,7 +350,7 @@ class TestGenerateCompositionalData(unittest.TestCase):
         self.teardown()
 
 
-@patch.object(LLMBlock, "_generate", _noop_llmblock_knowledge_generate)
+@patch.object(LLMBlock, "_generate", _noop_llmblock_generate)
 class TestGenerateKnowledgeData(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def _init_taxonomy(self, taxonomy_dir):
