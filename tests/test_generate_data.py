@@ -336,6 +336,22 @@ def validate_mixed_dataset(dataset_file_name):
     assert ds.features["messages"][0]["role"].dtype == "string"
 
 
+def validate_lm_eval_task(lm_eval_task_file_name):
+    with open(lm_eval_task_file_name, encoding="utf-8") as fp:
+        yaml_contents = yaml.safe_load(fp)
+        assert "task" in yaml_contents
+        assert "dataset_kwargs" in yaml_contents
+        assert "doc_to_text" in yaml_contents
+        assert "doc_to_choice" in yaml_contents
+        assert "doc_to_target" in yaml_contents
+
+
+def validate_mmlubench_dataset(dataset_file_name):
+    with open(dataset_file_name, encoding="utf-8") as fp:
+        # FIXME: fix the mmlubench pipeline in this test
+        assert fp.readlines() == []
+
+
 def generate_test_samples(taxonomy_yaml):
     """Convert questions and answers from the taxonomy format into the
     user/assistant format used by the legacy training methods such as
@@ -612,10 +628,14 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 "knowledge_new_task.yaml",
                 "mmlubench_knowledge_new.jsonl",
             ]:
-                file_name = os.path.join(self.tmp_path, "node_datasets_*", name)
-                print(f"Testing that generated file ({file_name}) exists")
-                files = glob.glob(file_name)
-                assert len(files) == 1
+                matches = glob.glob(
+                    os.path.join(self.tmp_path, "node_datasets_*", name)
+                )
+                assert len(matches) == 1
+                if name == "knowledge_new_task.yaml":
+                    validate_lm_eval_task(matches[0])
+                elif name == "mmlubench_knowledge_new.jsonl":
+                    validate_mmlubench_dataset(matches[0])
 
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its
