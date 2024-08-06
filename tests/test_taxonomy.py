@@ -35,7 +35,7 @@ TEST_SEED_EXAMPLE = "Can you help me debug this failing unit test?"
 
 TEST_TAXONOMY_BASE = "main"
 
-TEST_CUSTOM_YAML_RULES = b"""extends: relaxed
+TEST_CUSTOM_YAML_RULES = """extends: relaxed
 
 rules:
   line-length:
@@ -50,16 +50,18 @@ class TestTaxonomy:
     def _init_taxonomy(self, taxonomy_dir):
         self.taxonomy = taxonomy_dir
 
-    def test_read_taxonomy_leaf_nodes(self):
+    def test_read_taxonomy_leaf_nodes(self, tmp_path: pathlib.Path):
         tracked_file = "compositional_skills/tracked/qna.yaml"
         untracked_file = "compositional_skills/new/qna.yaml"
         self.taxonomy.add_tracked(tracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML)
         self.taxonomy.create_untracked(
             untracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
         )
+        custom_config_yaml = tmp_path.joinpath("custom_config.yaml")
+        custom_config_yaml.write_text(TEST_CUSTOM_YAML_RULES, encoding="utf-8")
 
         leaf_node = taxonomy.read_taxonomy_leaf_nodes(
-            self.taxonomy.root, TEST_TAXONOMY_BASE, TEST_CUSTOM_YAML_RULES
+            self.taxonomy.root, TEST_TAXONOMY_BASE, str(custom_config_yaml)
         )
         leaf_node_key = str(pathlib.Path(untracked_file).parent).replace(
             os.path.sep, "->"

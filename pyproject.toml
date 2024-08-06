@@ -12,7 +12,7 @@ authors = [
 description = "Synthetic Data Generation"
 readme = "README.md"
 license = {text = "Apache-2.0"}
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -22,7 +22,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -53,7 +52,7 @@ where = ["src"]
 include = ["instructlab.sdg"]
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 # same as black's default line length
 line-length = 88
 
@@ -92,6 +91,7 @@ from-first = true
 known-local-folder = ["tuning"]
 
 [tool.mypy]
+python_version = "3.10"
 disable_error_code = ["import-not-found", "import-untyped"]
 exclude = [
     "^src/instructlab/sdg/generate_data\\.py$",

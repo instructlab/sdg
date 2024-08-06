@@ -90,7 +90,7 @@ persistent=yes
 
 # Minimum Python version to use for version dependent checks. Will default to
 # the version used to run pylint.
-py-version=3.9
+py-version=3.10
 
 # Discover python modules and packages in the file system subtree.
 recursive=no
@@ -379,7 +379,8 @@ int-import-graph=
 known-standard-library=
 
 # Force import order to recognize a module as part of a third party library.
-known-third-party=enchant
+known-third-party=enchant,
+    instructlab.schema,
 
 # Couples of modules and preferred modules, separated by a comma.
 preferred-modules=
