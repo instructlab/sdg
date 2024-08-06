@@ -1,35 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from typing import Any, Dict, Union
 import os
 import pathlib
 
 # Third Party
 import pytest
+import yaml
 
 # First Party
 from instructlab.sdg.utils import taxonomy
-
-TEST_VALID_COMPOSITIONAL_SKILL_YAML = """created_by: rafael-vasquez
-version: 1
-seed_examples:
-- answer: "Sure thing!"
-  context: "This is a valid YAML."
-  question: "Can you help me debug this failing unit test?"
-- answer: "answer2"
-  context: "context2"
-  question: "question2"
-- answer: "answer3"
-  context: "context3"
-  question: "question3"
-- answer: "answer4"
-  context: "context4"
-  question: "question4"
-- answer: "answer5"
-  context: "context5"
-  question: "question5"
-task_description: 'This is a task'
-"""
 
 TEST_SEED_EXAMPLE = "Can you help me debug this failing unit test?"
 
@@ -42,6 +23,13 @@ rules:
     max: 180
 """
 
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
+
+
+def load_test_skills(skills_file_path) -> Union[Dict[str, Any], None]:
+    with open(skills_file_path, "r", encoding="utf-8") as skills_file:
+        return yaml.safe_load(skills_file)
+
 
 class TestTaxonomy:
     """Test taxonomy in instructlab.sdg.utils.taxonomy."""
@@ -51,12 +39,14 @@ class TestTaxonomy:
         self.taxonomy = taxonomy_dir
 
     def test_read_taxonomy_leaf_nodes(self):
+        test_compositional_skill_file = os.path.join(
+            TEST_DATA_DIR, "test_valid_compositional_skill.yaml"
+        )
         tracked_file = "compositional_skills/tracked/qna.yaml"
         untracked_file = "compositional_skills/new/qna.yaml"
-        self.taxonomy.add_tracked(tracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML)
-        self.taxonomy.create_untracked(
-            untracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
-        )
+        test_compositional_skill = load_test_skills(test_compositional_skill_file)
+        self.taxonomy.add_tracked(tracked_file, test_compositional_skill)
+        self.taxonomy.create_untracked(untracked_file, test_compositional_skill)
 
         leaf_node = taxonomy.read_taxonomy_leaf_nodes(
             self.taxonomy.root, TEST_TAXONOMY_BASE, TEST_CUSTOM_YAML_RULES
