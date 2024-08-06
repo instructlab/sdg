@@ -1,0 +1,19 @@
+created_by: rafael-vasquez
+version: 1
+seed_examples:
+- answer: "Sure thing!"
+  context: "This is a valid YAML."
+  question: "Can you help me debug this failing unit test?"
+- answer: "answer2"
+  context: "context2"
+  question: "question2"
+- answer: "answer3"
+  context: "context3"
+  question: "question3"
+- answer: "answer4"
+  context: "context4"
+  question: "question4"
+- answer: "answer5"
+  context: "context5"
+  question: "question5"
+task_description: 'This is a task'
