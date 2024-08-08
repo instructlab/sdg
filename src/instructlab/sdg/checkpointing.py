@@ -22,7 +22,8 @@ class Checkpointer:
         self._cache = []
 
     def checkpoint(self, dataset):
-        self._cache.append(dataset)
+        if len(dataset) != 0:
+            self._cache.append(dataset)
         if len(self._cache) < self._save_freq:
             return
         self.save()
