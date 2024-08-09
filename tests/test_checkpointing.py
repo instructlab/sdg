@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from unittest.mock import patch
 import json
 import os
 
@@ -117,3 +118,21 @@ def test_checkpointing(
 
     # Validate that all checkpoints are now saved to disk
     _validate_checkpoints(tmpdir, final_checkpoints, checkpoint_length, remove_column)
+
+
+@patch.object(Checkpointer, "save")
+def test_checkpoint_empty_dataset_doesnt_save_empty_files(mock_save):
+    checkpointer = Checkpointer()
+    empty_dataset = Dataset.from_list([])
+    checkpointer.checkpoint(empty_dataset)
+    checkpointer.done()
+    mock_save.assert_not_called()
+
+
+@patch.object(Checkpointer, "save")
+def test_checkpoint_nonempty_dataset_saves_files(mock_save):
+    checkpointer = Checkpointer()
+    dataset = Dataset.from_list([{"idx": 1, "foo": "bar"}])
+    checkpointer.checkpoint(dataset)
+    checkpointer.done()
+    mock_save.assert_called()
