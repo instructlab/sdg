@@ -96,7 +96,7 @@ jobs:
       - name: Run e2e test
         run: |
           . venv/bin/activate
-          ./instructlab/scripts/basic-workflow-tests.sh -cm
+          ./instructlab/scripts/basic-workflow-tests.sh -m
 
       - name: Remove llama-cpp-python from cache
         if: always()
