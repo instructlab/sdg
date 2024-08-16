@@ -33,8 +33,6 @@ task_description: 'This is a task'
 
 TEST_SEED_EXAMPLE = "Can you help me debug this failing unit test?"
 
-TEST_TAXONOMY_BASE = "main"
-
 TEST_CUSTOM_YAML_RULES = b"""extends: relaxed
 
 rules:
@@ -50,26 +48,41 @@ class TestTaxonomy:
     def _init_taxonomy(self, taxonomy_dir):
         self.taxonomy = taxonomy_dir
 
-    def test_read_taxonomy_leaf_nodes(self):
+    @pytest.mark.parametrize(
+        "taxonomy_base, create_tracked_file, create_untracked_file, check_leaf_node_keys",
+        [
+            ("main", True, True, ["compositional_skills->new"]),
+        ],
+    )
+    def test_read_taxonomy_leaf_nodes(
+        self,
+        taxonomy_base,
+        create_tracked_file,
+        create_untracked_file,
+        check_leaf_node_keys,
+    ):
         tracked_file = "compositional_skills/tracked/qna.yaml"
         untracked_file = "compositional_skills/new/qna.yaml"
-        self.taxonomy.add_tracked(tracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML)
-        self.taxonomy.create_untracked(
-            untracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
+        if create_tracked_file:
+            self.taxonomy.add_tracked(tracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML)
+        if create_untracked_file:
+            self.taxonomy.create_untracked(
+                untracked_file, TEST_VALID_COMPOSITIONAL_SKILL_YAML
+            )
+
+        leaf_nodes = taxonomy.read_taxonomy_leaf_nodes(
+            self.taxonomy.root, taxonomy_base, TEST_CUSTOM_YAML_RULES
         )
 
-        leaf_node = taxonomy.read_taxonomy_leaf_nodes(
-            self.taxonomy.root, TEST_TAXONOMY_BASE, TEST_CUSTOM_YAML_RULES
-        )
-        leaf_node_key = str(pathlib.Path(untracked_file).parent).replace(
-            os.path.sep, "->"
-        )
-        assert leaf_node_key in leaf_node
+        assert len(leaf_nodes) == len(check_leaf_node_keys)
 
-        leaf_node_entries = leaf_node.get(leaf_node_key)
-        seed_example_exists = False
-        if any(
-            entry["instruction"] == TEST_SEED_EXAMPLE for entry in leaf_node_entries
-        ):
-            seed_example_exists = True
-        assert seed_example_exists is True
+        for leaf_node_key in check_leaf_node_keys:
+            assert leaf_node_key in leaf_nodes
+
+            leaf_node_entries = leaf_nodes.get(leaf_node_key)
+            seed_example_exists = False
+            if any(
+                entry["instruction"] == TEST_SEED_EXAMPLE for entry in leaf_node_entries
+            ):
+                seed_example_exists = True
+            assert seed_example_exists is True
