@@ -73,7 +73,7 @@ def _get_taxonomy_diff(repo="taxonomy", base="origin/main"):
     # Move backwards from HEAD until we find the first commit that is part of base
     # then we can take our diff from there
     current_commit = repo.commit("HEAD")
-    while not base_object:
+    while base_object is None:
         branches = repo.git.branch("-a", "--contains", current_commit.hexsha)
         if re_git_branch.findall(branches):
             base_object = current_commit
