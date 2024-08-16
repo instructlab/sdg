@@ -97,6 +97,17 @@ def _get_taxonomy_diff(repo="taxonomy", base="origin/main"):
     return updated_taxonomy_files
 
 
+def _get_taxonomy(repo="taxonomy"):
+    repo = Path(repo)
+    taxonomy_file_paths = []
+    for root, _, files in os.walk(repo):
+        for file in files:
+            file_path = Path(root).joinpath(file).relative_to(repo)
+            if _istaxonomyfile(file_path):
+                taxonomy_file_paths.append(str(file_path))
+    return taxonomy_file_paths
+
+
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
@@ -400,15 +411,19 @@ def read_taxonomy(taxonomy, taxonomy_base, yaml_rules):
         if errors:
             raise SystemExit(yaml.YAMLError("Taxonomy file with errors! Exiting."))
     else:  # taxonomy is dir
-        # Gather the new or changed YAMLs using git diff
-        updated_taxonomy_files = _get_taxonomy_diff(taxonomy, taxonomy_base)
+        if taxonomy_base == "empty":
+            # Gather all the yamls - equivalent to a diff against "the null tree"
+            taxonomy_files = _get_taxonomy(taxonomy)
+        else:
+            # Gather the new or changed YAMLs using git diff, including untracked files
+            taxonomy_files = _get_taxonomy_diff(taxonomy, taxonomy_base)
         total_errors = 0
         total_warnings = 0
-        if updated_taxonomy_files:
-            logger.debug("Found new taxonomy files:")
-            for e in updated_taxonomy_files:
+        if taxonomy_files:
+            logger.debug("Found taxonomy files:")
+            for e in taxonomy_files:
                 logger.debug(f"* {e}")
-        for f in updated_taxonomy_files:
+        for f in taxonomy_files:
             file_path = os.path.join(taxonomy, f)
             data, warnings, errors = _read_taxonomy_file(file_path, yaml_rules)
             total_warnings += warnings
