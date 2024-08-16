@@ -62,6 +62,13 @@ class TestTaxonomy:
                 True,
                 ["compositional_skills->new", "compositional_skills->tracked"],
             ),
+            ("empty", True, False, ["compositional_skills->tracked"]),
+            (
+                "empty",
+                True,
+                True,
+                ["compositional_skills->new", "compositional_skills->tracked"],
+            ),
         ],
     )
     def test_read_taxonomy_leaf_nodes(
