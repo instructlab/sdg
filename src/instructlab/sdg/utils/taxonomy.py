@@ -55,14 +55,14 @@ def _get_taxonomy_diff(repo="taxonomy", base="origin/main"):
 
     branches = [b.name for b in repo.branches]
 
-    head_commit = None
+    base_object = None
     if "/" in base:
         re_git_branch = re.compile(f"remotes/{base}$", re.MULTILINE)
     elif base in branches:
         re_git_branch = re.compile(f"{base}$", re.MULTILINE)
     else:
         try:
-            head_commit = repo.commit(base)
+            base_object = repo.commit(base)
         except gitdb.exc.BadName as e:
             raise SystemExit(
                 yaml.YAMLError(
@@ -73,10 +73,10 @@ def _get_taxonomy_diff(repo="taxonomy", base="origin/main"):
     # Move backwards from HEAD until we find the first commit that is part of base
     # then we can take our diff from there
     current_commit = repo.commit("HEAD")
-    while not head_commit:
+    while not base_object:
         branches = repo.git.branch("-a", "--contains", current_commit.hexsha)
         if re_git_branch.findall(branches):
-            head_commit = current_commit
+            base_object = current_commit
             break
         try:
             current_commit = current_commit.parents[0]
@@ -89,7 +89,7 @@ def _get_taxonomy_diff(repo="taxonomy", base="origin/main"):
 
     modified_files = [
         d.b_path
-        for d in head_commit.diff(None)
+        for d in base_object.diff(None)
         if not d.deleted_file and _istaxonomyfile(d.b_path)
     ]
 
