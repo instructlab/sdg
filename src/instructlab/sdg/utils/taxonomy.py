@@ -60,6 +60,16 @@ def _get_taxonomy_diff(repo="taxonomy", base="origin/main"):
         re_git_branch = re.compile(f"remotes/{base}$", re.MULTILINE)
     elif base in branches:
         re_git_branch = re.compile(f"{base}$", re.MULTILINE)
+    elif base == "null":
+        # NOTE: this is the tree ID for an empty tree as produced by:
+        #
+        #   `git hash-object -t tree /dev/null`
+        #
+        # This is a "well known" hash and will work with any repo unless
+        # git's hashing algorithm changes.
+        #
+        # FIXME: generate this hash at runtime for safety
+        base_object = repo.tree('4b825dc642cb6eb9a060e54bf8d69288fbee4904')
     else:
         try:
             base_object = repo.commit(base)
