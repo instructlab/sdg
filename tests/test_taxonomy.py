@@ -52,6 +52,16 @@ class TestTaxonomy:
         "taxonomy_base, create_tracked_file, create_untracked_file, check_leaf_node_keys",
         [
             ("main", True, True, ["compositional_skills->new"]),
+            ("main", False, True, ["compositional_skills->new"]),
+            ("main", True, False, []),
+            ("main", False, False, []),
+            ("main^", True, False, ["compositional_skills->tracked"]),
+            (
+                "main^",
+                True,
+                True,
+                ["compositional_skills->new", "compositional_skills->tracked"],
+            ),
         ],
     )
     def test_read_taxonomy_leaf_nodes(
