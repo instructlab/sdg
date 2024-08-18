@@ -38,7 +38,11 @@ class TaxonomyReadingException(Exception):
     """An exception raised during reading of the taxonomy."""
 
 
-TAXONOMY_FOLDERS: List[str] = ["compositional_skills", "knowledge"]
+TAXONOMY_FOLDERS: List[str] = [
+    "compositional_skills",
+    "foundational_skills",
+    "knowledge",
+]
 """Taxonomy folders which are also the schema names"""
 
 
