@@ -1,5 +1,12 @@
 # make spellcheck-sort
 # Please keep this file sorted:
 # SPDX-License-Identifier: Apache-2.0
+Dataset
+dataset
+datasets
+Pre
+pre
 sdg
+subfolder
 Tatsu
+yaml
