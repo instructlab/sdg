@@ -264,6 +264,7 @@ def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
 # TODO - parameter removal needs to be done in sync with a CLI change.
 # to be removed: logger, prompt_file_path, rouge_threshold, tls_*
 def generate_data(
+    client: openai.OpenAI,
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
@@ -280,7 +281,6 @@ def generate_data(
     yaml_rules: Optional[str] = None,
     chunk_word_count=None,
     server_ctx_size=None,
-    client: Optional[openai.OpenAI] = None,
     pipeline: Optional[str] = "simple",
     batch_size: Optional[int] = None,
     checkpoint_dir: Optional[str] = None,
