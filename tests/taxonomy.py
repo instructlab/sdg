@@ -2,11 +2,12 @@
 
 # Standard
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 import shutil
 
 # Third Party
 import git
+import yaml
 
 
 class MockTaxonomy:
@@ -25,12 +26,12 @@ class MockTaxonomy:
         """List untracked files in the repository"""
         return self._repo.untracked_files
 
-    def create_untracked(self, rel_path: str, contents: str) -> Path:
+    def create_untracked(self, rel_path: str, contents: Dict[str, Any]) -> Path:
         """Create a new untracked file in the repository.
 
         Args:
             rel_path (str): Relative path (from repository root) to the file.
-            contents (str): String to be written to the file.
+            contents (Dict[str, Any]): Object to be written to the file.
         Returns:
             file_path: The path to the created file.
         """
@@ -38,15 +39,16 @@ class MockTaxonomy:
         assert not taxonomy_path.is_absolute()
         file_path = self.root.joinpath(taxonomy_path)
         file_path.parent.mkdir(exist_ok=True, parents=True)
-        file_path.write_text(contents, encoding="utf-8")
+        with file_path.open(mode="w", encoding="utf-8") as fp:
+            yaml.dump(contents, fp)
         return file_path
 
-    def add_tracked(self, rel_path, contents: str) -> Path:
-        """Add a new tracked file to the repository (and commits it).
+    def add_tracked(self, rel_path, contents: Dict[str, Any]) -> Path:
+        """Add a new tracked file to the repository (and commit it).
 
         Args:
             rel_path (str): Relative path (from repository root) to the file.
-            contents (str): String to be written to the file.
+            contents (Dict[str, Any]): Object to be written to the file.
         Returns:
             file_path: The path to the added file.
         """
