@@ -14,13 +14,6 @@ from instructlab.sdg.utils import taxonomy
 
 TEST_SEED_EXAMPLE = "Can you help me debug this failing unit test?"
 
-TEST_CUSTOM_YAML_RULES = """extends: relaxed
-
-rules:
-  line-length:
-    max: 180
-"""
-
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
 
@@ -65,7 +58,6 @@ class TestTaxonomy:
         create_tracked_file,
         create_untracked_file,
         check_leaf_node_keys,
-        tmp_path,
     ):
         tracked_file = "compositional_skills/tracked/qna.yaml"
         untracked_file = "compositional_skills/new/qna.yaml"
@@ -78,10 +70,8 @@ class TestTaxonomy:
         if create_untracked_file:
             self.taxonomy.create_untracked(untracked_file, test_compositional_skill)
 
-        custom_config_yaml = tmp_path.joinpath("custom_config.yaml")
-        custom_config_yaml.write_text(TEST_CUSTOM_YAML_RULES, encoding="utf-8")
         leaf_nodes = taxonomy.read_taxonomy_leaf_nodes(
-            self.taxonomy.root, taxonomy_base, str(custom_config_yaml)
+            self.taxonomy.root, taxonomy_base, None
         )
         assert len(leaf_nodes) == len(check_leaf_node_keys)
 

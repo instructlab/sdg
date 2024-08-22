@@ -25,12 +25,6 @@ from instructlab.sdg.pipeline import PipelineContext
 
 TEST_TAXONOMY_BASE = "main"
 
-TEST_CUSTOM_YAML_RULES = """extends: relaxed
-rules:
-  line-length:
-    max: 180
-"""
-
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
 NUM_INSTRUCTIONS_TO_GENERATE = 10
@@ -317,7 +311,6 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 taxonomy=self.test_taxonomy.root,
                 taxonomy_base=TEST_TAXONOMY_BASE,
                 output_dir=self.tmp_path,
-                yaml_rules=TEST_CUSTOM_YAML_RULES,
                 pipeline="simple",
             )
 
@@ -394,7 +387,6 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 taxonomy=self.test_taxonomy.root,
                 taxonomy_base=TEST_TAXONOMY_BASE,
                 output_dir=self.tmp_path,
-                yaml_rules=TEST_CUSTOM_YAML_RULES,
                 chunk_word_count=1000,
                 server_ctx_size=4096,
                 pipeline="simple",
