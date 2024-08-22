@@ -25,7 +25,7 @@ from instructlab.sdg.pipeline import PipelineContext
 
 TEST_TAXONOMY_BASE = "main"
 
-TEST_CUSTOM_YAML_RULES = b"""extends: relaxed
+TEST_CUSTOM_YAML_RULES = """extends: relaxed
 rules:
   line-length:
     max: 180
