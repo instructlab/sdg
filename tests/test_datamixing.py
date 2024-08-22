@@ -128,40 +128,89 @@ def test_add_extra_contexts_to_samples_with_one_sample():
     Test _add_extra_contexts_to_samples doesn't error out when
     given only one sample
     """
-    samples = Dataset.from_list([_fake_context("abc123")])
+    samples = Dataset.from_list([_fake_context("context1")])
     dataset = _add_extra_contexts_to_samples(samples, p=0.4)
     assert len(dataset) == 1
+    assert "context context1" in dataset[0]["messages"][0]["content"]
 
 
-def test_add_extra_contexts_to_samples_with_two_samples():
+def test_add_extra_contexts_to_samples_with_two_samples_golden_path():
     """
-    Test _add_extra_contexts_to_samples doesn't error out when
-    given only two samples
+    Test _add_extra_contexts_to_samples doesn't error out and adds
+    both expected contexts when given only two samples
     """
     samples = Dataset.from_list(
         [
-            _fake_context("abc123"),
-            _fake_context("bcd234"),
+            _fake_context("context1"),
+            _fake_context("context2"),
         ]
     )
-    dataset = _add_extra_contexts_to_samples(samples, p=0.4)
+    p = 1.0  # 1.0 to test the golden/answer document path of this logic
+    num_doc_in_context = 4
+    dataset = _add_extra_contexts_to_samples(
+        samples, p=p, num_doc_in_context=num_doc_in_context
+    )
     assert len(dataset) == 2
+    # ensure both contexts end up in both samples
+    assert "context context1" in dataset[0]["messages"][0]["content"]
+    assert "context context2" in dataset[0]["messages"][0]["content"]
+    assert "context context1" in dataset[1]["messages"][0]["content"]
+    assert "context context2" in dataset[1]["messages"][0]["content"]
 
 
-def test_add_extra_contexts_to_samples_with_six_samples():
+def test_add_extra_contexts_to_samples_with_six_samples_golden_path():
     """
-    Test _add_extra_contexts_to_samples doesn't error out when
-    given more samples
+    Test _add_extra_contexts_to_samples doesn't error out and adds
+    the expected number of contexts when given six samples
     """
     samples = Dataset.from_list(
         [
-            _fake_context("s1"),
-            _fake_context("s2"),
-            _fake_context("s3"),
-            _fake_context("s4"),
-            _fake_context("s5"),
-            _fake_context("s6"),
+            _fake_context("context1"),
+            _fake_context("context2"),
+            _fake_context("context3"),
+            _fake_context("context4"),
+            _fake_context("context5"),
+            _fake_context("context6"),
         ]
     )
-    dataset = _add_extra_contexts_to_samples(samples, p=0.4)
+    p = 1.0  # 1.0 to test the golden/answer document path of this logic
+    num_doc_in_context = 2
+    dataset = _add_extra_contexts_to_samples(
+        samples, p=p, num_doc_in_context=num_doc_in_context
+    )
     assert len(dataset) == 6
+    for i, sample in enumerate(dataset):
+        sample_content = sample["messages"][0]["content"]
+        # ensure every sample contains its own context
+        assert f"context context{i+1}" in sample_content
+        # ensure we have the expected number of contexts
+        assert sample_content.count("Document:\ncontext") == num_doc_in_context
+
+
+def test_add_extra_contexts_to_samples_with_six_samples_distractor_path():
+    """
+    Test _add_extra_contexts_to_samples doesn't error out and does
+    not add the answer document as a distractor when given six samples
+    """
+    samples = Dataset.from_list(
+        [
+            _fake_context("context1"),
+            _fake_context("context2"),
+            _fake_context("context3"),
+            _fake_context("context4"),
+            _fake_context("context5"),
+            _fake_context("context6"),
+        ]
+    )
+    p = 0.0  # 0.0 to test the distractor path of this logic
+    num_doc_in_context = 2
+    dataset = _add_extra_contexts_to_samples(
+        samples, p=p, num_doc_in_context=num_doc_in_context
+    )
+    assert len(dataset) == 6
+    for i, sample in enumerate(dataset):
+        sample_content = sample["messages"][0]["content"]
+        # ensure no sample contains its own context
+        assert f"context context{i+1}" not in sample_content
+        # ensure we have the expected number of contexts
+        assert sample_content.count("Document:\ncontext") == num_doc_in_context
