@@ -309,7 +309,8 @@ class TestGenerateCompositionalData(unittest.TestCase):
     def test_generate(self):
         with patch("logging.Logger.info") as mocked_logger:
             generate_data(
-                mocked_logger,
+                client=MagicMock(),
+                logger=mocked_logger,
                 model_family="merlinite",
                 model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
                 num_instructions_to_generate=10,
@@ -317,7 +318,6 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 taxonomy_base=TEST_TAXONOMY_BASE,
                 output_dir=self.tmp_path,
                 yaml_rules=TEST_CUSTOM_YAML_RULES,
-                client=MagicMock(),
                 pipeline="simple",
             )
 
@@ -386,7 +386,8 @@ class TestGenerateKnowledgeData(unittest.TestCase):
     def test_generate(self):
         with patch("logging.Logger.info") as mocked_logger:
             generate_data(
-                mocked_logger,
+                client=MagicMock(),
+                logger=mocked_logger,
                 model_family="merlinite",
                 model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
                 num_instructions_to_generate=10,
@@ -396,7 +397,6 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 yaml_rules=TEST_CUSTOM_YAML_RULES,
                 chunk_word_count=1000,
                 server_ctx_size=4096,
-                client=MagicMock(),
                 pipeline="simple",
             )
 

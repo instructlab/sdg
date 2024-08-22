@@ -14,7 +14,6 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from datasets import Dataset
-import httpx
 import openai
 import platformdirs
 
@@ -265,9 +264,8 @@ def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
 # TODO - parameter removal needs to be done in sync with a CLI change.
 # to be removed: logger, prompt_file_path, rouge_threshold, tls_*
 def generate_data(
+    client: openai.OpenAI,
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
-    api_base: Optional[str] = None,
-    api_key: Optional[str] = None,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
     num_cpus: Optional[int] = None,
@@ -283,11 +281,6 @@ def generate_data(
     yaml_rules: Optional[str] = None,
     chunk_word_count=None,
     server_ctx_size=None,
-    tls_insecure=False,
-    tls_client_cert: Optional[str] = None,
-    tls_client_key: Optional[str] = None,
-    tls_client_passwd: Optional[str] = None,
-    client: Optional[openai.OpenAI] = None,
     pipeline: Optional[str] = "simple",
     batch_size: Optional[int] = None,
     checkpoint_dir: Optional[str] = None,
@@ -334,16 +327,6 @@ def generate_data(
     )
 
     logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
-
-    if not client:
-        orig_cert = (tls_client_cert, tls_client_key, tls_client_passwd)
-        cert = tuple(item for item in orig_cert if item)
-        http_client = httpx.Client(cert=cert, verify=not tls_insecure)
-        client = openai.OpenAI(
-            base_url=api_base,
-            api_key=api_key,
-            http_client=http_client,
-        )
 
     if models.get_model_family(model_family, model_name) == "mixtral":
         model_family = MODEL_FAMILY_MIXTRAL
