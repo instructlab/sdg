@@ -314,7 +314,7 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
     all_context = list(set(ds["context"]))
 
     def __pick_documents(rec, p):
-        answer_document = [rec["context"]]
+        answer_document = rec["context"]
         selected_docs = [e for e in all_context if e != answer_document]
         if len(selected_docs) > 0:
             if len(selected_docs) < num_doc_in_context:
@@ -324,8 +324,9 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
             if random.uniform(0, 1) < p:
                 # golden/answer + distractor documents
                 docs = (
-                    random.sample(selected_docs, k=num_doc_in_context)
-                    if len(selected_docs) >= num_doc_in_context
+                    random.sample(selected_docs, k=num_doc_in_context - 1)
+                    + [answer_document]
+                    if len(selected_docs) >= (num_doc_in_context - 1)
                     else selected_docs + [answer_document]
                 )
             else:
