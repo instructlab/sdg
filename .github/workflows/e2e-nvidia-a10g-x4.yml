@@ -39,6 +39,7 @@ jobs:
             [
               {"Key": "Name", "Value": "instructlab-ci-github-large-runner"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"},
+              {"Key": "GitHubRef", "Value": "${{ github.ref }}"},
               {"Key": "GitHubPR", "Value": "${{ github.event.number }}"}
             ]
 
