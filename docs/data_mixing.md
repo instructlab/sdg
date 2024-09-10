@@ -9,11 +9,7 @@ The primary intended use of this is to specify an optional pre-generated dataset
 To use the [InstructLab Community pre-generated dataset](https://huggingface.co/datasets/instructlab/InstructLabCommunity) with all skills training, we first need to create a default recipe that specifies this dataset to include when mixing generated skills data. This recipe will get automatically picked up if placed in a `default_data_recipes/skills.yaml` subfolder and file under one of several possible locations - `'/home/<user>/.local/share/instructlab/sdg'`, `'/usr/local/share/instructlab/sdg'`, or `'/usr/share/instructlab/sdg'`. The exact list of possible locations is platform-dependent, and can be enumerated by a Python command like below:
 
 ```python
-python3 -c '
-import os, platformdirs
-print(list(platformdirs.PlatformDirs(
-    appname=os.path.join("instructlab", "sdg"), multipath=True
-).iter_data_dirs()))'
+python3 -c "import os; from xdg_base_dirs import xdg_data_home, xdg_data_dirs; data_dirs = [os.path.join(xdg_data_home(), 'instructlab', 'sdg')] + [os.path.join(dir, 'instructlab', 'sdg') for dir in xdg_data_dirs()]; print(data_dirs)"
 ```
 
 For this example, we'll assume you want to place to default data recipe under the `~/.local/share/instructlab/sdg/` platform directory.

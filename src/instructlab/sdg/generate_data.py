@@ -14,8 +14,8 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from datasets import Dataset
+from xdg_base_dirs import xdg_data_dirs, xdg_data_home
 import openai
-import platformdirs
 
 # First Party
 # pylint: disable=ungrouped-imports
@@ -208,10 +208,10 @@ def _sdg_init(ctx, pipeline):
     # Search for the pipeline in User and Site data directories
     # then for a package defined pipeline
     # and finally pipelines referenced by absolute path
-    pd = platformdirs.PlatformDirs(
-        appname=os.path.join("instructlab", "sdg"), multipath=True
-    )
-    for d in pd.iter_data_dirs():
+    data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
+    data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
+
+    for d in data_dirs:
         pipeline_path = os.path.join(d, "pipelines", pipeline)
         if os.path.exists(pipeline_path):
             _check_pipeline_dir(pipeline_path)
@@ -246,10 +246,9 @@ def _sdg_init(ctx, pipeline):
 
 
 def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
-    pd = platformdirs.PlatformDirs(
-        appname=os.path.join("instructlab", "sdg"), multipath=True
-    )
-    data_dirs = list(pd.iter_data_dirs())
+    data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
+    data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
+
     return DataMixer(
         data_dirs,
         output_dir,
