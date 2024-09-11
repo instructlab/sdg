@@ -7,6 +7,11 @@ on:
     branches:
       - main
       - release-*
+    paths:
+      - files~=\.py$
+      - files=pyproject.toml
+      - files=^requirements.*\.txt$
+      - files=.github/workflows/e2e-nvidia-t4-x1.yml # This workflow
   pull_request_target:
     types:
       - opened
@@ -15,6 +20,11 @@ on:
     branches:
       - main
       - release-*
+    paths:
+      - files~=\.py$
+      - files=pyproject.toml
+      - files=^requirements.*\.txt$
+      - files=.github/workflows/e2e-nvidia-t4-x1.yml # This workflow
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
