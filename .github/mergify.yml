@@ -1,4 +1,74 @@
 pull_request_rules:
+- name: auto-merge
+  description: Automatically merge to main with >= 2 approvals. All requested reviews have given feedback, no changes requested, and CI has passed.
+  conditions:
+    - "#approved-reviews-by>=2"
+    - "#review-requested=0"
+    - "#changes-requested-reviews-by=0"
+    - label!=hold
+    - label!=do-not-merge
+    - label!=needs-rebase
+    - check-success=DCO
+
+    - or:
+      # base branch is main or a release branch
+      - base=main
+      - base~=^release-
+
+    # If workflow configuration files in .github/ are changed, the actionlint check must pass
+    - or:
+      
+      - and:
+        - check-success=actionlint
+        - or:
+          - files~=^\.github/(actions|workflows)/.*\.ya?ml$
+          - files~=^\.github/workflows/actionlint\.
+      - and:
+        # files matching the below patterns are unchanged
+        - -files~=^\.github/(actions|workflows)/.*\.ya?ml$
+        - -files~=^\.github/workflows/actionlint\.
+
+    # e2e workflow
+    - or:
+      - and:
+        - check-success=e2e-workflow-complete
+        - or:
+          - files~=\.py$
+          - files=pyproject.toml
+          - files=^requirements.*\.txt$
+          - files=.github/workflows/e2e-nvidia-t4-x1.yml
+      - and:
+        - -files~=\.py$
+        - -files=pyproject.toml
+        - -files~=^requirements.*\.txt$
+        - -files=.github/workflows/e2e-nvidia-t4-x1.yml
+
+    # lint must pass if files change that would trigger this job
+    - or:
+      - and:
+        - check-success=lint-workflow-complete
+        - or:
+          # see .github/workflows/lint.yml and test.yml
+          - files~=\.py$
+          - files=pyproject.toml
+          - files~=^requirements.*\.txt$
+          - files=tox.ini
+          - files~=^scripts/[^/]+\.sh$
+          - files~=^src/instructlab/sdg/pipelines/
+          - files=.github/workflows/lint.yml
+      - and:
+        - -files~=\.py$
+        - -files=pyproject.toml
+        - -files~=^requirements.*\.txt$
+        - -files=tox.ini
+        - -files~=^scripts/[^/]+\.sh$
+        - -files~=^src/instructlab/sdg/pipelines/
+        - -files=.github/workflows/lint.yml
+
+  actions:
+    merge:
+      method: merge
+    delete_head_branch:
 
 - name: label-cicd
   description: Automatically apply CI/CD label
