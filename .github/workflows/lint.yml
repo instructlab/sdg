@@ -29,21 +29,50 @@ on:
       - 'src/instructlab/sdg/pipelines/**'
 
 env:
-  PYTHON_VERSION: 3.11
+  LC_ALL: en_US.UTF-8
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    name: "${{ matrix.lint.name }}"
+    strategy:
+      fail-fast: false
+      matrix:
+        lint:
+          - name: "ruff"
+            commands: |
+              tox -e ruff -- check
+          - name: "pylint"
+            commands: |
+              echo "::add-matcher::.github/workflows/matchers/pylint.json"
+              tox -e lint
+          - name: "mypy"
+            commands: |
+              tox -e mypy
+          - name: "pipelines"
+            commands: |
+              tox -e validate-pipelines
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: "Harden Runner"
+        uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+        with:
+          egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+
+      - name: "Checkout"
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
         with:
           # https://github.com/actions/checkout/issues/249
-          fetch-depth: 0
-          submodules: true
+          fetch-depth: 0  
 
       - name: Setup Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@f677139bbe7f9c59b41e40162b753c062f5d49a3 # v5.2.0
         with:
           python-version: 3.11
           cache: pip
@@ -51,28 +80,20 @@ jobs:
             **/pyproject.toml
             **/requirements*.txt
 
-      - name: Install dependencies
-        id: deps
+      - name: "Install tox"
         run: |
           python -m pip install --upgrade pip
-          python -m pip install tox
+          python -m pip install tox tox-gh
 
-      - name: Run Ruff check
+      - name: "${{ matrix.lint.name }}"
         run: |
-          tox -e ruff -- check
+          ${{ matrix.lint.commands }}
+        env:
+          RUFF_OUTPUT_FORMAT: github
 
-      - name: Run linting
-        if: ${{ !cancelled() && (steps.deps.outcome == 'success') }}
-        run: |
-          echo "::add-matcher::.github/workflows/matchers/pylint.json"
-          tox -e lint
-
-      - name: Run mypy type checks
-        if: ${{ !cancelled() && (steps.deps.outcome == 'success') }}
-        run: |
-          tox -e mypy
-
-      - name: Validate pipeline schemas
-        if: ${{ !cancelled() && (steps.deps.outcome == 'success') }}
-        run: |
-          tox -e validate-pipelines
+  lint-workflow-complete:
+    needs: ["lint"]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lint Workflow Complete
+        run: echo "Lint Workflow Complete"

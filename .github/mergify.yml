@@ -17,7 +17,6 @@ pull_request_rules:
 
     # If workflow configuration files in .github/ are changed, the actionlint check must pass
     - or:
-      
       - and:
         - check-success=actionlint
         - or:
