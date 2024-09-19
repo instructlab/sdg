@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import glob
 import json
 import os
+import re
 import shutil
 import tempfile
 import unittest
@@ -267,6 +268,11 @@ def _noop_llmblock_generate(self, samples):
     return output
 
 
+def _empty_llmblock_generate(self, samples):
+    """Return an empty set of generated samples."""
+    return []
+
+
 @patch.object(LLMBlock, "_generate", _noop_llmblock_generate)
 class TestGenerateCompositionalData(unittest.TestCase):
     @pytest.fixture(autouse=True)
@@ -437,6 +443,61 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 validate_lm_eval_task(matches[0])
             elif name == "mmlubench_knowledge_new.jsonl":
                 validate_mmlubench_dataset(matches[0])
+
+    def teardown(self) -> None:
+        """Recursively remove the temporary repository and all of its
+        subdirectories and files.
+        """
+        shutil.rmtree(self.tmp_path)
+        return
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.teardown()
+
+
+@patch.object(LLMBlock, "_generate", _empty_llmblock_generate)
+class TestGenerateEmptyDataset(unittest.TestCase):
+    @pytest.fixture(autouse=True)
+    def _init_taxonomy(self, taxonomy_dir):
+        self.test_taxonomy = taxonomy_dir
+
+    def setUp(self):
+        self.tmp_path = tempfile.TemporaryDirectory().name
+        test_valid_knowledge_skill_file = os.path.join(
+            TEST_DATA_DIR, "test_valid_knowledge_skill.yaml"
+        )
+        tracked_knowledge_file = os.path.join("knowledge  ", "tracked", "qna.yaml")
+        untracked_knowledge_file = os.path.join("knowledge", "new", "qna.yaml")
+        test_valid_knowledge_skill = load_test_skills(test_valid_knowledge_skill_file)
+        self.test_taxonomy.add_tracked(
+            tracked_knowledge_file, test_valid_knowledge_skill
+        )
+        self.test_taxonomy.create_untracked(
+            untracked_knowledge_file, test_valid_knowledge_skill
+        )
+
+    def test_generate(self):
+        with patch("logging.Logger.info") as mocked_logger:
+            generate_data(
+                client=MagicMock(),
+                logger=mocked_logger,
+                model_family="merlinite",
+                model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
+                num_instructions_to_generate=10,
+                taxonomy=self.test_taxonomy.root,
+                taxonomy_base=TEST_TAXONOMY_BASE,
+                output_dir=self.tmp_path,
+                chunk_word_count=1000,
+                server_ctx_size=4096,
+                pipeline="simple",
+            )
+        mocked_logger.warning.assert_called()
+        assert re.search(
+            "empty sdg output: knowledge_new", mocked_logger.warning.call_args.args[0]
+        )
 
     def teardown(self) -> None:
         """Recursively remove the temporary repository and all of its

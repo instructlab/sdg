@@ -382,10 +382,8 @@ def generate_data(
         logger.debug("Dataset: %s", ds)
         new_generated_data = pipe.generate(ds, leaf_node_path)
         if len(new_generated_data) == 0:
-            empty_sdg_leaf_nodes.append(new_generated_data)
-            logger.warning(
-                "Empty dataset for qna node: %s", leaf_node[0]["taxonomy_path"]
-            )
+            empty_sdg_leaf_nodes.append(leaf_node_path)
+            logger.warning("Empty dataset for qna node: %s", leaf_node_path)
             continue
         generated_data = (
             [new_generated_data]
