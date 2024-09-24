@@ -129,6 +129,15 @@ pull_request_rules:
       remove:
         - needs-rebase
 
+- name: release-branch-label
+  description: Automatically apply the release-branch label to release branch PRs
+  conditions:
+    - base~=^release-
+  actions:
+    label:
+      add:
+        - release-branch
+
 - name: Apply ci-failure label if any CI checks have failed
   conditions:
       - "#check-failure>0"
@@ -144,3 +153,30 @@ pull_request_rules:
     label:
       remove:
         - ci-failure
+
+- name: Apply 'one-approval' label if one of the maintainer approved the PR
+  conditions:
+      - "#approved-reviews-by=1"
+  actions:
+    label:
+      add:
+        - one-approval
+
+- name: Remove 'one-approval' label if the approval was reset
+  conditions:
+      - "#approved-reviews-by!=1"
+  actions:
+    label:
+      remove:
+        - one-approval
+
+- name: label-dependencies
+  description: Automatically apply dependencies label
+  conditions:
+    - or:
+      - files~=^requirements.*\.txt$
+      - files~=^requirements/
+  actions:
+    label:
+      add:
+        - dependencies
