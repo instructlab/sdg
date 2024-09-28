@@ -2,32 +2,23 @@
 
 # Standard
 from pathlib import Path
-from typing import List, Iterable
+from typing import Iterable, List, Tuple
 import json
 import logging
 import re
 
-from pathlib import Path
-from typing import List, Tuple
-import json
-import re
-
-# Third Party
-from docling.datamodel.base_models import PipelineOptions 
-from docling.datamodel.document import ConvertedDocument, DocumentConversionInput
-from docling.document_converter import DocumentConverter, ConversionStatus
-from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
-
 # Third Party
 from datasets import Dataset, concatenate_datasets
+from docling.datamodel.base_models import PipelineOptions
+from docling.datamodel.document import ConvertedDocument, DocumentConversionInput
+from docling.document_converter import ConversionStatus, DocumentConverter
+from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
 from transformers import AutoTokenizer
 import yaml
 
-# Local
-
 logger = logging.getLogger(__name__)
-DOC_FILEPATH = Path("~/.local/share/instructlab/documents").expanduser()
+DOC_FILEPATH = Path("~/.local/share/instructlab/datasets").expanduser()
 _DEFAULT_CHUNK_OVERLAP = 100
 
 
@@ -303,8 +294,8 @@ class DocProcessor:
     def __init__(
         self,
         parsed_doc_dir: Path,
-        tokenizer_model_name: str = "mistralai/Mixtral-8x7B-Instruct-v0.1",
         qna_yaml_path: Path = None,
+        tokenizer_model_name: str = "mistralai/Mixtral-8x7B-Instruct-v0.1",
     ):
         """
         Initialize the DocProcessor.
@@ -318,6 +309,9 @@ class DocProcessor:
             self._path_validator(qna_yaml_path) if qna_yaml_path else None
         )
         self.docling_jsons = list(self.parsed_doc_dir.glob("*.json"))
+
+        if tokenizer_model_name is None:
+            tokenizer_model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.tokenizer = create_tokenizer(tokenizer_model_name)
         print(f"""THIS IS KHALED: INIT DOCPROCESSOR:
               {self.parsed_doc_dir=}, 
@@ -490,14 +484,9 @@ def chunk_documents(
     Returns:
          List[str]: List of chunked documents.
     """
-    print(f"THIS IS KHALED: in chunk_documents {leaf_node=}")
     filepaths = leaf_node[0]["filepaths"]
     documents = leaf_node[0]["documents"]
     leaf_node_path = Path(leaf_node[0]["taxonomy_path"].replace("->", "/"))
-    print(f"""THIS IS KHALED:
-        {filepaths=},
-        {documents=},
-    """)
 
     # Check for single document
     if isinstance(documents, str):
@@ -510,6 +499,7 @@ def chunk_documents(
 
     md_docs, pdf_docs = _split_docs_by_filetype(zip(documents, filepaths))
 
+    print(f"THIS IS KHALED: {md_docs=}\n {pdf_docs=}")
     chunked_mds = chunk_markdowns(md_docs, server_ctx_size, chunk_word_count)
     chunked_pdfs = chunk_pdfs(pdf_docs, filepaths, leaf_node_path, model_name)
 
@@ -562,7 +552,8 @@ def chunk_markdowns(
     return content
 
 
-def chunk_pdfs(pdf_docs: List, filepaths: List, leaf_node_path: Path, model_name: str = None):
+def chunk_pdfs(
+    pdf_docs: List, filepaths: List, leaf_node_path: Path, model_name: str):
     """Semantically chunk PDF documents.
 
     TODO
@@ -573,45 +564,40 @@ def chunk_pdfs(pdf_docs: List, filepaths: List, leaf_node_path: Path, model_name
     print(f"""THIS IS KHALED: CHUNKING PDF DOCS
         {pdf_docs[0]=}
     """)
-    artifacts_path = DocumentConverter.download_models_hf()
-    converter = DocumentConverter(artifacts_path=artifacts_path)
-    inputs = DocumentConversionInput.from_paths(filepaths)  
+    model_artifacts_path = DocumentConverter.download_models_hf()
+    converter = DocumentConverter(artifacts_path=model_artifacts_path)
+    inputs = DocumentConversionInput.from_paths(filepaths)
     parsed_pdfs = converter.convert(inputs)
-    print(f"THIS IS KHALED: {parsed_pdfs=}")
 
-    docling_jsons_path = DOC_FILEPATH / "docling-jsons"
-    docling_jsons_path.mkdir(parents=True, exist_ok=True)
-
-    export_documents(parsed_pdfs, docling_jsons_path)
-    parsed_dicts = [p.render_as_dict() for p in parsed_pdfs]
-
-
-    # TODO name files better
-    for i, pd in enumerate(parsed_dicts):
-        fp = docling_jsons_path / f"docling_{i}.json"
-
-        with open(fp, "w") as json_file:
-            for entry in pd:
-                json_file.write(json.dumps(entry) + "\n")
+    docling_artifacts_path = export_documents(parsed_pdfs)
+    print(f"THIS IS KHALED {docling_artifacts_path=}")
 
     dp = DocProcessor(
-        parsed_doc_dir=str(docling_jsons_path),
+        parsed_doc_dir=str(docling_artifacts_path),
         tokenizer_model_name=model_name,
-        qna_yaml_path=Path("~/.local/share/instructlab/taxonomy").expanduser() / leaf_node_path / "qna.yaml",
+        qna_yaml_path=Path("~/.local/share/instructlab/taxonomy").expanduser()
+        / leaf_node_path
+        / "qna.yaml",
     )
 
-    chunked_pdfs = list(dp.get_processed_dataset())
-    print(f"THIS IS KHALED: {chunk_pdfs=}")
-    print(f"THIS IS KHALED: {type(chunk_pdfs)=}")
+    chunked_pdfs = dp.get_processed_dataset()
+    for k, v in chunked_pdfs.to_dict().items():
+        print(f"{k=}: ; {type(v)=}\n")
+        print(f"{v[:5]=}\n\n")
+    print(f"THIS IS KHALED: {type(chunked_pdfs)=}")
+    print(f"THIS IS KHALED: {chunked_pdfs.shape=}")
 
+    raise Exception('STOPPING')
     return chunked_pdfs
 
 
-def export_documents(
-    converted_docs: Iterable[ConvertedDocument],
-    output_dir: Path,
-):
-    output_dir.mkdir(parents=True, exist_ok=True)
+def export_documents(converted_docs: Iterable[ConvertedDocument]):
+    """TODO
+    
+    """
+    docling_artifacts_path = DOC_FILEPATH / "docling-artifacts"
+    docling_artifacts_path.mkdir(parents=True, exist_ok=True)
+    print(f"THIS IS KHALED IN EXPORT DOCUMENTS: {docling_artifacts_path}")
 
     success_count = 0
     failure_count = 0
@@ -622,11 +608,11 @@ def export_documents(
             doc_filename = doc.input.file.stem
 
             # Export Deep Search document JSON format:
-            with (output_dir / f"{doc_filename}.json").open("w") as fp:
+            with (docling_artifacts_path / f"{doc_filename}.json").open("w") as fp:
                 fp.write(json.dumps(doc.render_as_dict()))
 
             # Export Markdown format:
-            with (output_dir / f"{doc_filename}.md").open("w") as fp:
+            with (docling_artifacts_path / f"{doc_filename}.md").open("w") as fp:
                 fp.write(doc.render_as_markdown())
         else:
             logger.info(f"Document {doc.input.file} failed to convert.")
@@ -635,3 +621,5 @@ def export_documents(
     logger.info(
         f"Processed {success_count + failure_count} docs, of which {failure_count} failed"
     )
+
+    return docling_artifacts_path
