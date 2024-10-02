@@ -23,7 +23,7 @@ import gitdb
 import yaml
 
 # Local
-from . import docprocessor
+from .chunkers import DocumentChunker
 
 # Initialize the pdf parser
 parser = pdf_parser()
@@ -112,7 +112,7 @@ def _get_taxonomy(repo="taxonomy"):
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
-    output_dir: Path = Path(),
+    document_output_dir: Path = None,
 ) -> Tuple[List[str], List[Path]]:
     """
     Retrieve the content of files (Markdown and PDF) from a Git repository.
@@ -120,7 +120,7 @@ def _get_documents(
     Args:
         source (dict): Source info containing repository URL, commit hash, and list of file patterns.
         skip_checkout (bool, optional): If True, skips checking out the specific commit. Defaults to False.
-        output_dir (Path, optional): Directory to clone the repository into. Defaults to current directory.
+        document_output_dir (Path, optional): Directory to clone the repository into. Defaults to current directory.
 
     Returns:
         Tuple[List[str], List[Path]]:
@@ -136,7 +136,7 @@ def _get_documents(
     file_patterns = source.get("patterns", [])
 
     try:
-        repo = git.Repo.clone_from(repo_url, output_dir)
+        repo = git.Repo.clone_from(repo_url, document_output_dir)
 
         if not skip_checkout and commit_hash:
             repo.git.checkout(commit_hash)
@@ -238,7 +238,7 @@ def _get_documents(
 
 # pylint: disable=broad-exception-caught
 def _read_taxonomy_file(
-    file_path: str | Path, yamllint_config: str | None = None, output_dir: Path = Path()
+    file_path: str | Path, yamllint_config: str | None = None, document_output_dir: Path = Path()
 ):
     seed_instruction_data = []
 
@@ -262,11 +262,8 @@ def _read_taxonomy_file(
         documents = contents.get("document")
         print(f"")
         if documents:
-            date_suffix = (
-                datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
-            )
             document_contents, doc_filepaths = _get_documents(
-                source=documents, output_dir=output_dir / f"documents-{date_suffix}"
+                source=documents, document_output_dir=document_output_dir
             )
             logger.debug("Content from git repo fetched")
 
@@ -310,7 +307,7 @@ def read_taxonomy(
     taxonomy: str | Path,
     taxonomy_base: str,
     yaml_rules: str | None = None,
-    output_dir: Path = Path(),
+    document_output_dir: Path = Path(),
 ):
     yamllint_config = None  # If no custom rules file, use default config
     if yaml_rules is not None:  # user attempted to pass custom rules file
@@ -325,7 +322,7 @@ def read_taxonomy(
     is_file = os.path.isfile(taxonomy)
     if is_file:  # taxonomy is file
         seed_instruction_data, warnings, errors = _read_taxonomy_file(
-            taxonomy, yamllint_config, output_dir
+            taxonomy, yamllint_config, document_output_dir
         )
         if warnings:
             logger.warning(
@@ -349,7 +346,7 @@ def read_taxonomy(
         for f in taxonomy_files:
             file_path = os.path.join(taxonomy, f)
             data, warnings, errors = _read_taxonomy_file(
-                file_path, yamllint_config, output_dir
+                file_path, yamllint_config, document_output_dir
             )
             total_warnings += warnings
             total_errors += errors
@@ -366,9 +363,9 @@ def read_taxonomy(
     return seed_instruction_data
 
 
-def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, output_dir):
+def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_output_dir):
     seed_instruction_data = read_taxonomy(
-        taxonomy, taxonomy_base, yaml_rules, output_dir
+        taxonomy, taxonomy_base, yaml_rules, document_output_dir
     )
 
     # Transform into a more convenient format to feed into our updated SDG library
@@ -382,21 +379,17 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, output_dir):
 
 
 def _knowledge_leaf_node_to_samples(
-    leaf_node, server_ctx_size, chunk_word_count, output_dir, model_name
+    leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
 ):
     samples = []
-    # document is the same for the whole leaf node
-    chunks = (
-        docprocessor.chunk_documents(
-            leaf_node=leaf_node,
-            server_ctx_size=server_ctx_size,
-            chunk_word_count=chunk_word_count,
-            output_dir=output_dir,
-            model_name=model_name,
-        )
-        if leaf_node[0].get("documents")
-        else []
+    chunker = DocumentChunker(
+        leaf_node=leaf_node,
+        output_dir=document_output_dir,
+        server_ctx_size=server_ctx_size,
+        chunk_word_count=chunk_word_count,
+        tokenizer_model_name=model_name,
     )
+    chunks = chunker.chunk_documents()
 
     # domain is the same for the whole leaf node
     domain = leaf_node[0].get("domain")
@@ -441,12 +434,12 @@ def _skill_leaf_node_to_samples(leaf_node):
 
 
 def leaf_node_to_samples(
-    leaf_node, server_ctx_size, chunk_word_count, output_dir, model_name
+    leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
 ):
     if not leaf_node:
         return []
     if leaf_node[0].get("documents"):
         return _knowledge_leaf_node_to_samples(
-            leaf_node, server_ctx_size, chunk_word_count, output_dir, model_name
+            leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
         )
     return _skill_leaf_node_to_samples(leaf_node)
