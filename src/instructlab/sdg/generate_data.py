@@ -25,7 +25,6 @@ from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRA
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
-    EmptyDatasetError,
     Pipeline,
     PipelineContext,
 )
@@ -359,6 +358,7 @@ def generate_data(
         )
 
     generated_data = None
+    empty_sdg_leaf_nodes = []
     for leaf_node in leaf_nodes.values():
         is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
@@ -382,9 +382,9 @@ def generate_data(
         logger.debug("Dataset: %s", ds)
         new_generated_data = pipe.generate(ds, leaf_node_path)
         if len(new_generated_data) == 0:
-            raise EmptyDatasetError(
-                "Pipeline stopped: Empty dataset after running pipe"
-            )
+            empty_sdg_leaf_nodes.append(leaf_node_path)
+            logger.warning("Empty dataset for qna node: %s", leaf_node_path)
+            continue
         generated_data = (
             [new_generated_data]
             if generated_data is None
@@ -418,3 +418,9 @@ def generate_data(
 
     generate_duration = time.time() - generate_start
     logger.info(f"Generation took {generate_duration:.2f}s")
+    if len(empty_sdg_leaf_nodes) > 0:
+        logger.warning(
+            "Leaf nodes with empty sdg output: {}".format(
+                " ".join(empty_sdg_leaf_nodes)
+            )
+        )
