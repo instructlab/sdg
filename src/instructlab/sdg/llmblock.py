@@ -8,6 +8,7 @@ import re
 
 # Third Party
 from datasets import Dataset
+from tqdm import tqdm
 import openai
 
 # Local
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
 
-_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
+_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST] </s>"
 _MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
 
 _MODEL_PROMPTS = {
@@ -157,7 +158,7 @@ class LLMBlock(Block):
 
     def _generate(self, samples) -> list:
         prompts = [self._format_prompt(sample) for sample in samples]
-
+        logger.debug(f"STARTING GENERATION FOR LLMBlock USING PROMPTS: {prompts}")
         if self.server_supports_batched:
             response = self.ctx.client.completions.create(
                 prompt=prompts, **self.gen_kwargs
@@ -165,12 +166,17 @@ class LLMBlock(Block):
             return [choice.text.strip() for choice in response.choices]
 
         results = []
+        progress_bar = tqdm(
+            range(len(prompts)), desc=f"{self.block_name} Prompt Generation"
+        )
         for prompt in prompts:
+            logger.debug(f"CREATING COMPLETION FOR PROMPT: {prompt}")
             for _ in range(self.gen_kwargs.get("n", 1)):
                 response = self.ctx.client.completions.create(
                     prompt=prompt, **self.gen_kwargs
                 )
                 results.append(response.choices[0].text.strip())
+                progress_bar.update(1)
         return results
 
     def generate(self, samples: Dataset) -> Dataset:
