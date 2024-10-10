@@ -377,11 +377,27 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_outpu
 
     return leaf_nodes
 
+def icl_mapping(chunked_dataset):
+    samples = []
+    for record in chunked_dataset:
+        sample = {
+            "icl_document": record.get("icl_document", ""),
+            "document": record.get("document", ""),
+            "document_outline": record.get("document_outline", ""),
+            "domain": record.get("domain", ""),
+            "icl_query_1": record.get("icl_query_1", ""),
+            "icl_response_1": record.get("icl_response_1", ""),
+            "icl_query_2": record.get("icl_query_2", ""),
+            "icl_response_2": record.get("icl_response_2", ""),
+            "icl_query_3": record.get("icl_query_3", ""),
+            "icl_response_3": record.get("icl_response_3", ""),
+        }
+        samples.append(sample)
+    return samples
 
 def _knowledge_leaf_node_to_samples(
     leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
 ):
-    samples = []
     chunker = DocumentChunker(
         leaf_node=leaf_node,
         output_dir=document_output_dir,
@@ -394,29 +410,24 @@ def _knowledge_leaf_node_to_samples(
     # domain is the same for the whole leaf node
     domain = leaf_node[0].get("domain")
 
+    # Build the chunked_dataset
+    chunked_dataset = []
     for chunk in chunks:
-        # pylint: disable=consider-using-enumerate
         for icl_ in leaf_node:
-            icl_query = {
-                f"icl_query_{idx+1}": val["question"]
-                for idx, val in enumerate(icl_["questions_and_answers"])
-            }
-            icl_resp = {
-                f"icl_response_{idx+1}": val["answer"]
-                for idx, val in enumerate(icl_["questions_and_answers"])
-            }
-            samples_row = {
-                "icl_document": icl_["context"],
+            record = {
+                "icl_document": icl_.get("context", ""),
                 "document": chunk,
-                "document_outline": icl_["document_outline"],
+                "document_outline": icl_.get("document_outline", ""),
                 "domain": domain,
             }
-            samples_row.update(icl_query)
-            samples_row.update(icl_resp)
-            samples.append(samples_row)
+            for idx, val in enumerate(icl_.get("questions_and_answers", [])):
+                record[f"icl_query_{idx+1}"] = val.get("question", "")
+                record[f"icl_response_{idx+1}"] = val.get("answer", "")
+            chunked_dataset.append(record)
+
+    samples = icl_mapping(chunked_dataset)
 
     return samples
-
 
 def _skill_leaf_node_to_samples(leaf_node):
     samples = []
