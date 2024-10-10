@@ -114,27 +114,27 @@ jobs:
       - name: Install Packages
         run: |
           cat /etc/os-release
-          sudo dnf install -y gcc gcc-c++ make git python3.11 python3.11-devel
+          sudo dnf install -y gcc gcc-c++ make git python3.12 python3.12-devel
 
       - name: Install ilab
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           export PATH="/home/ec2-user/.local/bin:/usr/local/cuda/bin:$PATH"
-          python3.11 -m venv --upgrade-deps venv
+          python3.12 -m venv --upgrade-deps venv
           . venv/bin/activate
           git clone https://github.com/instructlab/instructlab
           cd instructlab
           sed 's/\[.*\]//' requirements.txt > constraints.txt
-          python3.11 -m pip cache remove llama_cpp_python
-          CMAKE_ARGS="-DLLAMA_CUBLAS=on" python3.11 -m pip install --force-reinstall --no-binary llama_cpp_python -c constraints.txt llama_cpp_python
-          python3.11 -m pip install bitsandbytes
-          python3.11 -m pip install .
+          python3.12 -m pip cache remove llama_cpp_python
+          CMAKE_ARGS="-DLLAMA_CUBLAS=on" python3.12 -m pip install --force-reinstall --no-binary llama_cpp_python -c constraints.txt llama_cpp_python
+          python3.12 -m pip install bitsandbytes
+          python3.12 -m pip install .
 
       - name: Install sdg
         run: |
           . venv/bin/activate
-          python3.11 -m pip install .
+          python3.12 -m pip install .
 
       - name: Run e2e test
         env:
