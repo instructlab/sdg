@@ -298,6 +298,7 @@ def generate_data(
                     "freeform_skills.yaml", and "grounded_skills.yaml".
     """
     generate_start = time.time()
+    print(f"THIS IS KHALED: {model_name=}")
 
     # FIXME: remove this when ilab knows to pass batch_size=0 with llama.cpp
     if batch_size is None:
@@ -309,12 +310,16 @@ def generate_data(
     if not (taxonomy and os.path.exists(taxonomy)):
         raise GenerateException(f"Error: taxonomy ({taxonomy}) does not exist.")
 
-    leaf_nodes = read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules)
+    date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
+    document_output_dir = Path(output_dir) / f"documents-{date_suffix}"
+
+    leaf_nodes = read_taxonomy_leaf_nodes(
+        taxonomy, taxonomy_base, yaml_rules, document_output_dir
+    )
     if not leaf_nodes:
         raise GenerateException("Error: No new leaf nodes found in the taxonomy.")
 
     name = Path(model_name).stem  # Just in case it is a file path
-    date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
     output_file_messages = f"messages_{name}_{date_suffix}.jsonl"
     output_file_test = f"test_{name}_{date_suffix}.jsonl"
     output_file_train = f"train_{name}_{date_suffix}.jsonl"
@@ -362,7 +367,9 @@ def generate_data(
     for leaf_node in leaf_nodes.values():
         is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
-        samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
+        samples = leaf_node_to_samples(
+            leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
+        )
 
         if not samples:
             raise GenerateException("Error: No samples found in leaf node.")
