@@ -385,6 +385,8 @@ def generate_data(
             pipe = freeform_skills_pipe
 
         logger.debug("Samples: %s", samples)
+
+        # TODO will already be a dataset at this point so refactor as needed
         ds = Dataset.from_list(samples)
         logger.debug("Dataset: %s", ds)
         new_generated_data = pipe.generate(ds, leaf_node_path)

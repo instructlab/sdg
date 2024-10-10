@@ -130,7 +130,7 @@ class TextSplitChunker(ChunkerBase):
         self.chunk_word_count = chunk_word_count
         self.output_dir = output_dir
 
-    def chunk_documents(self) -> List[str]:
+    def chunk_documents(self) -> Dataset:
         """Naively chunk markdown documents based on the word count provided by the user.
         Returns:
             List[str]: List of chunked documents.
@@ -167,8 +167,9 @@ class TextSplitChunker(ChunkerBase):
             doc = re.sub(r"\  +\|", " |", doc)
             temp = md_text_splitter.create_documents([doc])
             content.extend([item.page_content for item in temp])
-        return content
+        # TODO convert to dataset
 
+        return content
 
     def _num_tokens_from_words(self) -> int:
         return int(self.num_words * 1.3)  # 1 word ~ 1.3 token
@@ -203,7 +204,7 @@ class SemanticChunker(ChunkerBase):
             tokenizer_model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
 
-    def chunk_documents(self):
+    def chunk_documents(self) -> Dataset:
         """Semantically chunk PDF documents.
 
         Returns:
@@ -218,29 +219,19 @@ class SemanticChunker(ChunkerBase):
         model_artifacts_path = DocumentConverter.download_models_hf()
         converter = DocumentConverter(artifacts_path=model_artifacts_path)
         inputs = DocumentConversionInput.from_paths(self.filepaths)
-        parsed_pdfs = converter.convert(inputs)
+        parsed_documents = converter.convert(inputs)
 
-        docling_artifacts_path = self.export_documents(parsed_pdfs)
+        docling_artifacts_path = self.export_documents(parsed_documents)
 
-        datasets = []
-        docling_jsons = list(docling_artifacts_path.glob("*.json"))
-        print(f"THIS IS KHALED: {docling_jsons=}")
-        for json_fp in docling_jsons:
-            chunk_ds = self._process_parsed_docling_json(json_fp)
-            chunk_ds_with_icls = self._add_icls(chunk_ds)
-            datasets.append(chunk_ds_with_icls)
-        print(f"THIS IS KHALED: {datasets=}")
-        chunked_pdfs = self.safe_concatenate_datasets(datasets)
-        print(f"THIS IS KHALED: {chunked_pdfs=}")
+        docling_json_paths = list(docling_artifacts_path.glob("*.json"))
+        print(f"THIS IS KHALED: {docling_json_paths=}")
+        # TODO export to global function
+        chunk_datasets_lst = [self._process_parsed_docling_json(p) for p in docling_json_paths]
+        print(f"THIS IS KHALED: {chunk_datasets_lst=}")
+        chunks: Dataset = _safe_concatenate_datasets(chunk_datasets_lst)
+        print(f"THIS IS KHALED: {chunks=}")
 
-        for k, v in chunked_pdfs.to_dict().items():
-            print(f"{k=}: ; {type(v)=}\n")
-            print(f"{v[:5]=}\n\n")
-        print(f"THIS IS KHALED: {type(chunked_pdfs)=}")
-        print(f"THIS IS KHALED: {chunked_pdfs.shape=}")
-
-        return chunked_pdfs
-
+        return chunks
 
     def _path_validator(self, path) -> Path:
         """
@@ -275,7 +266,7 @@ class SemanticChunker(ChunkerBase):
         Args:
             json_fp (Path): Path to the parsed docling json file.
         Returns:
-            Dataset: Dataset object.
+            List: a list of chunks built from the provided json file
         """
         logger.info(f"Processing parsed docling json file: {json_fp}")
         print(f"THIS IS KHALED: {json_fp=}")
@@ -298,7 +289,6 @@ class SemanticChunker(ChunkerBase):
                 "domain": [self.qna_yaml.get("domain", "")] * len(chunks),
             }
         )
-
 
     def fuse_texts(self, text_list, short_length_threshold=100):
         """
@@ -555,18 +545,6 @@ class SemanticChunker(ChunkerBase):
             document_chunks.append("\n\n".join(current_buffer))
         return document_chunks
 
-
-    def safe_concatenate_datasets(self, datasets: List[Dataset]) -> Dataset | None:
-        """
-        Concatenate datasets safely, ignoring any datasets that are None or empty.
-        """
-        filtered_datasets = [ds for ds in datasets if ds is not None and ds.num_rows > 0]
-
-        if not filtered_datasets:
-            return None
-
-        return concatenate_datasets(filtered_datasets)
-
     def export_documents(self, converted_docs: Iterable[ConvertedDocument]):
         """Write converted documents to json files
         
@@ -603,3 +581,15 @@ class SemanticChunker(ChunkerBase):
         )
 
         return docling_artifacts_path
+
+
+def _safe_concatenate_datasets(datasets: List[Dataset]) -> Dataset | None:
+    """
+    Concatenate datasets safely, ignoring any datasets that are None or empty.
+    """
+    filtered_datasets = [ds for ds in datasets if ds is not None and ds.num_rows > 0]
+
+    if not filtered_datasets:
+        return None
+
+    return concatenate_datasets(filtered_datasets)

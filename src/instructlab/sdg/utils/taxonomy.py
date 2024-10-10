@@ -11,6 +11,7 @@ import re
 import tempfile
 
 # Third Party
+from datasets import Dataset
 from docling_parse.docling_parse import pdf_parser
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
@@ -377,11 +378,52 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_outpu
 
     return leaf_nodes
 
+def icl_mapping(chunked_dataset):
+    samples = []
+    for record in chunked_dataset:
+        sample = {
+            "icl_document": record.get("icl_document", ""),
+            "document": record.get("document", ""),
+            "document_outline": record.get("document_outline", ""),
+            "domain": record.get("domain", ""),
+            "icl_query_1": record.get("icl_query_1", ""),
+            "icl_response_1": record.get("icl_response_1", ""),
+            "icl_query_2": record.get("icl_query_2", ""),
+            "icl_response_2": record.get("icl_response_2", ""),
+            "icl_query_3": record.get("icl_query_3", ""),
+            "icl_response_3": record.get("icl_response_3", ""),
+        }
+        samples.append(sample)
+    return samples
+
+
+def map_chunk_to_icls(chunk, leaf_node):
+    chunked_dataset = []
+
+    # domain is the same for the whole leaf node
+    for icl_ in leaf_node:
+        qna_pairs = icl_.get("questions_and_answers", [])
+        for i, qna in enumerate(qna_pairs):
+            # TODO GET THESE FROM CHUNK DATASETS
+            # or just append icls to end of each entry
+            # TODO figure out if this is the right way to access a 
+            # dataset object
+            record = {
+                "icl_document": icl_.get("context", ""),
+                "document": chunk.get("document", []),
+                "document_outline": chunk.get("document_outline", ""),
+                "domain": chunk.get("domain", ""),
+                f"icl_query_{i+1}": qna.get("question", ""),
+                f"icl_response_{i+1}": qna.get("answer", ""),
+            }
+            print(f"THIS IS KHALED IN map_chunk_to_icls: {record=}")
+            chunked_dataset.append(record)
+    return chunked_dataset
+
 
 def _knowledge_leaf_node_to_samples(
     leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
 ):
-    samples = []
     chunker = DocumentChunker(
         leaf_node=leaf_node,
         output_dir=document_output_dir,
@@ -391,29 +433,12 @@ def _knowledge_leaf_node_to_samples(
     )
     chunks = chunker.chunk_documents()
 
-    # domain is the same for the whole leaf node
-    domain = leaf_node[0].get("domain")
-
+    # TODO find a native datasets way of doing this
+    samples = []
     for chunk in chunks:
-        # pylint: disable=consider-using-enumerate
-        for icl_ in leaf_node:
-            icl_query = {
-                f"icl_query_{idx+1}": val["question"]
-                for idx, val in enumerate(icl_["questions_and_answers"])
-            }
-            icl_resp = {
-                f"icl_response_{idx+1}": val["answer"]
-                for idx, val in enumerate(icl_["questions_and_answers"])
-            }
-            samples_row = {
-                "icl_document": icl_["context"],
-                "document": chunk,
-                "document_outline": icl_["document_outline"],
-                "domain": domain,
-            }
-            samples_row.update(icl_query)
-            samples_row.update(icl_resp)
-            samples.append(samples_row)
+        chunk_icl_mapping = map_chunk_to_icls(chunk, leaf_node)
+        print(f"THIS IS KHALED: {chunk_icl_mapping=}")
+        samples.extend(chunk_icl_mapping)
 
     return samples
 
