@@ -107,7 +107,7 @@ def _create_mmlu_evaluation_task(task_name, eval_data_file_path, yaml_file_path)
             }
         ],
         "dataset_kwargs": {"data_files": {"test": eval_data_file_path}},
-        "group": "mmlu_pr",
+        "tag": "mmlu_pr",
     }
     with open(yaml_file_path, "w", encoding="utf-8") as yaml_file:
         yaml.dump(task_yaml, yaml_file, default_flow_style=False)
