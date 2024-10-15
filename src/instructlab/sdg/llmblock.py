@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
 
-_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST] </s>"
+_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
 _MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
 
 _MODEL_PROMPTS = {
