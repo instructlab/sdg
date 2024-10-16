@@ -129,7 +129,9 @@ class FlattenColumnsBlock(Block):
             value_name=self.value_name,
             var_name=self.var_name,
         )
-        return pandas.dataset_from_pandas_dataframe(flatten_df)
+        ds = pandas.dataset_from_pandas_dataframe(flatten_df)
+        logger.info(f"THIS IS KHALED: {ds=}")
+        return ds
 
 
 class DuplicateColumnsBlock(Block):
@@ -162,6 +164,7 @@ class RenameColumnsBlock(Block):
 
     def generate(self, samples: Dataset):
         samples = samples.rename_columns(self.columns_map)
+        logger.info(f"THIS IS KHALED: {samples=}")
         return samples
 
 
