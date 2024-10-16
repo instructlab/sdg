@@ -187,7 +187,6 @@ class SemanticChunker(ChunkerBase):
         output_dir: Path,
         tokenizer_model_name=None,
     ):
-        print(f"THIS IS KHALED IN SEMANTIC CHUNKER: {leaf_node_path=}")
         self.document_paths = document_paths
         self.filepaths = filepaths
         self.leaf_node_path = leaf_node_path
@@ -208,14 +207,11 @@ class SemanticChunker(ChunkerBase):
         """Semantically chunk PDF documents.
 
         Returns:
-            Dataset: A Dataset object containing the chunked documents
+            List: a list of chunks from the documents
         """
         if self.document_paths == []:
             return []
 
-        print(f"""THIS IS KHALED: CHUNKING PDF DOCS
-            {self.document_paths[0]=}
-        """)
         model_artifacts_path = DocumentConverter.download_models_hf()
         converter = DocumentConverter(artifacts_path=model_artifacts_path)
         inputs = DocumentConversionInput.from_paths(self.filepaths)
@@ -224,12 +220,8 @@ class SemanticChunker(ChunkerBase):
         docling_artifacts_path = self.export_documents(parsed_documents)
 
         docling_json_paths = list(docling_artifacts_path.glob("*.json"))
-        print(f"THIS IS KHALED: {docling_json_paths=}")
         # TODO export to global function
-        chunk_datasets_lst = [self._process_parsed_docling_json(p) for p in docling_json_paths]
-        print(f"THIS IS KHALED: {chunk_datasets_lst=}")
-        chunks: Dataset = _safe_concatenate_datasets(chunk_datasets_lst)
-        print(f"THIS IS KHALED: {chunks=}")
+        chunks = [self._process_parsed_docling_json(p) for p in docling_json_paths]
 
         return chunks
 
@@ -269,7 +261,6 @@ class SemanticChunker(ChunkerBase):
             List: a list of chunks built from the provided json file
         """
         logger.info(f"Processing parsed docling json file: {json_fp}")
-        print(f"THIS IS KHALED: {json_fp=}")
         with open(json_fp, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -279,6 +270,9 @@ class SemanticChunker(ChunkerBase):
             max_token_per_chunk=500,
             tokenizer=self.tokenizer,
         )
+        return self.fuse_texts(chunks, 200)
+
+        # TODO remove
         chunks = self.fuse_texts(chunks, 200)
         return Dataset.from_dict(
             {
@@ -552,10 +546,8 @@ class SemanticChunker(ChunkerBase):
         Returns:
             Path: path to directory with docling json artifacts
         """
-        print(f"THIS IS KHALED IN EXPORT DOCUMENTS: {self.output_dir=}")
         docling_artifacts_path = self.output_dir / "docling-artifacts"
         docling_artifacts_path.mkdir(parents=True, exist_ok=True)
-        print(f"THIS IS KHALED IN EXPORT DOCUMENTS: {docling_artifacts_path=}")
 
         success_count = 0
         failure_count = 0
@@ -583,6 +575,7 @@ class SemanticChunker(ChunkerBase):
         return docling_artifacts_path
 
 
+# TODO move this somewhere
 def _safe_concatenate_datasets(datasets: List[Dataset]) -> Dataset | None:
     """
     Concatenate datasets safely, ignoring any datasets that are None or empty.

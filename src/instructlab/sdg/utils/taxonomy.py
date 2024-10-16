@@ -378,47 +378,32 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_outpu
 
     return leaf_nodes
 
-def icl_mapping(chunked_dataset):
-    samples = []
-    for record in chunked_dataset:
-        sample = {
-            "icl_document": record.get("icl_document", ""),
-            "document": record.get("document", ""),
-            "document_outline": record.get("document_outline", ""),
-            "domain": record.get("domain", ""),
-            "icl_query_1": record.get("icl_query_1", ""),
-            "icl_response_1": record.get("icl_response_1", ""),
-            "icl_query_2": record.get("icl_query_2", ""),
-            "icl_response_2": record.get("icl_response_2", ""),
-            "icl_query_3": record.get("icl_query_3", ""),
-            "icl_response_3": record.get("icl_response_3", ""),
-        }
-        samples.append(sample)
-    return samples
 
-
-def map_chunk_to_icls(chunk, leaf_node):
+def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
     chunked_dataset = []
 
     # domain is the same for the whole leaf node
-    for icl_ in leaf_node:
-        qna_pairs = icl_.get("questions_and_answers", [])
-        for i, qna in enumerate(qna_pairs):
-            # TODO GET THESE FROM CHUNK DATASETS
-            # or just append icls to end of each entry
-            # TODO figure out if this is the right way to access a 
-            # dataset object
+    domain = leaf_node[0].get("domain")
+    for chunk in chunks:
+        for icl_ in leaf_node:
             record = {
+                "document": chunk,
                 "icl_document": icl_.get("context", ""),
-                "document": chunk.get("document", []),
-                "document_outline": chunk.get("document_outline", ""),
-                "domain": chunk.get("domain", ""),
-                f"icl_query_{i+1}": qna.get("question", ""),
-                f"icl_response_{i+1}": qna.get("answer", ""),
+                "document_outline": icl_.get("document_outline", ""),
+                "domain": domain,
             }
-            print(f"THIS IS KHALED IN map_chunk_to_icls: {record=}")
+
+            qna_pairs = icl_.get("questions_and_answers", [])
+            for i, qna in enumerate(qna_pairs):
+                record.update({
+                    f"icl_query_{i+1}": qna.get("question", ""),
+                    f"icl_response_{i+1}": qna.get("answer", ""),
+                })
+
             chunked_dataset.append(record)
-    return chunked_dataset
+            print(f"THIS IS KHALED IN map_chunk_to_icls: {record=}")
+
+    return Dataset.from_list(chunked_dataset)
 
 
 def _knowledge_leaf_node_to_samples(
@@ -434,11 +419,8 @@ def _knowledge_leaf_node_to_samples(
     chunks = chunker.chunk_documents()
 
     # TODO find a native datasets way of doing this
-    samples = []
-    for chunk in chunks:
-        chunk_icl_mapping = map_chunk_to_icls(chunk, leaf_node)
-        print(f"THIS IS KHALED: {chunk_icl_mapping=}")
-        samples.extend(chunk_icl_mapping)
+    samples = map_chunks_to_icls(chunks, leaf_node)
+    kprintds(samples, extra_info="in function _knowledge_leaf_node_to_samples, printing samples")
 
     return samples
 
@@ -455,7 +437,7 @@ def _skill_leaf_node_to_samples(leaf_node):
         samples[-1]["seed_question"] = leaf_node[i]["instruction"]
         samples[-1]["seed_response"] = leaf_node[i]["output"]
 
-    return samples
+    return Dataset.from_list(samples)
 
 
 def leaf_node_to_samples(
@@ -468,3 +450,28 @@ def leaf_node_to_samples(
             leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
         )
     return _skill_leaf_node_to_samples(leaf_node)
+
+
+def kprintds(ds: Dataset, extra_info=None):
+    def truncate(example, max_str_length=35, max_list_length=None):
+        for key, value in example.items():
+            if isinstance(value, str):
+                return {key: (value[:max_str_length] + '...') if len(value) > max_str_length else value}
+            elif isinstance(value, list):
+                return {key: [(v[:max_str_length] + '...') if len(v) > max_str_length else v for v in value]}
+            else:
+                return {key: value}
+
+    # Get the first 5 rows and truncate long text fields
+    first_five_rows = ds.select(range(5)).map(truncate)
+
+    # Print the truncated rows
+    s = f"THIS IS KHALED: {extra_info if extra_info is not None else ''}\n\n"
+    s += f"DATASET HAS COLUMNS {ds.column_names}\n\n"
+    s += f"COLUMNS HAVE DTYPES {ds.features}\n\n"
+    for row in first_five_rows:
+        for colname, entry in row.items():
+            s += f"{colname} ({type(entry)}): {entry}\n\n"
+        s += "\n"
+
+    return s

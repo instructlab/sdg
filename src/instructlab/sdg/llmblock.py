@@ -180,6 +180,7 @@ class LLMBlock(Block):
 
         :return: The parsed output after generation.
         """
+        import ipdb; ipdb.set_trace()
         num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
 
