@@ -299,7 +299,6 @@ def generate_data(
                     "freeform_skills.yaml", and "grounded_skills.yaml".
     """
     generate_start = time.time()
-    print(f"THIS IS KHALED: {model_name=}")
 
     # FIXME: remove this when ilab knows to pass batch_size=0 with llama.cpp
     if batch_size is None:
@@ -373,12 +372,15 @@ def generate_data(
 
         if not samples:
             raise GenerateException("Error: No samples found in leaf node.")
+        
+        print(f"THIS IS KHALED IN generate_data: {samples=}")
+        print(f"THIS IS KHALED IN generate_data: {samples[:5]=}")
 
-        if samples[0].get("document"):
+        if "document" in samples.column_names:
             pipe = knowledge_pipe
             is_knowledge = True
 
-        elif samples[0].get("seed_context"):
+        elif "seed_context" in samples.column_names:
             pipe = grounded_skills_pipe
 
         else:
@@ -386,10 +388,8 @@ def generate_data(
 
         logger.debug("Samples: %s", samples)
 
-        # TODO will already be a dataset at this point so refactor as needed
-        ds = Dataset.from_list(samples)
-        logger.debug("Dataset: %s", ds)
-        new_generated_data = pipe.generate(ds, leaf_node_path)
+        logger.debug("Samples: %s", samples)
+        new_generated_data = pipe.generate(samples, leaf_node_path)
         if len(new_generated_data) == 0:
             raise EmptyDatasetError(
                 "Pipeline stopped: Empty dataset after running pipe"
@@ -407,7 +407,7 @@ def generate_data(
             generate_eval_task_data(
                 mmlu_bench_pipe,
                 leaf_node_path,
-                ds,
+                samples,
                 output_dir,
                 date_suffix,
             )
