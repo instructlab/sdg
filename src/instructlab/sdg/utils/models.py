@@ -16,6 +16,7 @@ MODEL_FAMILIES = set(("merlinite", "mixtral"))
 # Map model names to their family
 MODEL_FAMILY_MAPPINGS = {
     "granite": "merlinite",
+    "mistral": "mixtral",
 }
 
 
