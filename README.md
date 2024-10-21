@@ -5,4 +5,6 @@
 ![Release](https://img.shields.io/github/v/release/instructlab/sdg)
 ![License](https://img.shields.io/github/license/instructlab/sdg)
 
+![`e2e-nvidia-t4-x1.yaml` on `main`](https://github.com/instructlab/sdg/actions/workflows/e2e-nvidia-t4-x1.yml/badge.svg?branch=main)
+
 Python library for Synthetic Data Generation
