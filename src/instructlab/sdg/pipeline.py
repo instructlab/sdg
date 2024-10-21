@@ -4,6 +4,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from importlib import resources
+from threading import Lock
 from typing import Dict, Iterable, List, Optional
 import logging
 import math
@@ -131,7 +132,7 @@ class Pipeline:
             pipeline_yaml = os.path.join(resources.files(__package__), pipeline_yaml)
         return cls(ctx, pipeline_yaml, *_parse_pipeline_config_file(pipeline_yaml))
 
-    def generate(self, dataset, checkpoint_name=None) -> Dataset:
+    def generate(self, dataset, checkpoint_name=None, thread: int = 0) -> Dataset:
         """
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
@@ -151,7 +152,7 @@ class Pipeline:
         # If not batching, simply delegate to _generate_single
         if not self.ctx.batching_enabled:
             logger.info("Running pipeline single-threaded")
-            return self._generate_single(dataset)
+            return self._generate_single(dataset, thread)
 
         # Otherwise, split the dataset into batches and run each batch as a
         # future in the thread pool
@@ -181,7 +182,7 @@ class Pipeline:
 
     ## Implementation Details ##
 
-    def _generate_single(self, dataset) -> Dataset:
+    def _generate_single(self, dataset, thread: int = None) -> Dataset:
         """Generate a single dataset by running the pipeline steps."""
         for block_prop in self.chained_blocks:
             # Initialize arguments for error handling to None
@@ -198,7 +199,10 @@ class Pipeline:
                 logger.info(dataset)
 
                 # Execute the block and wrap errors with the block name/type
-                dataset = block.generate(dataset)
+                if block_type == llmblock.LLMBlock:
+                    dataset = block.generate(dataset, thread)
+                else:
+                    dataset = block.generate(dataset)
             except Exception as err:
                 raise PipelineBlockError(
                     exception=err,
