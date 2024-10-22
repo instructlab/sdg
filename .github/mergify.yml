@@ -27,6 +27,21 @@ pull_request_rules:
         - -files~=^\.github/(actions|workflows)/.*\.ya?ml$
         - -files~=^\.github/workflows/actionlint\.
 
+    # e2e medium workflow
+    - or:
+      - and:
+        - check-success~=e2e-medium-workflow-complete
+        - or:
+          - files~=\.py$
+          - files=pyproject.toml
+          - files=^requirements.*\.txt$
+          - files=.github/workflows/e2e-nvidia-a10g-x1.yml
+      - and:
+        - -files~=\.py$
+        - -files=pyproject.toml
+        - -files~=^requirements.*\.txt$
+        - -files=.github/workflows/e2e-nvidia-a10g-x1.yml
+
     # e2e small workflow
     - or:
       - and:
