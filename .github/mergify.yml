@@ -27,10 +27,10 @@ pull_request_rules:
         - -files~=^\.github/(actions|workflows)/.*\.ya?ml$
         - -files~=^\.github/workflows/actionlint\.
 
-    # e2e workflow
+    # e2e small workflow
     - or:
       - and:
-        - check-success=e2e-workflow-complete
+        - check-success~=e2e-small-workflow-complete
         - or:
           - files~=\.py$
           - files=pyproject.toml
