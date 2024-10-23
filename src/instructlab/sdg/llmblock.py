@@ -2,6 +2,7 @@
 
 # Standard
 from collections import ChainMap
+from threading import Lock
 from typing import Any, Dict
 import logging
 import re
@@ -156,7 +157,7 @@ class LLMBlock(Block):
             gen_kwargs["temperature"] = float(gen_kwargs["temperature"])
         return gen_kwargs
 
-    def _generate(self, samples) -> list:
+    def _generate(self, samples, thread) -> list:
         prompts = [self._format_prompt(sample) for sample in samples]
         logger.debug(f"STARTING GENERATION FOR LLMBlock USING PROMPTS: {prompts}")
         if self.server_supports_batched:
@@ -167,7 +168,9 @@ class LLMBlock(Block):
 
         results = []
         progress_bar = tqdm(
-            range(len(prompts)), desc=f"{self.block_name} Prompt Generation"
+            range(len(prompts)),
+            desc=f"{self.block_name} Prompt Generation Thread {thread}",
+            position=thread,
         )
         for prompt in prompts:
             logger.debug(f"CREATING COMPLETION FOR PROMPT: {prompt}")
@@ -179,7 +182,7 @@ class LLMBlock(Block):
                 progress_bar.update(1)
         return results
 
-    def generate(self, samples: Dataset) -> Dataset:
+    def generate(self, samples: Dataset, thread: int) -> Dataset:
         """
         Generate the output from the block. This method should first validate the input data,
         then generate the output, and finally parse the generated output before returning it.
@@ -211,7 +214,7 @@ class LLMBlock(Block):
 
         # generate the output
 
-        outputs = self._generate(samples)
+        outputs = self._generate(samples, thread)
         logger.debug("Generated outputs: %s", outputs)
 
         num_parallel_samples = self.gen_kwargs.get("n", 1)
