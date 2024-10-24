@@ -17,6 +17,7 @@ import yaml
 # First Party
 from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
+from instructlab.sdg.utils.taxonomy import kprintds
 
 # Local
 from . import filterblock, importblock, llmblock, utilblocks
@@ -145,8 +146,12 @@ class Pipeline:
             # Separate checkpoints with sub directories
             checkpoint_dir = os.path.join(self.ctx.checkpoint_dir, checkpoint_name)
 
+        print("THIS IS KHALED IN PIPELINE GENERATE ABT TO CHECKPOINT")
+
         checkpointer = Checkpointer(checkpoint_dir, self.ctx.save_freq)
         dataset, pre_generated_data = checkpointer.load(dataset)
+
+        print("THIS IS KHALED IN PIPELINE GENERATE SUCCESSFULLY CHECKPOINTED(?)")
 
         # If not batching, simply delegate to _generate_single
         if not self.ctx.batching_enabled:
@@ -195,7 +200,7 @@ class Pipeline:
                 drop_duplicates_cols = block_prop.get("drop_duplicates", False)
                 block = block_type(self.ctx, self, block_name, **block_config)
                 logger.info("Running block: %s", block_name)
-                logger.info(dataset)
+                logger.info(kprintds(dataset, extra_info=f"{block_name=}, {block_config=}"))
 
                 # Execute the block and wrap errors with the block name/type
                 dataset = block.generate(dataset)
