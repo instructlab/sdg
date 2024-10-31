@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Tuple
+from typing import DefaultDict, Iterable, List, Tuple, Optional
 import json
 import logging
 import re
@@ -50,7 +50,7 @@ class DocumentChunker:
         cls,
         leaf_node,
         taxonomy_path,
-        output_dir: Path,
+        output_dir: Optional[Path],
         server_ctx_size=4096,
         chunk_word_count=1024,
         tokenizer_model_name: str | None = None,
