@@ -20,7 +20,6 @@ from transformers import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 _DEFAULT_CHUNK_OVERLAP = 100
-DEFAULT_TAXONOMY_PATH = Path("~/.local/share/instructlab/taxonomy").expanduser()
 
 
 def _num_tokens_from_words(num_words) -> int:
@@ -49,6 +48,7 @@ class DocumentChunker:
     def __new__(
         cls,
         leaf_node = None,
+        taxonomy_path = None,
         output_dir: Path = None,
         server_ctx_size=4096,
         chunk_word_count=1024,
@@ -69,6 +69,9 @@ class DocumentChunker:
                 chunker class for the provided filetype
         """
         documents = leaf_node[0]["documents"]
+
+        if not isinstance(taxonomy_path, Path):
+            taxonomy_path = Path(taxonomy_path)
 
         if isinstance(documents, str):
             documents = [documents]
@@ -99,7 +102,7 @@ class DocumentChunker:
             return ContextAwareChunker(
                 doc_dict[FileTypes.PDF],
                 filepaths,
-                DEFAULT_TAXONOMY_PATH / leaf_node_path / "qna.yaml",
+                taxonomy_path / leaf_node_path / "qna.yaml",
                 output_dir, 
                 chunk_word_count,
                 tokenizer_model_name,

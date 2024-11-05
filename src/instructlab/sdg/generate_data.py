@@ -268,7 +268,7 @@ def generate_data(
     model_name: Optional[str] = None,
     num_cpus: Optional[int] = None,
     num_instructions_to_generate: Optional[int] = 30,
-    taxonomy: Optional[str] = None,
+    taxonomy: Optional[str] = None,  # TODO rename to taxonomy_path to match config
     taxonomy_base: Optional[str] = None,
     output_dir: Optional[str] = None,
     # TODO - not used and should be removed from the CLI
@@ -367,7 +367,7 @@ def generate_data(
         is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
         samples = leaf_node_to_samples(
-            leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
+            leaf_node, taxonomy, server_ctx_size, chunk_word_count, document_output_dir, model_name
         )
 
         if not samples:

@@ -30,7 +30,6 @@ from .chunkers import DocumentChunker
 parser = pdf_parser()
 
 logger = logging.getLogger(__name__)
-DOC_FILEPATH = Path("~/.local/share/instructlab/documents").expanduser()
 
 
 def _is_taxonomy_file(fn: str) -> bool:
@@ -406,10 +405,11 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
 
 
 def _knowledge_leaf_node_to_samples(
-    leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
+    leaf_node, taxonomy_path, server_ctx_size, chunk_word_count, document_output_dir, model_name
 ):
     chunker = DocumentChunker(
         leaf_node=leaf_node,
+        taxonomy_path=taxonomy_path,
         output_dir=document_output_dir,
         server_ctx_size=server_ctx_size,
         chunk_word_count=chunk_word_count,
@@ -437,12 +437,12 @@ def _skill_leaf_node_to_samples(leaf_node):
 
 
 def leaf_node_to_samples(
-    leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
+    leaf_node, taxonomy_path, server_ctx_size, chunk_word_count, document_output_dir, model_name
 ):
     if not leaf_node:
         return []
     if leaf_node[0].get("documents"):
         return _knowledge_leaf_node_to_samples(
-            leaf_node, server_ctx_size, chunk_word_count, document_output_dir, model_name
+            leaf_node, taxonomy_path, server_ctx_size, chunk_word_count, document_output_dir, model_name
         )
     return _skill_leaf_node_to_samples(leaf_node)
