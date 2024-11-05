@@ -178,23 +178,18 @@ class ContextAwareChunker(ChunkerBase):
         leaf_node_path,
         output_dir: Path,
         chunk_word_count: int,
-        tokenizer_model_name=None,
+        tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
         self.leaf_node_path = leaf_node_path
         self.output_dir = self._path_validator(output_dir)
         self.chunk_word_count = chunk_word_count
-        if tokenizer_model_name is None:
-            self.tokenizer_model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"
-        else:
-            self.tokenizer_model_name = tokenizer_model_name
+        self.tokenizer_model_name = tokenizer_model_name
         self.qna_yaml = self._load_qna_yaml(
             self._path_validator(leaf_node_path) if leaf_node_path else None
         )
 
-        if tokenizer_model_name is None:
-            tokenizer_model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
 
     def chunk_documents(self) -> List:
