@@ -308,7 +308,7 @@ def read_taxonomy(
     taxonomy: str | Path,
     taxonomy_base: str,
     yaml_rules: str | None = None,
-    document_output_dir: Path = Path(),
+    document_output_dir: Path | None = None,
 ):
     yamllint_config = None  # If no custom rules file, use default config
     if yaml_rules is not None:  # user attempted to pass custom rules file
@@ -364,7 +364,7 @@ def read_taxonomy(
     return seed_instruction_data
 
 
-def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_output_dir):
+def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_output_dir=None):
     seed_instruction_data = read_taxonomy(
         taxonomy, taxonomy_base, yaml_rules, document_output_dir
     )

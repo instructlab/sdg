@@ -23,6 +23,13 @@ _DEFAULT_CHUNK_OVERLAP = 100
 DEFAULT_TAXONOMY_PATH = Path("~/.local/share/instructlab/taxonomy").expanduser()
 
 
+def _num_tokens_from_words(num_words) -> int:
+    return int(num_words * 1.3)  # 1 word ~ 1.3 token
+
+def _num_chars_from_tokens(num_tokens) -> int:
+    return int(num_tokens * 4)  # 1 token ~ 4 English character
+
+
 class FileTypes(Enum):
     MD = ".md"
     PDF = ".pdf"
@@ -62,7 +69,17 @@ class DocumentChunker:
                 chunker class for the provided filetype
         """
         documents = leaf_node[0]["documents"]
-        assert type(documents) == list
+
+        if isinstance(documents, str):
+            documents = [documents]
+            logger.info(
+                "Converted single string into a list of string. Assumed the string passed in is the document. Normally, chunk_document() should take a list as input."
+            )
+        elif not isinstance(documents, list):
+            raise TypeError(
+                "Expected: documents to be a list, but got {}".format(type(documents))
+            )
+
         filepaths = leaf_node[0]["filepaths"]
         leaf_node_path = Path(leaf_node[0]["taxonomy_path"].replace("->", "/"))
 
@@ -84,6 +101,7 @@ class DocumentChunker:
                 filepaths,
                 DEFAULT_TAXONOMY_PATH / leaf_node_path / "qna.yaml",
                 output_dir, 
+                chunk_word_count,
                 tokenizer_model_name,
             )
 
@@ -128,12 +146,12 @@ class TextSplitChunker(ChunkerBase):
         self.chunk_word_count = chunk_word_count
         self.output_dir = output_dir
 
-    def chunk_documents(self) -> Dataset:
+    def chunk_documents(self) -> List:
         """Naively chunk markdown documents based on the word count provided by the user.
         Returns:
             List[str]: List of chunked documents.
         """
-        num_tokens_per_doc = self._num_tokens_from_words(self.chunk_word_count)
+        num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
         if num_tokens_per_doc > int(self.server_ctx_size - 1024):
             raise ValueError(
                 "Error: {}".format(
@@ -145,36 +163,8 @@ class TextSplitChunker(ChunkerBase):
         if self.document_contents == []:
             return []
 
-        # Placeholder for params
-        content = []
-        chunk_size = self._num_chars_from_tokens(num_tokens_per_doc)
-        chunk_overlap = _DEFAULT_CHUNK_OVERLAP
-
-        # Using Markdown as default, document-specific chunking will be implemented in separate pr.
-        md_text_splitter = RecursiveCharacterTextSplitter.from_language(
-            language=Language.MARKDOWN,
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
-
-        # Determine file type for heuristics, default with markdown
-        for doc in self.document_contents:
-            # Use regex to remove unnecessary dashes in front of pipe characters in a markdown table.
-            doc = re.sub(r"-{2,}\|", "-|", doc)
-            # Remove unnecessary spaces in front of pipe characters in a markdown table.
-            doc = re.sub(r"\  +\|", " |", doc)
-            temp = md_text_splitter.create_documents([doc])
-            content.extend([item.page_content for item in temp])
-
-        return content
-
-    @staticmethod
-    def _num_tokens_from_words(num_words) -> int:
-        return int(num_words * 1.3)  # 1 word ~ 1.3 token
-
-    @staticmethod
-    def _num_chars_from_tokens(num_tokens) -> int:
-        return int(num_tokens * 4)  # 1 token ~ 4 English character
+        chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
+        return chunk_markdowns(self.document_contents, chunk_size)
 
 
 class ContextAwareChunker(ChunkerBase):
@@ -184,12 +174,14 @@ class ContextAwareChunker(ChunkerBase):
         filepaths,
         leaf_node_path,
         output_dir: Path,
+        chunk_word_count: int,
         tokenizer_model_name=None,
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
         self.leaf_node_path = leaf_node_path
         self.output_dir = self._path_validator(output_dir)
+        self.chunk_word_count = chunk_word_count
         if tokenizer_model_name is None:
             self.tokenizer_model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         else:
@@ -202,7 +194,7 @@ class ContextAwareChunker(ChunkerBase):
             tokenizer_model_name = "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
 
-    def chunk_documents(self) -> Dataset:
+    def chunk_documents(self) -> List:
         """Semantically chunk PDF documents.
 
         Returns:
@@ -270,9 +262,13 @@ class ContextAwareChunker(ChunkerBase):
             max_token_per_chunk=500,
             tokenizer=self.tokenizer,
         )
-        return self.fuse_texts(chunks, 200)
+        fused_texts = self.fuse_texts(chunks, 200)
 
-    def fuse_texts(self, text_list, short_length_threshold=100):
+        num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
+        chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
+        return chunk_markdowns(fused_texts, chunk_size)
+
+    def fuse_texts(self, text_list: List, short_length_threshold: int = 100):
         """
         Fuse short texts with preceding longer texts if their word count is below the threshold.
         Args:
@@ -561,3 +557,37 @@ class ContextAwareChunker(ChunkerBase):
         )
 
         return docling_artifacts_path
+
+
+def chunk_markdowns(documents: List | Dataset, chunk_size) -> Dataset:
+    """
+    Iterates over the documents and splits them into chunks based on the word count provided by the user.
+    Args:
+        documents (list): List of documents retrieved from git (can also consist of a single document).
+        server_ctx_size (int): Context window size of server.
+        chunk_word_count (int): Maximum number of words to chunk a document.
+    Returns:
+         List[str]: List of chunked documents.
+    """
+
+    # Checks for input type error
+    content = []
+    # chunk_size = _num_chars_from_tokens(no_tokens_per_doc)
+    chunk_overlap = _DEFAULT_CHUNK_OVERLAP
+
+    # Using Markdown as default, document-specific chunking will be implemented in separate pr.
+    text_splitter = RecursiveCharacterTextSplitter.from_language(
+        language=Language.MARKDOWN,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+
+    # Determine file type for heuristics, default with markdown
+    for docs in documents:
+        # Use regex to remove unnecessary dashes in front of pipe characters in a markdown table.
+        docs = re.sub(r"-{2,}\|", "-|", docs)
+        # Remove unnecessary spaces in front of pipe characters in a markdown table.
+        docs = re.sub(r"\  +\|", " |", docs)
+        temp = text_splitter.create_documents([docs])
+        content.extend([item.page_content for item in temp])
+    return content
