@@ -265,13 +265,13 @@ class ContextAwareChunker(ChunkerBase):
         num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
         chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
         return chunk_markdowns(fused_texts, chunk_size)
-
+        
     def fuse_texts(self, text_list: List, short_length_threshold: int = 100):
         """
-        Fuse short texts with preceding longer texts if their word count is below the threshold.
+        Fuse short texts with preceding longer texts if their token count is below the threshold.
         Args:
             text_list (list): List of text chunks to process.
-            short_length_threshold (int): The word count threshold for determining short texts.
+            short_length_threshold (int): The token count threshold for determining short texts.
         Returns:
             list: List of fused texts.
         """
@@ -279,9 +279,9 @@ class ContextAwareChunker(ChunkerBase):
         previous_long_text = ""
 
         for text in text_list:
-            word_count = len(text.split())
+            token_count = self.get_token_count(text, self.tokenizer)  # Use tokenizer for token count
 
-            if word_count <= short_length_threshold and previous_long_text:
+            if token_count <= short_length_threshold and previous_long_text:
                 # Append the short text to the last long text
                 fused_texts[-1] += "\n\n" + text
             else:
@@ -290,8 +290,7 @@ class ContextAwareChunker(ChunkerBase):
                 previous_long_text = text
 
         return fused_texts
-
-
+    
     def create_tokenizer(self, model_name: str):
         """
         Create a tokenizer instance from a pre-trained model or a local directory.
