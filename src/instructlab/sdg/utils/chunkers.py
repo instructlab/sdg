@@ -414,8 +414,8 @@ class ContextAwareChunker(ChunkerBase):
         elif next_page_num is not None:
             return next_page_num
 
-
-    def build_chunks_from_docling_json(self, 
+    def build_chunks_from_docling_json(
+        self,
         json_book,
         max_token_per_chunk,
         tokenizer,
@@ -456,7 +456,7 @@ class ContextAwareChunker(ChunkerBase):
                 "table",
                 "title",
                 "equation",
-            ]:
+            ]:  # 'page-header',
                 if book_element["type"] == "table":
                     current_book_page_number = self.get_table_page_number(json_book, idx)
                 else:
@@ -492,12 +492,16 @@ class ContextAwareChunker(ChunkerBase):
                         >= max_token_per_chunk
                         and len(current_buffer) > 1
                     ):
+                        chunk_text = '\n\n'.join(current_buffer[:-1])
+                        print(f"Current chunk size {self.get_token_count(chunk_text, tokenizer)} and max is {max_token_per_chunk}")
+
                         document_chunks.append("\n\n".join(current_buffer[:-1]))
 
                         if (
                             self.get_token_count(current_buffer[-1], tokenizer)
                             >= max_token_per_chunk
                         ):
+                            print(f"This is too big a document to be left in the current buffer {self.get_token_count(current_buffer[-1], tokenizer)}")
                             document_chunks.append(current_buffer[-1])
                             current_buffer = []
                         else:
@@ -507,9 +511,8 @@ class ContextAwareChunker(ChunkerBase):
                     book_text = self.add_heading_formatting(book_text)
                 elif book_element["type"] == "table":
                     book_text = self.get_table(json_book, book_element["$ref"])
-
                 if "## References" in book_text or "## Acknowledgements" in book_text:
-                    # For research papers we ignore everything after these sections
+                    # For research papers we ignore everything after this sections
                     break
                 current_buffer.append(book_text)
 
@@ -521,6 +524,7 @@ class ContextAwareChunker(ChunkerBase):
         if "\n\n".join(current_buffer) not in document_chunks:
             document_chunks.append("\n\n".join(current_buffer))
         return document_chunks
+
 
     def export_documents(self, converted_docs: Iterable[ConvertedDocument]):
         """Write converted documents to json files
