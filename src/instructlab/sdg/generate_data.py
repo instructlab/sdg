@@ -269,6 +269,7 @@ def generate_data(
     client: openai.OpenAI,
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
     system_prompt: Optional[str] = None,
+    use_legacy_pretraining_format: Optional[bool] = True,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
     num_cpus: Optional[int] = None,
@@ -423,7 +424,12 @@ def generate_data(
                 date_suffix,
             )
 
-        mixer.collect(leaf_node_path, new_generated_data, is_knowledge)
+        mixer.collect(
+            leaf_node_path,
+            new_generated_data,
+            is_knowledge,
+            use_legacy_pretraining_format,
+        )
 
     if generated_data is None:
         generated_data = []
