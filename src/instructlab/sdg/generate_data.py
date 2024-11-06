@@ -13,7 +13,6 @@ import time
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
-from datasets import Dataset
 from xdg_base_dirs import xdg_data_dirs, xdg_data_home
 import openai
 
@@ -367,12 +366,17 @@ def generate_data(
         is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
         samples = leaf_node_to_samples(
-            leaf_node, taxonomy, server_ctx_size, chunk_word_count, document_output_dir, model_name
+            leaf_node,
+            taxonomy,
+            server_ctx_size,
+            chunk_word_count,
+            document_output_dir,
+            model_name,
         )
 
         if not samples:
             raise GenerateException("Error: No samples found in leaf node.")
-        
+
         if "document" in samples.column_names:
             pipe = knowledge_pipe
             is_knowledge = True

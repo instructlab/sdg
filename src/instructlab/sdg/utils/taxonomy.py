@@ -1,18 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 import glob
 import logging
 import os
 import re
-import tempfile
 
 # Third Party
 from datasets import Dataset
-from docling_parse.docling_parse import pdf_parser
+from docling_parse.docling_parse import pdf_parser  # pylint: disable=no-name-in-module
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -27,7 +25,7 @@ import yaml
 from .chunkers import DocumentChunker
 
 # Initialize the pdf parser
-parser = pdf_parser()
+PDFParser = pdf_parser()
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +133,7 @@ def _get_documents(
     commit_hash = source.get("commit")
     file_patterns = source.get("patterns", [])
 
-    try:
+    try:  # pylint: disable=too-many-nested-blocks
         repo = git.Repo.clone_from(repo_url, document_output_dir)
 
         if not skip_checkout and commit_hash:
@@ -171,21 +169,21 @@ def _get_documents(
                             doc_key = f"key_{os.path.basename(file_path)}"  # Unique document key
                             logger.info(f"Loading PDF document from {file_path}")
 
-                            success = parser.load_document(doc_key, file_path)
+                            success = PDFParser.load_document(doc_key, file_path)
                             if not success:
                                 logger.warning(
                                     f"Failed to load PDF document: {file_path}"
                                 )
                                 continue
 
-                            num_pages = parser.number_of_pages(doc_key)
+                            num_pages = PDFParser.number_of_pages(doc_key)
                             logger.info(f"PDF '{file_path}' has {num_pages} pages.")
 
                             pdf_text = ""
 
                             for page in range(num_pages):
                                 try:
-                                    json_doc = parser.parse_pdf_from_key_on_page(
+                                    json_doc = PDFParser.parse_pdf_from_key_on_page(
                                         doc_key, page
                                     )
                                     if "pages" not in json_doc or not json_doc["pages"]:
@@ -203,7 +201,7 @@ def _get_documents(
                                         )
                                         if text.strip():  # Only append non-empty text
                                             pdf_text += text.strip() + "\n"
-                                except Exception as page_error:
+                                except Exception as page_error:  # pylint: disable=broad-exception-caught
                                     logger.warning(
                                         f"Error parsing page {page + 1} of '{file_path}': {page_error}"
                                     )
@@ -214,12 +212,12 @@ def _get_documents(
                                 filepaths.append(Path(file_path))
 
                             # Unload the document to free memory
-                            parser.unload_document(doc_key)
+                            PDFParser.unload_document(doc_key)
                             logger.info(f"Unloaded PDF document: {file_path}")
 
                         else:
                             logger.info(f"Skipping unsupported file type: {file_path}")
-                    except Exception as file_error:
+                    except Exception as file_error:  # pylint: disable=broad-exception-caught
                         logger.error(
                             f"Error processing file '{file_path}': {file_error}"
                         )
@@ -236,19 +234,20 @@ def _get_documents(
         raise e
 
 
-# pylint: disable=broad-exception-caught
 def _read_taxonomy_file(
-    file_path: str | Path, yamllint_config: str | None = None, document_output_dir: Path = Path()
+    file_path: str | Path,
+    yamllint_config: str | None = None,
+    document_output_dir: Path = Path(),
 ):
     seed_instruction_data = []
 
-    parser = TaxonomyParser(
+    taxonomy_parser = TaxonomyParser(
         schema_version=0,  # Use version value in yaml
         message_format=TaxonomyMessageFormat.LOGGING,  # Report warnings and errors to the logger
         yamllint_config=yamllint_config,
         yamllint_strict=True,  # Report yamllint warnings as errors
     )
-    taxonomy = parser.parse(file_path)
+    taxonomy = taxonomy_parser.parse(file_path)
 
     if taxonomy.warnings or taxonomy.errors:
         return seed_instruction_data, taxonomy.warnings, taxonomy.errors
@@ -260,7 +259,7 @@ def _read_taxonomy_file(
         task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
-        print(f"")
+        document_contents, doc_filepaths = None, None
         if documents:
             document_contents, doc_filepaths = _get_documents(
                 source=documents, document_output_dir=document_output_dir
@@ -363,7 +362,9 @@ def read_taxonomy(
     return seed_instruction_data
 
 
-def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules, document_output_dir=None):
+def read_taxonomy_leaf_nodes(
+    taxonomy, taxonomy_base, yaml_rules, document_output_dir=None
+):
     seed_instruction_data = read_taxonomy(
         taxonomy, taxonomy_base, yaml_rules, document_output_dir
     )
@@ -394,10 +395,12 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
 
             qna_pairs = icl_.get("questions_and_answers", [])
             for i, qna in enumerate(qna_pairs):
-                record.update({
-                    f"icl_query_{i+1}": qna.get("question", ""),
-                    f"icl_response_{i+1}": qna.get("answer", ""),
-                })
+                record.update(
+                    {
+                        f"icl_query_{i+1}": qna.get("question", ""),
+                        f"icl_response_{i+1}": qna.get("answer", ""),
+                    }
+                )
 
             chunked_dataset.append(record)
 
@@ -405,7 +408,12 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
 
 
 def _knowledge_leaf_node_to_samples(
-    leaf_node, taxonomy_path, server_ctx_size, chunk_word_count, document_output_dir, model_name
+    leaf_node,
+    taxonomy_path,
+    server_ctx_size,
+    chunk_word_count,
+    document_output_dir,
+    model_name,
 ):
     chunker = DocumentChunker(
         leaf_node=leaf_node,
@@ -437,12 +445,22 @@ def _skill_leaf_node_to_samples(leaf_node):
 
 
 def leaf_node_to_samples(
-    leaf_node, taxonomy_path, server_ctx_size, chunk_word_count, document_output_dir, model_name
+    leaf_node,
+    taxonomy_path,
+    server_ctx_size,
+    chunk_word_count,
+    document_output_dir,
+    model_name,
 ):
     if not leaf_node:
         return []
     if leaf_node[0].get("documents"):
         return _knowledge_leaf_node_to_samples(
-            leaf_node, taxonomy_path, server_ctx_size, chunk_word_count, document_output_dir, model_name
+            leaf_node,
+            taxonomy_path,
+            server_ctx_size,
+            chunk_word_count,
+            document_output_dir,
+            model_name,
         )
     return _skill_leaf_node_to_samples(leaf_node)
