@@ -185,7 +185,7 @@ class ContextAwareChunker(ChunkerBase):
         self.leaf_node_path = leaf_node_path
         self.output_dir = self._path_validator(output_dir)
         self.chunk_word_count = chunk_word_count
-        self.tokenizer_model_name = tokenizer_model_name
+        self.tokenizer_model_name = tokenizer_model_name if tokenizer_model_name is not None else "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.qna_yaml = self._load_qna_yaml(
             self._path_validator(leaf_node_path) if leaf_node_path else None
         )
@@ -266,12 +266,14 @@ class ContextAwareChunker(ChunkerBase):
         chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
         return chunk_markdowns(fused_texts, chunk_size)
         
-    def fuse_texts(self, text_list: List, short_length_threshold: int = 100):
+    def fuse_texts(self, text_list: List, short_length_threshold: int = 130):
         """
         Fuse short texts with preceding longer texts if their token count is below the threshold.
         Args:
             text_list (list): List of text chunks to process.
             short_length_threshold (int): The token count threshold for determining short texts.
+                                      Default is 130, tuned specifically for the Mixtral tokenizer.
+                                      Update this value if changing the tokenizer model.
         Returns:
             list: List of fused texts.
         """
