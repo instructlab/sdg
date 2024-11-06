@@ -20,7 +20,11 @@ import openai
 # pylint: disable=ungrouped-imports
 from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
-from instructlab.sdg.llmblock import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
+from instructlab.sdg.llmblock import (
+    DEFAULT_MAX_NUM_TOKENS,
+    MODEL_FAMILY_MERLINITE,
+    MODEL_FAMILY_MIXTRAL,
+)
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
@@ -183,6 +187,7 @@ def _context_init(
     save_freq: int,
     batch_num_workers: Optional[int],
     batch_size: Optional[int],
+    max_num_tokens: Optional[int] = DEFAULT_MAX_NUM_TOKENS,
 ):
     extra_kwargs = {}
     if batch_size is not None:
@@ -196,6 +201,7 @@ def _context_init(
         num_instructions_to_generate=num_instructions_to_generate,
         checkpoint_dir=checkpoint_dir,
         save_freq=save_freq,
+        max_num_tokens=max_num_tokens,
         **extra_kwargs,
     )
 
@@ -281,6 +287,7 @@ def generate_data(
     pipeline: Optional[str] = "simple",
     batch_size: Optional[int] = None,
     checkpoint_dir: Optional[str] = None,
+    max_num_tokens: Optional[int] = DEFAULT_MAX_NUM_TOKENS,
 ) -> None:
     """Generate data for training and testing a model.
 
@@ -343,6 +350,7 @@ def generate_data(
         1,  # save_freq
         batch_size=batch_size,
         batch_num_workers=num_cpus,
+        max_num_tokens=max_num_tokens,
     )
 
     knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe = _sdg_init(

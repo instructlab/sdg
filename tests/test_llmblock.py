@@ -86,3 +86,20 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             "FOO pear\nintroduction\nprinciples\nexamples\ngeneration BAR",
             "model_prompt should be a non-empty string when set to None",
         )
+
+    @patch("src.instructlab.sdg.block.Block._load_config")
+    def test_max_num_tokens_override(self, mock_load_config):
+        mock_load_config.return_value = self.config_return_value
+        self.mock_ctx.max_num_tokens = 512
+        # Ensure that if a custom model_prompt is specified, it is used correctly
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            model_prompt="",
+            gen_kwargs={"max_tokens": 2048},
+        )
+        num_tokens = block.gen_kwargs["max_tokens"]
+        assert num_tokens == 512

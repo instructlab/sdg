@@ -16,6 +16,8 @@ from .block import Block
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MAX_NUM_TOKENS = 4096
+
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
 
@@ -78,11 +80,23 @@ class LLMBlock(Block):
         self.model_prompt = model_prompt
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
+        max_num_token_override = ctx.max_num_tokens
         self.parser_name = parser_kwargs.get("parser_name", None)
         self.parsing_pattern = parser_kwargs.get("parsing_pattern", None)
         self.parser_cleanup_tags = parser_kwargs.get("parser_cleanup_tags", None)
+        # max_num_tokens should only be applicable to knowledge blocks
+        # gen_knowledge if the full/simple pipeline's knowledge generation block
+        if block_name != "gen_knowledge":
+            logger.debug(
+                f"Not applying max_num_tokens to block {block_name}. This is only applicable for gen_knowledge."
+            )
+            max_num_token_override = DEFAULT_MAX_NUM_TOKENS
         self.gen_kwargs = self._gen_kwargs(
-            gen_kwargs, model=self.ctx.model_id, temperature=0, max_tokens=4096
+            max_num_token_override,
+            gen_kwargs,
+            model=self.ctx.model_id,
+            temperature=0,
+            max_tokens=DEFAULT_MAX_NUM_TOKENS,
         )
         # Whether the LLM server supports a list of input prompts
         # and supports the n parameter to generate n outputs per input
@@ -142,7 +156,7 @@ class LLMBlock(Block):
 
         return prompt if model_prompt is None else model_prompt.format(prompt=prompt)
 
-    def _gen_kwargs(self, gen_kwargs, **defaults):
+    def _gen_kwargs(self, max_num_token_override, gen_kwargs, **defaults):
         gen_kwargs = {**defaults, **gen_kwargs}
         if (
             "n" in gen_kwargs
@@ -150,15 +164,18 @@ class LLMBlock(Block):
             and gen_kwargs["n"] == "scaled"
         ):
             gen_kwargs["n"] = self.ctx.num_instructions_to_generate
-        if "max_tokens" in gen_kwargs:
-            gen_kwargs["max_tokens"] = int(gen_kwargs["max_tokens"])
         if "temperature" in gen_kwargs:
             gen_kwargs["temperature"] = float(gen_kwargs["temperature"])
+        if max_num_token_override != DEFAULT_MAX_NUM_TOKENS:
+            gen_kwargs["max_tokens"] = max_num_token_override
+        elif "max_tokens" in gen_kwargs:
+            gen_kwargs["max_tokens"] = int(gen_kwargs["max_tokens"])
         return gen_kwargs
 
     def _generate(self, samples) -> list:
         prompts = [self._format_prompt(sample) for sample in samples]
         logger.debug(f"STARTING GENERATION FOR LLMBlock USING PROMPTS: {prompts}")
+        print(self.gen_kwargs)
         if self.server_supports_batched:
             response = self.ctx.client.completions.create(
                 prompt=prompts, **self.gen_kwargs
