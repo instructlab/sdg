@@ -1,23 +1,30 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from importlib import resources
 from pathlib import Path
-from typing import Optional
+from threading import Lock
+from typing import List, Optional
 import dataclasses
 import json
 import logging
+import math
 import os
+import threading
 import time
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets
+from tqdm import tqdm
 from xdg_base_dirs import xdg_data_dirs, xdg_data_home
 import openai
 
 # First Party
+from instructlab.sdg.checkpointing import Checkpointer
+
 # pylint: disable=ungrouped-imports
 from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
@@ -262,7 +269,7 @@ def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
 # TODO - parameter removal needs to be done in sync with a CLI change.
 # to be removed: logger, prompt_file_path, rouge_threshold, tls_*
 def generate_data(
-    client: openai.OpenAI,
+    clients: list[openai.OpenAI],
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
@@ -332,7 +339,7 @@ def generate_data(
         model_family = MODEL_FAMILY_MERLINITE
 
     ctx = _context_init(
-        client,
+        clients[0],
         model_family,
         model_name,
         num_instructions_to_generate,
@@ -359,60 +366,79 @@ def generate_data(
 
     generated_data = None
     empty_sdg_leaf_nodes = []
+
     for leaf_node in leaf_nodes.values():
-        is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
         samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
 
         if not samples:
             raise GenerateException("Error: No samples found in leaf node.")
 
+        is_knowledge = False
+        is_g_skill = False
+        is_f_skill = False
         if samples[0].get("document"):
-            pipe = knowledge_pipe
             is_knowledge = True
 
         elif samples[0].get("seed_context"):
+            is_g_skill = True
             pipe = grounded_skills_pipe
 
         else:
+            is_f_skill = True
             pipe = freeform_skills_pipe
 
         logger.debug("Samples: %s", samples)
-        ds = Dataset.from_list(samples)
-        logger.debug("Dataset: %s", ds)
-        new_generated_data = pipe.generate(ds, leaf_node_path)
-        if len(new_generated_data) == 0:
-            empty_sdg_leaf_nodes.append(leaf_node_path)
-            logger.warning("Empty dataset for qna node: %s", leaf_node_path)
-            continue
-        generated_data = (
-            [new_generated_data]
-            if generated_data is None
-            else generated_data + [new_generated_data]
-        )
-        logger.info("Generated %d samples", len(generated_data))
-        logger.debug("Generated data: %s", generated_data)
 
-        if is_knowledge:
-            # generate mmlubench data for the current leaf node
-            generate_eval_task_data(
-                mmlu_bench_pipe,
-                leaf_node_path,
+        ds = Dataset.from_list(samples)
+
+        # if we have multiple servers using llama we need to
+        # 1. split ds into batches per server
+        # 2. execute a thread running each batch in its own pipeline
+        # 3. add the data back together
+        # 4. return that data.
+        if len(clients) > 1:
+            new_generated_data = generate_on_multiple_servers(
                 ds,
+                clients,
+                checkpoint_dir,
+                model_family,
+                model_name,
+                num_instructions_to_generate,
                 output_dir,
                 date_suffix,
+                is_knowledge,
+                is_g_skill,
+                is_f_skill,
+                pipeline,
+                leaf_node_path,
+                num_cpus,
             )
+        else:
+            new_generated_data = pipe.generate(ds, leaf_node_path)
+            if len(new_generated_data) == 0:
+                empty_sdg_leaf_nodes.append(leaf_node_path)
+                logger.warning("Empty dataset for qna node: %s", leaf_node_path)
+                continue
+            generated_data = (
+                [new_generated_data]
+                if generated_data is None
+                else generated_data + [new_generated_data]
+            )
+            logger.info("Generated %d samples", len(generated_data))
+            logger.debug("Generated data: %s", generated_data)
 
-        mixer.collect(leaf_node_path, new_generated_data, is_knowledge)
+            if is_knowledge:
+                # generate mmlubench data for the current leaf node
+                generate_eval_task_data(
+                    mmlu_bench_pipe,
+                    leaf_node_path,
+                    ds,
+                    output_dir,
+                    date_suffix,
+                )
 
-    if generated_data is None:
-        generated_data = []
-
-    _gen_train_data(
-        generated_data,
-        os.path.join(output_dir, output_file_train),
-        os.path.join(output_dir, output_file_messages),
-    )
+    mixer.collect(leaf_node_path, new_generated_data, is_knowledge)
 
     mixer.generate()
 
@@ -424,3 +450,132 @@ def generate_data(
                 " ".join(empty_sdg_leaf_nodes)
             )
         )
+
+
+def process_llama_server_batch(
+    ds,
+    client,
+    model_family,
+    model_name,
+    num_instructions_to_generate,
+    checkpoint_dir,
+    batch_size,
+    num_cpus,
+    output_dir,
+    date_suffix,
+    is_knowledge,
+    is_g_skill,
+    is_f_skill,
+    pipeline,
+    leaf_node_path,
+    thread,
+):
+    logger.info(f"Running on client {client.base_url} {model_name} ")
+    ctx = _context_init(
+        client,
+        model_family,
+        model_name,
+        num_instructions_to_generate,
+        checkpoint_dir,
+        1,  # save_freq
+        batch_size=batch_size,
+        batch_num_workers=num_cpus,
+    )
+
+    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe = _sdg_init(
+        ctx, pipeline
+    )
+    mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
+    mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
+    logger.debug("Dataset: %s", ds)
+    pipe = None
+    if is_knowledge:
+        pipe = knowledge_pipe
+    elif is_g_skill:
+        pipe = grounded_skills_pipe
+    elif is_f_skill:
+        pipe = freeform_skills_pipe
+
+    new_data = pipe.generate(ds, leaf_node_path, thread)
+
+    if is_knowledge:
+        generate_eval_task_data(
+            mmlu_bench_pipe,
+            leaf_node_path,
+            ds,
+            output_dir,
+            date_suffix,
+        )
+    return new_data
+
+
+def generate_on_multiple_servers(
+    ds,
+    clients,
+    checkpoint_dir,
+    model_family,
+    model_name,
+    num_instructions_to_generate,
+    output_dir,
+    date_suffix,
+    is_knowledge,
+    is_g_skill,
+    is_f_skill,
+    pipeline,
+    leaf_node_path,
+    num_cpus,
+):
+    # num batches == num clients
+    total_size = len(ds)
+
+    batch_size = math.ceil(total_size / len(clients))
+
+    # Create a batch for each client using ds.select() and indices
+    batches = [
+        ds.select(range(i * batch_size, min((i + 1) * batch_size, total_size)))
+        for i in range(len(clients))
+    ]
+    # batches will be the same as the number of clients.
+
+    checkpointer = Checkpointer(checkpoint_dir, 1)
+    output_splits = []
+
+    logger.debug(f" batches {len(batches)}, clients {len(clients)}, {clients}")
+    # Using ThreadPoolExecutor to process each (ds, client) pair in parallel
+    with ThreadPoolExecutor() as executor:
+        futures = [
+            executor.submit(
+                process_llama_server_batch,
+                ds,
+                client,
+                model_family,
+                model_name,
+                num_instructions_to_generate,
+                checkpoint_dir,
+                0,
+                num_cpus / len(clients),
+                output_dir,
+                date_suffix,
+                is_knowledge,
+                is_g_skill,
+                is_f_skill,
+                pipeline,
+                leaf_node_path,
+                thread,
+            )
+            for thread, (ds, client) in enumerate(zip(batches, clients))
+        ]
+        for i, future in enumerate(futures):
+            if future.running():
+                logger.debug(f"Thread {i} is running")
+            elif future.done():
+                logger.debug(f"Thread {i} has completed")
+            elif future.cancelled():
+                logger.debug(f"Thread {i} was canceled")
+        for future in futures:
+            new_data = future.result()
+            output_splits.append(new_data)
+            checkpointer.checkpoint(new_data)
+    concatenate_datasets(output_splits)
+    logger.debug("Dataset: %s", output_splits)
+    return output_splits
