@@ -35,7 +35,7 @@ from instructlab.sdg.utils.taxonomy import (
 
 logger = logging.getLogger(__name__)
 
-_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
+_SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
 
 
 def _unescape(s):
@@ -73,7 +73,9 @@ def _convert_to_messages(sample):
     return sample
 
 
-def _gen_train_data(machine_instruction_data, output_file_train, output_file_messages):
+def _gen_train_data(
+    machine_instruction_data, output_file_train, output_file_messages, system_prompt
+):
     """
     Generate training data in the legacy system/user/assistant format
     used in train_*.jsonl as well as the legacy messages format used
@@ -93,7 +95,7 @@ def _gen_train_data(machine_instruction_data, output_file_train, output_file_mes
                 user += "\n" + synth_example["context"]
             assistant = _unescape(_get_response_hack(synth_example))
             train_entry = {
-                "system": _SYS_PROMPT,
+                "system": system_prompt,
                 "user": _unescape(user),
                 "assistant": assistant,
             }
@@ -101,7 +103,7 @@ def _gen_train_data(machine_instruction_data, output_file_train, output_file_mes
             sample = {
                 "inputs": _unescape(user),
                 "targets": assistant,
-                "system": _SYS_PROMPT,
+                "system": system_prompt,
             }
             messages_data.append(_convert_to_messages(sample))
 
@@ -116,13 +118,13 @@ def _gen_train_data(machine_instruction_data, output_file_train, output_file_mes
             outfile.write("\n")
 
 
-def _knowledge_seed_example_to_test_data(seed_example):
+def _knowledge_seed_example_to_test_data(seed_example, system_prompt):
     res = []
     for qna in seed_example["questions_and_answers"]:
         user = qna["question"] + "\n" + seed_example["context"]
         res.append(
             {
-                "system": _SYS_PROMPT,
+                "system": system_prompt,
                 "user": _unescape(user),
                 "assistant": _unescape(qna["answer"]),
             }
@@ -133,6 +135,7 @@ def _knowledge_seed_example_to_test_data(seed_example):
 def _gen_test_data(
     leaf_nodes,
     output_file_test,
+    system_prompt,
 ):
     """
     Generate test data in the format needed by the legacy Linux training
@@ -142,7 +145,9 @@ def _gen_test_data(
     for _, leaf_node in leaf_nodes.items():
         for seed_example in leaf_node:
             if "questions_and_answers" in seed_example:
-                test_data.extend(_knowledge_seed_example_to_test_data(seed_example))
+                test_data.extend(
+                    _knowledge_seed_example_to_test_data(seed_example, system_prompt)
+                )
                 continue
 
             # skill seed example
@@ -154,7 +159,7 @@ def _gen_test_data(
 
             test_data.append(
                 {
-                    "system": _SYS_PROMPT,
+                    "system": system_prompt,
                     "user": _unescape(user),
                     "assistant": _unescape(seed_example["output"]),  # answer
                 }
@@ -243,7 +248,7 @@ def _sdg_init(ctx, pipeline):
     )
 
 
-def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
+def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst, system_prompt):
     data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
     data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
 
@@ -251,7 +256,7 @@ def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
         data_dirs,
         output_dir,
         date_suffix,
-        _SYS_PROMPT,
+        system_prompt,
         ctx.dataset_num_procs,
         knowledge_auxiliary_inst,
     )
@@ -263,6 +268,7 @@ def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst):
 def generate_data(
     client: openai.OpenAI,
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
+    system_prompt: Optional[str] = None,
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
     num_cpus: Optional[int] = None,
@@ -298,6 +304,8 @@ def generate_data(
     """
     generate_start = time.time()
 
+    system_prompt = system_prompt if system_prompt is not None else _SYS_PROMPT
+
     # FIXME: remove this when ilab knows to pass batch_size=0 with llama.cpp
     if batch_size is None:
         batch_size = 0
@@ -325,6 +333,7 @@ def generate_data(
     _gen_test_data(
         leaf_nodes,
         os.path.join(output_dir, output_file_test),
+        system_prompt,
     )
 
     logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
@@ -353,7 +362,9 @@ def generate_data(
     mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
     mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
 
-    mixer = _mixer_init(ctx, output_dir, date_suffix, knowledge_pipe.auxiliary_inst)
+    mixer = _mixer_init(
+        ctx, output_dir, date_suffix, knowledge_pipe.auxiliary_inst, system_prompt
+    )
 
     if console_output:
         logger.info(
@@ -421,6 +432,7 @@ def generate_data(
         generated_data,
         os.path.join(output_dir, output_file_train),
         os.path.join(output_dir, output_file_messages),
+        system_prompt,
     )
 
     mixer.generate()

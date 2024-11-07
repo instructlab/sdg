@@ -20,9 +20,11 @@ import pytest
 import yaml
 
 # First Party
-from instructlab.sdg.generate_data import _SYS_PROMPT, _context_init, generate_data
+from instructlab.sdg.generate_data import _context_init, generate_data
 from instructlab.sdg.llmblock import LLMBlock
 from instructlab.sdg.pipeline import PipelineContext
+
+TEST_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 
 TEST_TAXONOMY_BASE = "main"
 
@@ -50,7 +52,7 @@ def validate_legacy_dataset(dataset_file_name, expected_samples):
         assert ds.features[feature].dtype == "string"
 
     for idx, sample in enumerate(expected_samples):
-        assert ds[idx]["system"] == _SYS_PROMPT
+        assert ds[idx]["system"] == TEST_SYS_PROMPT
         assert ds[idx]["user"] == sample["user"]
         assert ds[idx]["assistant"] == sample["assistant"]
 
@@ -79,7 +81,7 @@ def validate_messages_dataset(dataset_file_name, expected_samples):
         assert ds[idx]["messages"][0]["content"] == sample["user"]
         assert ds[idx]["messages"][1]["role"] == "assistant"
         assert ds[idx]["messages"][1]["content"] == sample["assistant"]
-        assert ds[idx]["metadata"] == json.dumps({"system": _SYS_PROMPT})
+        assert ds[idx]["metadata"] == json.dumps({"system": TEST_SYS_PROMPT})
 
 
 def validate_skill_leaf_node_dataset(dataset_file_name):
@@ -123,7 +125,7 @@ def validate_recipe(recipe_file_name):
         assert len(yaml_contents["datasets"]) == 1
         assert yaml_contents["datasets"][0]["path"].endswith(".jsonl")
         assert "sampling_size" in yaml_contents["datasets"][0]
-        assert yaml_contents["metadata"]["sys_prompt"] == _SYS_PROMPT
+        assert yaml_contents["metadata"]["sys_prompt"] == TEST_SYS_PROMPT
 
 
 def validate_mixed_dataset(dataset_file_name):
@@ -318,6 +320,7 @@ class TestGenerateCompositionalData(unittest.TestCase):
                 taxonomy_base=TEST_TAXONOMY_BASE,
                 output_dir=self.tmp_path,
                 pipeline="simple",
+                system_prompt=TEST_SYS_PROMPT,
             )
 
         for name in ["test_*.jsonl", "train_*.jsonl", "messages_*.jsonl"]:
@@ -396,6 +399,7 @@ class TestGenerateKnowledgeData(unittest.TestCase):
                 chunk_word_count=1000,
                 server_ctx_size=4096,
                 pipeline="simple",
+                system_prompt=TEST_SYS_PROMPT,
             )
 
         for name in ["test_*.jsonl", "train_*.jsonl", "messages_*.jsonl"]:
@@ -493,6 +497,7 @@ class TestGenerateEmptyDataset(unittest.TestCase):
                 chunk_word_count=1000,
                 server_ctx_size=4096,
                 pipeline="simple",
+                system_prompt=TEST_SYS_PROMPT,
             )
         mocked_logger.warning.assert_called()
         assert re.search(
