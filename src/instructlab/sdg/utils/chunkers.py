@@ -10,8 +10,15 @@ import re
 
 # Third Party
 from datasets import Dataset
-from docling.datamodel.document import ConvertedDocument, DocumentConversionInput
-from docling.document_converter import ConversionStatus, DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.document import ConversionResult
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import (
+    ConversionStatus,
+    DocumentConverter,
+    PdfFormatOption,
+)
+from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
 from transformers import AutoTokenizer
@@ -210,10 +217,14 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         if self.document_paths == []:
             return []
 
-        model_artifacts_path = DocumentConverter.download_models_hf()
-        converter = DocumentConverter(artifacts_path=model_artifacts_path)
-        inputs = DocumentConversionInput.from_paths(self.filepaths)
-        parsed_documents = converter.convert(inputs)
+        model_artifacts_path = StandardPdfPipeline.download_models_hf()
+        pipeline_options = PdfPipelineOptions(artifacts_path=model_artifacts_path)
+        converter = DocumentConverter(
+            format_options={
+                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
+            }
+        )
+        parsed_documents = converter.convert_all(self.filepaths)
 
         docling_artifacts_path = self.export_documents(parsed_documents)
 
@@ -539,7 +550,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
             document_chunks.append("\n\n".join(current_buffer))
         return document_chunks
 
-    def export_documents(self, converted_docs: Iterable[ConvertedDocument]):
+    def export_documents(self, converted_docs: Iterable[ConversionResult]):
         """Write converted documents to json files
 
         Check for successful conversions and write those to the docling artifacts directory.
@@ -559,11 +570,11 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
 
                 # Export Deep Search document JSON format:
                 with (docling_artifacts_path / f"{doc_filename}.json").open("w") as fp:
-                    fp.write(json.dumps(doc.render_as_dict()))
+                    fp.write(json.dumps(doc.legacy_document.export_to_dict()))
 
                 # Export Markdown format:
                 with (docling_artifacts_path / f"{doc_filename}.md").open("w") as fp:
-                    fp.write(doc.render_as_markdown())
+                    fp.write(doc.legacy_document.export_to_markdown())
             else:
                 logger.info(f"Document {doc.input.file} failed to convert.")
                 failure_count += 1

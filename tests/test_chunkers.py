@@ -5,9 +5,6 @@ from pathlib import Path
 import tempfile
 
 # Third Party
-from docling.datamodel.base_models import PipelineOptions
-from docling.datamodel.document import ConvertedDocument, DocumentConversionInput
-from docling.document_converter import ConversionStatus, DocumentConverter
 import pytest
 
 # First Party
