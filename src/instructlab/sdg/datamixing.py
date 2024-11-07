@@ -362,17 +362,24 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
     return ds
 
 
-def _conv_pretrain(rec):
+def _conv_pretrain(rec, use_legacy_pretraining_format: bool):
     """
     Convert a messages dataset that contains only user/assistant entries per
     message (and in that order) to a pretraining message used downstream by
     the training pipeline. `_generate_knowledge_qa_dataset` creates the type
     of dataset expected here.
     """
+    if use_legacy_pretraining_format:
+        user = "<|user|>"
+        assistant = "<|assistant|>"
+    else:
+        user = "<|start_of_role|>user<|end_of_role|>"
+        assistant = "<|start_of_role|>assistant<|end_of_role|>"
+
     rec["messages"] = [
         {
             "role": "pretraining",
-            "content": f"<|user|>\n{rec['messages'][0]['content']}\n<|assistant|>\n{rec['messages'][1]['content']}",
+            "content": f"{user}\n{rec['messages'][0]['content']}\n{assistant}\n{rec['messages'][1]['content']}",
         }
     ]
     return rec
@@ -461,7 +468,9 @@ def _create_phase10_ds(
 
 
 def _create_phase07_ds(
-    generated_dataset: Dataset, auxiliary_inst: Optional[Dict[str, List[str]]]
+    generated_dataset: Dataset,
+    auxiliary_inst: Optional[Dict[str, List[str]]],
+    use_legacy_pretraining_format: bool,
 ):
     """
     Create a dataset for Phase 0.7 of downstream training.
@@ -474,11 +483,15 @@ def _create_phase07_ds(
     knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=False
     )
-    knowledge_ds = knowledge_ds.map(_conv_pretrain)
+    knowledge_ds = knowledge_ds.map(
+        lambda rec: _conv_pretrain(rec, use_legacy_pretraining_format)
+    )
 
     auxiliary_dataset = _create_auxiliary_dataset(generated_dataset, auxiliary_inst)
     if auxiliary_dataset is not None:
-        auxiliary_dataset = auxiliary_dataset.map(_conv_pretrain)
+        auxiliary_dataset = auxiliary_dataset.map(
+            lambda rec: _conv_pretrain(rec, use_legacy_pretraining_format)
+        )
         phase07 = concatenate_datasets([knowledge_ds, auxiliary_dataset])
     else:
         phase07 = knowledge_ds
@@ -567,10 +580,16 @@ class DataMixer:
         leaf_node_data.to_json(output_file, orient="records", lines=True)
         recipe.add_dataset(output_file_leaf_node, sampling_size)
 
-    def collect(self, leaf_node_path, new_generated_data, is_knowledge):
+    def collect(
+        self,
+        leaf_node_path,
+        new_generated_data,
+        is_knowledge,
+        use_legacy_pretraining_format,
+    ):
         if is_knowledge:
             knowledge_phase_data = _create_phase07_ds(
-                new_generated_data, self.auxiliary_inst
+                new_generated_data, self.auxiliary_inst, use_legacy_pretraining_format
             )
             output_file_leaf_knowledge = (
                 f"node_datasets_{self.date_suffix}/{leaf_node_path}_p07.jsonl"
