@@ -2,14 +2,15 @@
 
 # Standard
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 import glob
 import logging
 import os
 import re
-import tempfile
 
 # Third Party
+from datasets import Dataset
+from docling_parse.docling_parse import pdf_parser  # pylint: disable=no-name-in-module
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -21,7 +22,10 @@ import gitdb
 import yaml
 
 # Local
-from . import chunking
+from .chunkers import DocumentChunker
+
+# Initialize the pdf parser
+PDFParser = pdf_parser()
 
 logger = logging.getLogger(__name__)
 
@@ -106,52 +110,144 @@ def _get_taxonomy(repo="taxonomy"):
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
-) -> List[str]:
+    document_output_dir: Path = None,
+) -> Tuple[List[str], List[Path]]:
     """
-    Retrieve the content of files from a Git repository.
+    Retrieve the content of files (Markdown and PDF) from a Git repository.
 
     Args:
         source (dict): Source info containing repository URL, commit hash, and list of file patterns.
+        skip_checkout (bool, optional): If True, skips checking out the specific commit. Defaults to False.
+        document_output_dir (Path, optional): Directory to clone the repository into. Defaults to current directory.
 
     Returns:
-         List[str]: List of document contents.
-    """ ""
+        Tuple[List[str], List[Path]]:
+            - List of document contents (Markdown as text and PDFs as extracted text).
+            - List of corresponding file paths.
+
+    Raises:
+        SystemExit: If no valid documents are found.
+        OSError, GitCommandError, FileNotFoundError: For errors during Git operations or file access.
+    """
     repo_url = source.get("repo")
     commit_hash = source.get("commit")
     file_patterns = source.get("patterns", [])
-    with tempfile.TemporaryDirectory() as temp_dir:
-        try:
-            repo = git.Repo.clone_from(repo_url, temp_dir)
-            if not skip_checkout:
-                repo.git.checkout(commit_hash)
 
-            file_contents = []
+    try:  # pylint: disable=too-many-nested-blocks
+        repo = git.Repo.clone_from(repo_url, document_output_dir)
 
-            logger.debug("Processing files...")
-            for pattern in file_patterns:
-                for file_path in glob.glob(os.path.join(repo.working_dir, pattern)):
-                    if os.path.isfile(file_path) and file_path.endswith(".md"):
-                        with open(file_path, "r", encoding="utf-8") as file:
-                            file_contents.append(file.read())
+        if not skip_checkout and commit_hash:
+            repo.git.checkout(commit_hash)
 
-            if file_contents:
-                return file_contents
-            raise SystemExit("Couldn't find knowledge documents")
-        except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
-            raise e
+        file_contents = []
+        filepaths = []
+
+        logger.info("Processing files...")
+        for pattern in file_patterns:
+            # Use glob to find files matching the pattern
+            matched_files = glob.glob(
+                os.path.join(repo.working_dir, pattern), recursive=True
+            )
+            logger.info(f"Pattern '{pattern}' matched {len(matched_files)} files.")
+
+            for file_path in matched_files:
+                if os.path.isfile(file_path):
+                    logger.info(f"Processing file: {file_path}")
+                    try:
+                        if file_path.lower().endswith(".md"):
+                            # Process Markdown files
+                            with open(file_path, "r", encoding="utf-8") as file:
+                                content = file.read()
+                                file_contents.append(content)
+                                filepaths.append(Path(file_path))
+                                logger.info(
+                                    f"Appended Markdown content from {file_path}"
+                                )
+
+                        elif file_path.lower().endswith(".pdf"):
+                            # Process PDF files using docling_parse's pdf_parser
+                            doc_key = f"key_{os.path.basename(file_path)}"  # Unique document key
+                            logger.info(f"Loading PDF document from {file_path}")
+
+                            success = PDFParser.load_document(doc_key, file_path)
+                            if not success:
+                                logger.warning(
+                                    f"Failed to load PDF document: {file_path}"
+                                )
+                                continue
+
+                            num_pages = PDFParser.number_of_pages(doc_key)
+                            logger.info(f"PDF '{file_path}' has {num_pages} pages.")
+
+                            pdf_text = ""
+
+                            for page in range(num_pages):
+                                try:
+                                    json_doc = PDFParser.parse_pdf_from_key_on_page(
+                                        doc_key, page
+                                    )
+                                    if "pages" not in json_doc or not json_doc["pages"]:
+                                        logger.warning(
+                                            f"Page {page + 1} could not be parsed in '{file_path}'"
+                                        )
+                                        continue
+
+                                    json_page = json_doc["pages"][0]
+
+                                    # Extract text from cells
+                                    for cell in json_page.get("cells", []):
+                                        text = cell.get("content", {}).get(
+                                            "rnormalized", ""
+                                        )
+                                        if text.strip():  # Only append non-empty text
+                                            pdf_text += text.strip() + "\n"
+                                except Exception as page_error:  # pylint: disable=broad-exception-caught
+                                    logger.warning(
+                                        f"Error parsing page {page + 1} of '{file_path}': {page_error}"
+                                    )
+                                    continue
+
+                            if pdf_text:
+                                file_contents.append(pdf_text)
+                                filepaths.append(Path(file_path))
+
+                            # Unload the document to free memory
+                            PDFParser.unload_document(doc_key)
+                            logger.info(f"Unloaded PDF document: {file_path}")
+
+                        else:
+                            logger.info(f"Skipping unsupported file type: {file_path}")
+                    except Exception as file_error:  # pylint: disable=broad-exception-caught
+                        logger.error(
+                            f"Error processing file '{file_path}': {file_error}"
+                        )
+                        continue
+                else:
+                    logger.info(f"Skipping non-file path: {file_path}")
+
+        if file_contents:
+            return file_contents, filepaths
+        raise SystemExit("Couldn't find knowledge documents")
+
+    except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
+        logger.error("Error retrieving documents: %s", str(e))
+        raise e
 
 
-# pylint: disable=broad-exception-caught
-def _read_taxonomy_file(file_path: str | Path, yamllint_config: str | None = None):
+def _read_taxonomy_file(
+    file_path: str | Path,
+    yamllint_config: str | None = None,
+    document_output_dir: Path = Path(),
+):
     seed_instruction_data = []
 
-    parser = TaxonomyParser(
+    taxonomy_parser = TaxonomyParser(
         schema_version=0,  # Use version value in yaml
         message_format=TaxonomyMessageFormat.LOGGING,  # Report warnings and errors to the logger
         yamllint_config=yamllint_config,
         yamllint_strict=True,  # Report yamllint warnings as errors
     )
-    taxonomy = parser.parse(file_path)
+    taxonomy = taxonomy_parser.parse(file_path)
 
     if taxonomy.warnings or taxonomy.errors:
         return seed_instruction_data, taxonomy.warnings, taxonomy.errors
@@ -163,8 +259,11 @@ def _read_taxonomy_file(file_path: str | Path, yamllint_config: str | None = Non
         task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
+        document_contents, doc_filepaths = None, None
         if documents:
-            documents = _get_documents(source=documents)
+            document_contents, doc_filepaths = _get_documents(
+                source=documents, document_output_dir=document_output_dir
+            )
             logger.debug("Content from git repo fetched")
 
         for seed_example in contents.get("seed_examples"):
@@ -176,7 +275,8 @@ def _read_taxonomy_file(file_path: str | Path, yamllint_config: str | None = Non
                         "questions_and_answers": question_answer_list,
                         "context": context,
                         "taxonomy_path": tax_path,
-                        "document": documents,
+                        "documents": document_contents,
+                        "filepaths": doc_filepaths,
                         "domain": domain,
                         "document_outline": contents.get("document_outline"),
                     }
@@ -203,7 +303,10 @@ def _read_taxonomy_file(file_path: str | Path, yamllint_config: str | None = Non
 
 
 def read_taxonomy(
-    taxonomy: str | Path, taxonomy_base: str, yaml_rules: str | None = None
+    taxonomy: str | Path,
+    taxonomy_base: str,
+    yaml_rules: str | None = None,
+    document_output_dir: Path | None = None,
 ):
     yamllint_config = None  # If no custom rules file, use default config
     if yaml_rules is not None:  # user attempted to pass custom rules file
@@ -218,7 +321,7 @@ def read_taxonomy(
     is_file = os.path.isfile(taxonomy)
     if is_file:  # taxonomy is file
         seed_instruction_data, warnings, errors = _read_taxonomy_file(
-            taxonomy, yamllint_config
+            taxonomy, yamllint_config, document_output_dir
         )
         if warnings:
             logger.warning(
@@ -241,7 +344,9 @@ def read_taxonomy(
                 logger.debug(f"* {e}")
         for f in taxonomy_files:
             file_path = os.path.join(taxonomy, f)
-            data, warnings, errors = _read_taxonomy_file(file_path, yamllint_config)
+            data, warnings, errors = _read_taxonomy_file(
+                file_path, yamllint_config, document_output_dir
+            )
             total_warnings += warnings
             total_errors += errors
             if data:
@@ -257,8 +362,12 @@ def read_taxonomy(
     return seed_instruction_data
 
 
-def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules):
-    seed_instruction_data = read_taxonomy(taxonomy, taxonomy_base, yaml_rules)
+def read_taxonomy_leaf_nodes(
+    taxonomy, taxonomy_base, yaml_rules, document_output_dir=None
+):
+    seed_instruction_data = read_taxonomy(
+        taxonomy, taxonomy_base, yaml_rules, document_output_dir
+    )
 
     # Transform into a more convenient format to feed into our updated SDG library
     leaf_nodes = {}
@@ -270,43 +379,53 @@ def read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules):
     return leaf_nodes
 
 
-def _knowledge_leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count):
-    samples = []
-    # document is the same for the whole leaf node
-    chunks = (
-        chunking.chunk_document(
-            documents=leaf_node[0]["document"],
-            server_ctx_size=server_ctx_size,
-            chunk_word_count=chunk_word_count,
-        )
-        if leaf_node[0].get("document")
-        else []
-    )
+def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
+    chunked_dataset = []
 
     # domain is the same for the whole leaf node
     domain = leaf_node[0].get("domain")
-
     for chunk in chunks:
-        # pylint: disable=consider-using-enumerate
         for icl_ in leaf_node:
-            icl_query = {
-                f"icl_query_{idx+1}": val["question"]
-                for idx, val in enumerate(icl_["questions_and_answers"])
-            }
-            icl_resp = {
-                f"icl_response_{idx+1}": val["answer"]
-                for idx, val in enumerate(icl_["questions_and_answers"])
-            }
-            samples_row = {
-                "icl_document": icl_["context"],
+            record = {
                 "document": chunk,
-                "document_outline": icl_["document_outline"],
+                "icl_document": icl_.get("context", ""),
+                "document_outline": icl_.get("document_outline", ""),
                 "domain": domain,
             }
-            samples_row.update(icl_query)
-            samples_row.update(icl_resp)
-            samples.append(samples_row)
 
+            qna_pairs = icl_.get("questions_and_answers", [])
+            for i, qna in enumerate(qna_pairs):
+                record.update(
+                    {
+                        f"icl_query_{i+1}": qna.get("question", ""),
+                        f"icl_response_{i+1}": qna.get("answer", ""),
+                    }
+                )
+
+            chunked_dataset.append(record)
+
+    return Dataset.from_list(chunked_dataset)
+
+
+def _knowledge_leaf_node_to_samples(
+    leaf_node,
+    taxonomy_path,
+    server_ctx_size,
+    chunk_word_count,
+    document_output_dir,
+    model_name,
+):
+    chunker = DocumentChunker(
+        leaf_node=leaf_node,
+        taxonomy_path=taxonomy_path,
+        output_dir=document_output_dir,
+        server_ctx_size=server_ctx_size,
+        chunk_word_count=chunk_word_count,
+        tokenizer_model_name=model_name,
+    )
+    chunks = chunker.chunk_documents()
+
+    samples = map_chunks_to_icls(chunks, leaf_node)
     return samples
 
 
@@ -322,14 +441,26 @@ def _skill_leaf_node_to_samples(leaf_node):
         samples[-1]["seed_question"] = leaf_node[i]["instruction"]
         samples[-1]["seed_response"] = leaf_node[i]["output"]
 
-    return samples
+    return Dataset.from_list(samples)
 
 
-def leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count):
+def leaf_node_to_samples(
+    leaf_node,
+    taxonomy_path,
+    server_ctx_size,
+    chunk_word_count,
+    document_output_dir,
+    model_name,
+):
     if not leaf_node:
         return []
-    if leaf_node[0].get("document"):
+    if leaf_node[0].get("documents"):
         return _knowledge_leaf_node_to_samples(
-            leaf_node, server_ctx_size, chunk_word_count
+            leaf_node,
+            taxonomy_path,
+            server_ctx_size,
+            chunk_word_count,
+            document_output_dir,
+            model_name,
         )
     return _skill_leaf_node_to_samples(leaf_node)

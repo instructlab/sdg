@@ -13,7 +13,6 @@ import time
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
-from datasets import Dataset
 from xdg_base_dirs import xdg_data_dirs, xdg_data_home
 import openai
 
@@ -268,7 +267,7 @@ def generate_data(
     model_name: Optional[str] = None,
     num_cpus: Optional[int] = None,
     num_instructions_to_generate: Optional[int] = 30,
-    taxonomy: Optional[str] = None,
+    taxonomy: Optional[str] = None,  # TODO rename to taxonomy_path to match config
     taxonomy_base: Optional[str] = None,
     output_dir: Optional[str] = None,
     # TODO - not used and should be removed from the CLI
@@ -309,12 +308,16 @@ def generate_data(
     if not (taxonomy and os.path.exists(taxonomy)):
         raise GenerateException(f"Error: taxonomy ({taxonomy}) does not exist.")
 
-    leaf_nodes = read_taxonomy_leaf_nodes(taxonomy, taxonomy_base, yaml_rules)
+    date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
+    document_output_dir = Path(output_dir) / f"documents-{date_suffix}"
+
+    leaf_nodes = read_taxonomy_leaf_nodes(
+        taxonomy, taxonomy_base, yaml_rules, document_output_dir
+    )
     if not leaf_nodes:
         raise GenerateException("Error: No new leaf nodes found in the taxonomy.")
 
     name = Path(model_name).stem  # Just in case it is a file path
-    date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
     output_file_messages = f"messages_{name}_{date_suffix}.jsonl"
     output_file_test = f"test_{name}_{date_suffix}.jsonl"
     output_file_train = f"train_{name}_{date_suffix}.jsonl"
@@ -362,25 +365,31 @@ def generate_data(
     for leaf_node in leaf_nodes.values():
         is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
-        samples = leaf_node_to_samples(leaf_node, server_ctx_size, chunk_word_count)
+        samples = leaf_node_to_samples(
+            leaf_node,
+            taxonomy,
+            server_ctx_size,
+            chunk_word_count,
+            document_output_dir,
+            model_name,
+        )
 
         if not samples:
             raise GenerateException("Error: No samples found in leaf node.")
 
-        if samples[0].get("document"):
+        if "document" in samples.column_names:
             pipe = knowledge_pipe
             is_knowledge = True
 
-        elif samples[0].get("seed_context"):
+        elif "seed_context" in samples.column_names:
             pipe = grounded_skills_pipe
 
         else:
             pipe = freeform_skills_pipe
 
         logger.debug("Samples: %s", samples)
-        ds = Dataset.from_list(samples)
-        logger.debug("Dataset: %s", ds)
-        new_generated_data = pipe.generate(ds, leaf_node_path)
+
+        new_generated_data = pipe.generate(samples, leaf_node_path)
         if len(new_generated_data) == 0:
             empty_sdg_leaf_nodes.append(leaf_node_path)
             logger.warning("Empty dataset for qna node: %s", leaf_node_path)
@@ -398,7 +407,7 @@ def generate_data(
             generate_eval_task_data(
                 mmlu_bench_pipe,
                 leaf_node_path,
-                ds,
+                samples,
                 output_dir,
                 date_suffix,
             )

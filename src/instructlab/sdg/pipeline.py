@@ -195,7 +195,6 @@ class Pipeline:
                 drop_duplicates_cols = block_prop.get("drop_duplicates", False)
                 block = block_type(self.ctx, self, block_name, **block_config)
                 logger.info("Running block: %s", block_name)
-                logger.info(dataset)
 
                 # Execute the block and wrap errors with the block name/type
                 dataset = block.generate(dataset)
