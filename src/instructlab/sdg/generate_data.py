@@ -35,7 +35,7 @@ from instructlab.sdg.utils.taxonomy import (
 
 logger = logging.getLogger(__name__)
 
-_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
+_SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
 
 
 def _unescape(s):
