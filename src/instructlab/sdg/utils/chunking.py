@@ -6,7 +6,11 @@ import logging
 import re
 
 # Third Party
-from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+from transformers import AutoTokenizer
+from instructlab.sdg.utils.models import get_model_family
+
+# Local
+from instructlab.sdg.utils import GenerateException
 
 _DEFAULT_CHUNK_OVERLAP = 100
 
@@ -21,13 +25,14 @@ def _num_chars_from_tokens(num_tokens) -> int:
     return int(num_tokens * 4)  # 1 token ~ 4 English character
 
 
-def chunk_document(documents: List, server_ctx_size, chunk_word_count) -> List[str]:
+def chunk_document(documents: List, server_ctx_size, chunk_word_count, model_path: str) -> List[str]:
     """
     Iterates over the documents and splits them into chunks based on the word count provided by the user.
     Args:
         documents (list): List of documents retrieved from git (can also consist of a single document).
         server_ctx_size (int): Context window size of server.
         chunk_word_count (int): Maximum number of words to chunk a document.
+        model_path (str): Path to the downloaded teacher model.
     Returns:
          List[str]: List of chunked documents.
     """
@@ -52,19 +57,32 @@ def chunk_document(documents: List, server_ctx_size, chunk_word_count) -> List[s
                 )
             )
         )
+
+    # Load the tokenizer from the local model
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
+    except Exception as e:
+        raise GenerateException(f"Failed to load tokenizer from {model_path}: {str(e)}")
+
+    # Determine the model family
+    model_family = get_model_family(None, model_path)
     # Placeholder for params
     content = []
-    chunk_size = _num_chars_from_tokens(no_tokens_per_doc)
+    chunk_size = no_tokens_per_doc * 4  # Approximate character count
     chunk_overlap = _DEFAULT_CHUNK_OVERLAP
 
     # Using Markdown as default, document-specific chunking will be implemented in separate pr.
-    text_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.MARKDOWN,
+    text_splitter = RecursiveCharacterTextSplitter(
+        separators=["\n\n", "\n", " ", ""],
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
+        length_function=lambda x: len(tokenizer.encode(x))
     )
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
 
-    # Determine file type for heuristics, default with markdown
+
+
     for docs in documents:
         # Use regex to remove unnecessary dashes in front of pipe characters in a markdown table.
         docs = re.sub(r"-{2,}\|", "-|", docs)
