@@ -67,3 +67,22 @@ def test_chunker_factory_unsupported_filetype(documents_dir):
                 output_dir=temp_dir,
                 tokenizer_model_name="instructlab/merlinite-7b-lab",
             )
+
+
+def test_chunker_factory_empty_filetype(documents_dir):
+    """Test that the DocumentChunker factory class fails when provided no document"""
+    leaf_node = [
+        {
+            "documents": [],
+            "taxonomy_path": "",
+            "filepaths": [],
+        }
+    ]
+    with pytest.raises(ValueError):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            _ = DocumentChunker(
+                leaf_node=leaf_node,
+                taxonomy_path=documents_dir,
+                output_dir=temp_dir,
+                tokenizer_model_name="instructlab/merlinite-7b-lab",
+            )
