@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-import tempfile
 from pathlib import Path
+import tempfile
 
 # Third Party
 from docling.datamodel.base_models import PipelineOptions
@@ -44,16 +44,12 @@ def test_chunker_factory(filepaths, chunker_type, documents_dir):
         }
     ]
     with tempfile.TemporaryDirectory() as temp_dir:
-<<<<<<< HEAD
-        chunker = DocumentChunker(leaf_node=leaf_node, taxonomy_path=documents_dir, output_dir=temp_dir, tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1")
-=======
         chunker = DocumentChunker(
             leaf_node=leaf_node,
             taxonomy_path=documents_dir,
             output_dir=temp_dir,
             tokenizer_model_name="instructlab/merlinite-7b-lab",
         )
->>>>>>> eaf7434 (wip)
         assert isinstance(chunker, chunker_type)
 
 
@@ -68,13 +64,9 @@ def test_chunker_factory_unsupported_filetype(documents_dir):
     ]
     with pytest.raises(ValueError):
         with tempfile.TemporaryDirectory() as temp_dir:
-<<<<<<< HEAD
-            _ = DocumentChunker(leaf_node=leaf_node, taxonomy_path=documents_dir, output_dir=temp_dir, tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1")
-=======
             _ = DocumentChunker(
                 leaf_node=leaf_node,
                 taxonomy_path=documents_dir,
                 output_dir=temp_dir,
                 tokenizer_model_name="instructlab/merlinite-7b-lab",
             )
->>>>>>> eaf7434 (wip)

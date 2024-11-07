@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Tuple, Optional
+from typing import DefaultDict, Iterable, List, Optional, Tuple
 import json
 import logging
 import re
@@ -50,7 +50,7 @@ class DocumentChunker:
         cls,
         leaf_node,
         taxonomy_path,
-        output_dir: Optional[Path],
+        output_dir: Path,
         server_ctx_size=4096,
         chunk_word_count=1024,
         tokenizer_model_name: str | None = None,
@@ -238,7 +238,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                 raise FileNotFoundError(f"{path} does not exist.")
         return path
 
-    def _load_qna_yaml(self, qna_yaml_path: Path | None) -> dict:
+    def _load_qna_yaml(self, qna_yaml_path: Optional[Path]) -> dict:
         """
         Load the qna YAML file.
         Args:
@@ -503,7 +503,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                         and len(current_buffer) > 1
                     ):
                         chunk_text = "\n\n".join(current_buffer[:-1])
-                        print(
+                        logger.debug(
                             f"Current chunk size {self.get_token_count(chunk_text, tokenizer)} and max is {max_token_per_chunk}"
                         )
 
@@ -513,8 +513,8 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                             self.get_token_count(current_buffer[-1], tokenizer)
                             >= max_token_per_chunk
                         ):
-                            print(
-                                f"This is too big a document to be left in the current buffer {self.get_token_count(current_buffer[-1], tokenizer)}"
+                            logger.debug(
+                                f"The following text was dropped from the document because it was too long to fit into a single context for synthetic data generation: {current_buffer[-1]}"
                             )
                             document_chunks.append(current_buffer[-1])
                             current_buffer = []
