@@ -10,7 +10,9 @@ import re
 
 # Third Party
 from datasets import Dataset
-from docling_parse.docling_parse import pdf_parser  # pylint: disable=no-name-in-module
+
+# pylint: disable=no-name-in-module
+from docling_parse.docling_parse import pdf_parser_v1
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -25,7 +27,7 @@ import yaml
 from .chunkers import DocumentChunker
 
 # Initialize the pdf parser
-PDFParser = pdf_parser()
+PDFParser = pdf_parser_v1()
 
 logger = logging.getLogger(__name__)
 
@@ -165,7 +167,7 @@ def _get_documents(
                                 )
 
                         elif file_path.lower().endswith(".pdf"):
-                            # Process PDF files using docling_parse's pdf_parser
+                            # Process PDF files using docling_parse's pdf_parser_v1
                             doc_key = f"key_{os.path.basename(file_path)}"  # Unique document key
                             logger.info(f"Loading PDF document from {file_path}")
 
