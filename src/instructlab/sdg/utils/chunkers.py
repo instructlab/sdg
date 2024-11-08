@@ -95,6 +95,8 @@ class DocumentChunker:
         doc_dict = cls._split_docs_by_filetype(documents, filepaths)
         if len(doc_dict.keys()) > 1:
             raise ValueError("Received multiple document types")
+        if len(doc_dict.keys()) < 1:
+            raise ValueError("Received no document types")
 
         if FileTypes.MD in doc_dict:
             doc_contents = [d for d, _ in doc_dict[FileTypes.MD]]
