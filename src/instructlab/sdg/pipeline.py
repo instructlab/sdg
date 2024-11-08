@@ -48,6 +48,7 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
         central executor pool.
     dataset_num_procs: The number of processes to use when performing parallel
        map operations on individual datasets.
+    max_num_tokens: the maximum number of tokens to generate per sample.
     """
 
     # The default batch size of 8 has been determined as a good default for
@@ -65,6 +66,7 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     dataset_num_procs: Optional[int] = DEFAULT_DATASET_NUM_PROCS
     checkpoint_dir: Optional[str] = None
     save_freq: Optional[int] = 1
+    max_num_tokens: Optional[int] = llmblock.DEFAULT_MAX_NUM_TOKENS
     batch_size: int = DEFAULT_BATCH_SIZE
     batch_num_workers: Optional[int] = None
 
@@ -195,7 +197,6 @@ class Pipeline:
                 drop_duplicates_cols = block_prop.get("drop_duplicates", False)
                 block = block_type(self.ctx, self, block_name, **block_config)
                 logger.info("Running block: %s", block_name)
-
                 # Execute the block and wrap errors with the block name/type
                 dataset = block.generate(dataset)
             except Exception as err:
