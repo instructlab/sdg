@@ -7,19 +7,8 @@ from instructlab.sdg.utils.chunkers import DocumentChunker
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
-# TODO: Apparently we don't really need any contents in the qna.yaml?
-knowledge_qna = """
-version: 3
-domain: astronomy
-"""
-
 
 def test_chunk_pdf(tmp_path):
-    qna_dir = os.path.join(tmp_path, "knowledge")
-    os.makedirs(qna_dir)
-    with open(os.path.join(qna_dir, "qna.yaml"), "w", encoding="utf-8") as f:
-        f.write(knowledge_qna)
-
     leaf_node = [
         {
             "documents": ["Lorem ipsum"],
@@ -44,11 +33,6 @@ def test_chunk_pdf(tmp_path):
 
 
 def test_chunk_md(tmp_path):
-    qna_dir = os.path.join(tmp_path, "knowledge")
-    os.makedirs(qna_dir)
-    with open(os.path.join(qna_dir, "qna.yaml"), "w", encoding="utf-8") as f:
-        f.write(knowledge_qna)
-
     markdown_path = Path(os.path.join(TEST_DATA_DIR, "phoenix.md"))
     leaf_node = [
         {
