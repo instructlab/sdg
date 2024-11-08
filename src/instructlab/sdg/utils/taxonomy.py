@@ -416,6 +416,7 @@ def _knowledge_leaf_node_to_samples(
     chunk_word_count,
     document_output_dir,
     model_name,
+    docling_model_path=None,
 ):
     chunker = DocumentChunker(
         leaf_node=leaf_node,
@@ -424,6 +425,7 @@ def _knowledge_leaf_node_to_samples(
         server_ctx_size=server_ctx_size,
         chunk_word_count=chunk_word_count,
         tokenizer_model_name=model_name,
+        docling_model_path=docling_model_path
     )
     chunks = chunker.chunk_documents()
 
@@ -453,6 +455,7 @@ def leaf_node_to_samples(
     chunk_word_count,
     document_output_dir,
     model_name,
+    docling_model_path=None,
 ):
     if not leaf_node:
         return []
@@ -464,5 +467,6 @@ def leaf_node_to_samples(
             chunk_word_count,
             document_output_dir,
             model_name,
+            docling_model_path=docling_model_path,
         )
     return _skill_leaf_node_to_samples(leaf_node)
