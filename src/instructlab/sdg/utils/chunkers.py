@@ -18,6 +18,7 @@ from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TesseractOcrOptions,
 )
+from instructlab.model.backends.backends import is_model_gguf, is_model_safetensors
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
 
@@ -220,19 +221,13 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         filepaths,
         output_dir: Path,
         chunk_word_count: int,
-        tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        tokenizer_model_name: str,
         docling_model_path=None,
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
         self.output_dir = self._path_validator(output_dir)
         self.chunk_word_count = chunk_word_count
-        self.tokenizer_model_name = (
-            tokenizer_model_name
-            if tokenizer_model_name is not None
-            else "mistralai/Mixtral-8x7B-Instruct-v0.1"
-        )
-
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
         self.docling_model_path = docling_model_path
 
@@ -365,12 +360,20 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         # Third Party
         from transformers import AutoTokenizer
 
+        model_path = Path(model_name)
         try:
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            logger.info(f"Successfully loaded tokenizer from: {model_name}")
+            if is_model_safetensors(model_path):
+                tokenizer = AutoTokenizer.from_pretrained(model_path)
+            elif is_model_gguf(model_path):
+                tokenizer = AutoTokenizer.from_pretrained(model_path.parent, gguf_file=model_path.name)
+            logger.info(f"Successfully loaded tokenizer from: {model_path}")
             return tokenizer
         except Exception as e:
-            logger.error(f"Failed to load tokenizer from {model_name}: {str(e)}")
+            logger.error(
+                f"Failed to load tokenizer as model was not found at {model_path}."
+                "Please run `ilab model download {model_name} and try again\n"
+                "{str(e)}"
+            )
             raise
 
     def get_token_count(self, text, tokenizer):
