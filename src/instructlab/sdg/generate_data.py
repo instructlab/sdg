@@ -14,6 +14,7 @@ import time
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from xdg_base_dirs import xdg_data_dirs, xdg_data_home
+from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 import openai
 
 # First Party
@@ -40,7 +41,6 @@ from instructlab.sdg.utils.taxonomy import (
 logger = logging.getLogger(__name__)
 
 _SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
-
 
 def _unescape(s):
     return bytes(s, "utf-8").decode("utf-8").strip()
@@ -210,15 +210,28 @@ def _context_init(
         **extra_kwargs,
     )
 
-
 def _sdg_init(ctx, pipeline):
     pipeline_pkg = None
 
     # Search for the pipeline in User and Site data directories
     # then for a package defined pipeline
     # and finally pipelines referenced by absolute path
-    data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
-    data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
+    data_dir = os.path.join(xdg_data_home(), "instructlab", "sdg", "models", "docling")
+    data_dirs = [data_dir]
+    data_dirs.extend(
+        os.path.join(dir, "instructlab", "sdg", "models", "docling") for dir in xdg_data_dirs()
+    )
+
+    # Set `docling_model_path` to consistently use `data_dir`
+    docling_model_path = Path(data_dir)
+    os.makedirs(docling_model_path, exist_ok=True)
+
+    if not os.listdir(docling_model_path):
+        # Download models if directory is empty
+        logger.info("Docling models for chunking not found locally. Downloading from Hugging Face...")
+        StandardPdfPipeline.download_models_hf()
+    else:
+        logger.info(f"Using existing Docling models from: {docling_model_path}")
 
     for d in data_dirs:
         pipeline_path = os.path.join(d, "pipelines", pipeline)
@@ -295,6 +308,7 @@ def generate_data(
     batch_size: Optional[int] = None,
     checkpoint_dir: Optional[str] = None,
     max_num_tokens: Optional[int] = DEFAULT_MAX_NUM_TOKENS,
+    docling_model_path: Optional[str] = None,
 ) -> None:
     """Generate data for training and testing a model.
 
@@ -392,6 +406,7 @@ def generate_data(
             chunk_word_count,
             document_output_dir,
             model_name,
+            docling_model_path=docling_model_path,
         )
 
         if not samples:
