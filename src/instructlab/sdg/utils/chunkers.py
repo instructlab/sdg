@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Optional, Tuple
+from typing import DefaultDict, Iterable, List, Tuple
 import json
 import logging
 import re
@@ -22,7 +22,6 @@ from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
 from transformers import AutoTokenizer
-import yaml
 
 logger = logging.getLogger(__name__)
 _DEFAULT_CHUNK_OVERLAP = 100
@@ -92,7 +91,6 @@ class DocumentChunker:
             )
 
         filepaths = leaf_node[0]["filepaths"]
-        leaf_node_path = Path(leaf_node[0]["taxonomy_path"].replace("->", "/"))
 
         doc_dict = cls._split_docs_by_filetype(documents, filepaths)
         if len(doc_dict.keys()) > 1:
@@ -112,7 +110,6 @@ class DocumentChunker:
             return ContextAwareChunker(
                 doc_paths,
                 filepaths,
-                taxonomy_path / leaf_node_path / "qna.yaml",
                 output_dir,
                 chunk_word_count,
                 tokenizer_model_name,
@@ -187,23 +184,18 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         self,
         document_paths,
         filepaths,
-        leaf_node_path,
         output_dir: Path,
         chunk_word_count: int,
         tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
-        self.leaf_node_path = leaf_node_path
         self.output_dir = self._path_validator(output_dir)
         self.chunk_word_count = chunk_word_count
         self.tokenizer_model_name = (
             tokenizer_model_name
             if tokenizer_model_name is not None
             else "mistralai/Mixtral-8x7B-Instruct-v0.1"
-        )
-        self.qna_yaml = self._load_qna_yaml(
-            self._path_validator(leaf_node_path) if leaf_node_path else None
         )
 
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
@@ -248,19 +240,6 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
             if not path.exists():
                 raise FileNotFoundError(f"{path} does not exist.")
         return path
-
-    def _load_qna_yaml(self, qna_yaml_path: Optional[Path]) -> dict:
-        """
-        Load the qna YAML file.
-        Args:
-            qna_yaml_path (Path): Path to the knowledge qna YAML file.
-        Returns:
-            dict: Dictionary corresponding to knowledge qna YAML file.
-        """
-        if qna_yaml_path:
-            with open(qna_yaml_path, "r", encoding="utf-8") as f:
-                return yaml.safe_load(f)
-        return {}
 
     def _process_parsed_docling_json(self, json_fp: Path) -> Dataset:
         """
