@@ -175,7 +175,7 @@ class LLMBlock(Block):
     def _generate(self, samples) -> list:
         prompts = [self._format_prompt(sample) for sample in samples]
         logger.debug(f"STARTING GENERATION FOR LLMBlock USING PROMPTS: {prompts}")
-        print(self.gen_kwargs)
+        logger.debug(f"Generation arguments: {self.gen_kwargs}")
         if self.server_supports_batched:
             response = self.ctx.client.completions.create(
                 prompt=prompts, **self.gen_kwargs
