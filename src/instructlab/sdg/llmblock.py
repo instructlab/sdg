@@ -9,6 +9,7 @@ import re
 # Third Party
 from datasets import Dataset
 from tqdm import tqdm
+import httpx
 import openai
 
 # Local
@@ -40,16 +41,31 @@ def server_supports_batched(client, model_id: str) -> bool:
     supported = getattr(client, "server_supports_batched", None)
     if supported is not None:
         return supported
-    try:
-        # Make a test call to the server to determine whether it supports
-        # multiple input prompts per request and also the n parameter
-        response = client.completions.create(
-            model=model_id, prompt=["test1", "test2"], max_tokens=1, n=3
-        )
-        # Number outputs should be 2 * 3 = 6
-        supported = len(response.choices) == 6
-    except openai.InternalServerError:
-        supported = False
+    # Start looking for InstructLab's default llama-cpp-python so we
+    # can avoid throwing an assertion error in the server, as
+    # llama-cpp-python does not like us explicitly testing batches
+    if "/v1" in client.base_url.path:
+        try:
+            # The root (without /v1) will have InstructLab's welcome
+            # message
+            http_res = client.get("../", cast_to=httpx.Response)
+            if "Hello from InstructLab" in http_res.text:
+                # The server is llama-cpp-python, so disable batching
+                supported = False
+        except openai.APIStatusError:
+            # The server is not InstructLab's llama-cpp-python
+            pass
+    if supported is None:
+        try:
+            # Make a test call to the server to determine whether it supports
+            # multiple input prompts per request and also the n parameter
+            response = client.completions.create(
+                model=model_id, prompt=["test1", "test2"], max_tokens=1, n=3
+            )
+            # Number outputs should be 2 * 3 = 6
+            supported = len(response.choices) == 6
+        except openai.InternalServerError:
+            supported = False
     client.server_supports_batched = supported
     logger.info(f"LLM server supports batched inputs: {client.server_supports_batched}")
     return supported
