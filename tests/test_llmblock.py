@@ -6,9 +6,11 @@ import unittest
 
 # Third Party
 from datasets import Dataset, Features, Value
+from httpx import URL
+from openai import InternalServerError, NotFoundError, OpenAI
 
 # First Party
-from src.instructlab.sdg.llmblock import LLMBlock
+from src.instructlab.sdg.llmblock import LLMBlock, server_supports_batched
 
 
 class TestLLMBlockModelPrompt(unittest.TestCase):
@@ -103,3 +105,55 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
         )
         num_tokens = block.gen_kwargs["max_tokens"]
         assert num_tokens == 512
+
+    def test_server_supports_batched_llama_cpp(self):
+        resp_text = """{"message":"Hello from InstructLab! Visit us at https://instructlab.ai"}"""
+        mock_client = MagicMock()
+        mock_client.server_supports_batched = None
+        mock_client.base_url = URL("http://localhost:8000/v1")
+        mock_client.get = MagicMock()
+        mock_client.get.return_value = MagicMock()
+        mock_client.get().text = resp_text
+        self.mock_ctx.client = mock_client
+        supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
+        assert not supports_batched
+
+    def test_server_supports_batched_other_llama_cpp(self):
+        resp_text = "another server"
+        mock_client = MagicMock()
+        mock_client.server_supports_batched = None
+        mock_client.base_url = URL("http://localhost:8000/v1")
+        mock_client.get = MagicMock()
+        mock_client.get.return_value = MagicMock()
+        mock_client.get().text = resp_text
+        mock_completion = MagicMock()
+        mock_completion.create = MagicMock()
+        mock_completion.create.side_effect = InternalServerError(
+            "mock error",
+            response=MagicMock(),
+            body=MagicMock(),
+        )
+        mock_client.completions = mock_completion
+        self.mock_ctx.client = mock_client
+        supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
+        assert not supports_batched
+
+    def test_server_supports_batched_vllm(self):
+        mock_client = MagicMock()
+        mock_client.server_supports_batched = None
+        mock_client.base_url = URL("http://localhost:8000/v1")
+        mock_client.get = MagicMock()
+        mock_client.get.side_effect = NotFoundError(
+            "mock error",
+            response=MagicMock(),
+            body=MagicMock(),
+        )
+        mock_completion_resp = MagicMock()
+        mock_completion_resp.choices = ["a", "b", "c", "d", "e", "f"]
+        mock_completion = MagicMock()
+        mock_completion.create = MagicMock()
+        mock_completion.create.return_value = mock_completion_resp
+        mock_client.completions = mock_completion
+        self.mock_ctx.client = mock_client
+        supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
+        assert supports_batched
