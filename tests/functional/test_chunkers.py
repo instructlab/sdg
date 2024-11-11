@@ -5,14 +5,15 @@ import os
 # First Party
 from instructlab.sdg.utils.chunkers import DocumentChunker
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "testdata")
 
 
 def test_chunk_pdf(tmp_path):
+    pdf_path = Path(os.path.join(TEST_DATA_DIR, "sample_documents", "phoenix.pdf"))
     leaf_node = [
         {
             "documents": ["Lorem ipsum"],
-            "filepaths": [Path(os.path.join(TEST_DATA_DIR, "phoenix.pdf"))],
+            "filepaths": [pdf_path],
             "taxonomy_path": "knowledge",
         }
     ]
@@ -33,7 +34,7 @@ def test_chunk_pdf(tmp_path):
 
 
 def test_chunk_md(tmp_path):
-    markdown_path = Path(os.path.join(TEST_DATA_DIR, "phoenix.md"))
+    markdown_path = Path(os.path.join(TEST_DATA_DIR, "sample_documents", "phoenix.md"))
     leaf_node = [
         {
             "documents": [markdown_path.read_text(encoding="utf-8")],
