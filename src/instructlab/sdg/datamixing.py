@@ -608,7 +608,7 @@ class DataMixer:
             )
 
             skills_phase_data = _create_phase10_ds(
-                new_generated_data, self.auxiliary_inst
+                new_generated_data, self.auxiliary_inst, use_legacy_pretraining_format
             )
             output_file_leaf_skills = (
                 f"node_datasets_{self.date_suffix}/{leaf_node_path}_p10.jsonl"
