@@ -451,6 +451,7 @@ def _create_phase10_ds(
         generated_dataset, keep_context_separate=True
     )
     raft_knowledge_ds = _add_extra_contexts_to_samples(knowledge_ds, p=0.4)
+    # Include phase07
     pretraining_knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=False
     ).map(
@@ -458,10 +459,11 @@ def _create_phase10_ds(
     )
 
     auxiliary_dataset = _create_auxiliary_dataset(generated_dataset, auxiliary_inst)
+
     if auxiliary_dataset is not None:
-        phase10 = concatenate_datasets([knowledge_ds, auxiliary_dataset])
+        phase10 = concatenate_datasets([raft_knowledge_ds, pretraining_knowledge_ds, auxiliary_dataset])
     else:
-        phase10 = knowledge_ds
+        phase10 = concatenate_datasets([raft_knowledge_ds, pretraining_knowledge_ds])
     return phase10
 
 
