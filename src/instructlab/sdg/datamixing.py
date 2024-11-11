@@ -445,7 +445,7 @@ def _create_auxiliary_dataset(
 
 
 def _create_phase10_ds(
-    generated_dataset: Dataset, auxiliary_inst: Optional[Dict[str, List[str]]]
+    generated_dataset: Dataset, auxiliary_inst: Optional[Dict[str, List[str]]], use_legacy_pretraining_format: bool,
 ):
     """
     Create a dataset for Phase 1.0 of downstream training.
@@ -457,7 +457,12 @@ def _create_phase10_ds(
     knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=True
     )
-    knowledge_ds = _add_extra_contexts_to_samples(knowledge_ds, p=0.4)
+    raft_knowledge_ds = _add_extra_contexts_to_samples(knowledge_ds, p=0.4)
+    pretraining_knowledge_ds = _generate_knowledge_qa_dataset(
+        generated_dataset, keep_context_separate=False
+    ).map(
+        lambda rec: _conv_pretrain(rec, use_legacy_pretraining_format)
+    )
 
     auxiliary_dataset = _create_auxiliary_dataset(generated_dataset, auxiliary_inst)
     if auxiliary_dataset is not None:
