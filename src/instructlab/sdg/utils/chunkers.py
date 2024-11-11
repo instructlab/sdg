@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Tuple
+from typing import DefaultDict, Iterable, List, Optional, Tuple
 import json
 import logging
 import re
@@ -90,8 +90,8 @@ class DocumentChunker:
         output_dir: Path,
         server_ctx_size=4096,
         chunk_word_count=1024,
-        tokenizer_model_name: str | None = None,
-        docling_model_path: str | None = None,
+        tokenizer_model_name: Optional[str] = None,
+        docling_model_path: Optional[str] = None,
     ):
         """Insantiate the appropriate chunker for the provided document
 
@@ -101,7 +101,7 @@ class DocumentChunker:
             output_dir (Path): directory where artifacts should be stored
             server_ctx_size (int): Context window size of server
             chunk_word_count (int): Maximum number of words to chunk a document
-            tokenizer_model_name (str): name of huggingface model to get
+            tokenizer_model_name (Optional[str]): name of huggingface model to get
                 tokenizer from
         Returns:
             TextSplitChunker | ContextAwareChunker: Object of the appropriate
@@ -221,7 +221,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         filepaths,
         output_dir: Path,
         chunk_word_count: int,
-        tokenizer_model_name: str,
+        tokenizer_model_name: Optional[str],
         docling_model_path=None,
     ):
         self.document_paths = document_paths
@@ -345,7 +345,8 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
 
         return fused_texts
 
-    def create_tokenizer(self, model_name: str):
+    @staticmethod
+    def create_tokenizer(model_name: Optional[str]):
         """
         Create a tokenizer instance from a pre-trained model or a local directory.
 
@@ -359,22 +360,37 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         # pylint: disable=import-outside-toplevel
         # Third Party
         from transformers import AutoTokenizer
+        if model_name is None:
+            raise TypeError("No model path provided")
 
         model_path = Path(model_name)
+        error_info_message = (
+            "Please run ilab model download {download_args} and try again"
+        )
         try:
             if is_model_safetensors(model_path):
                 tokenizer = AutoTokenizer.from_pretrained(model_path)
+                error_info_message = error_info_message.format(
+                    download_args=f"--repository {model_path}"
+                )
             elif is_model_gguf(model_path):
-                tokenizer = AutoTokenizer.from_pretrained(model_path.parent, gguf_file=model_path.name)
+                model_dir, model_filename = model_path.parent, model_path.name
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_dir, gguf_file=model_filename
+                )
+                error_info_message = error_info_message.format(
+                    download_args=f"--repository {model_dir} --filename {model_filename}"
+                )
+            else:
+                raise Exception(f"Received path to invalid model format {model_path}")
             logger.info(f"Successfully loaded tokenizer from: {model_path}")
             return tokenizer
-        except Exception as e:
+
+        except (OSError, ValueError) as e:
             logger.error(
-                f"Failed to load tokenizer as model was not found at {model_path}."
-                "Please run `ilab model download {model_name} and try again\n"
-                "{str(e)}"
+                f"Failed to load tokenizer as model was not found at {model_path}. {error_info_message}"
             )
-            raise
+            raise e
 
     def get_token_count(self, text, tokenizer):
         """
