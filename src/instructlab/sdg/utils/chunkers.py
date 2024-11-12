@@ -213,6 +213,8 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
 
         model_artifacts_path = StandardPdfPipeline.download_models_hf()
         pipeline_options = PdfPipelineOptions(artifacts_path=model_artifacts_path)
+        # Keep OCR models on the CPU instead of GPU
+        pipeline_options.ocr_options.use_gpu = False
         converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
