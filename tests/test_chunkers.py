@@ -2,9 +2,11 @@
 
 # Standard
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 import tempfile
 
 # Third Party
+from docling.datamodel.pipeline_options import EasyOcrOptions, TesseractOcrOptions
 import pytest
 
 # First Party
@@ -13,6 +15,7 @@ from instructlab.sdg.utils.chunkers import (
     DocumentChunker,
     FileTypes,
     TextSplitChunker,
+    resolve_ocr_options,
 )
 
 # Local
@@ -86,3 +89,52 @@ def test_chunker_factory_empty_filetype(documents_dir):
                 output_dir=temp_dir,
                 tokenizer_model_name="instructlab/merlinite-7b-lab",
             )
+
+
+def test_resolve_ocr_options_is_not_none():
+    """
+    Test that resolve_ocr_options does not return None, which means it
+    found a valid OCR library on the machine running this test
+    """
+    ocr_options = resolve_ocr_options()
+    assert ocr_options is not None
+
+
+@patch("instructlab.sdg.utils.chunkers.TesseractOcrModel")
+def test_resolve_ocr_options_prefers_tessserocr(mock_tesseract):
+    """
+    Ensure resolve_ocr_options defaults to tesserocr if we're able
+    to load that library without error.
+    """
+    mock_tesseract.return_value = MagicMock()
+    ocr_options = resolve_ocr_options()
+    assert isinstance(ocr_options, TesseractOcrOptions)
+
+
+@patch("instructlab.sdg.utils.chunkers.TesseractOcrModel")
+def test_resolve_ocr_options_falls_back_to_easyocr(mock_tesseract):
+    """
+    Ensure resolve_ocr_options falls back to easyocr if we cannot
+    load tesserocr.
+    """
+    mock_tesseract.side_effect = ImportError("mock import error")
+    ocr_options = resolve_ocr_options()
+    assert isinstance(ocr_options, EasyOcrOptions)
+
+
+@patch("instructlab.sdg.utils.chunkers.TesseractOcrModel")
+@patch("instructlab.sdg.utils.chunkers.EasyOcrModel")
+@patch("logging.Logger.error")
+def test_resolve_ocr_options_none_found_logs_error(
+    mock_logger, mock_easyocr, mock_tesseract
+):
+    """
+    If we cannot load tesserocr or easyocr, ensure
+    resolve_ocr_options logs an error so that users are aware optical
+    character recognition in PDFs will be disabled.
+    """
+    mock_tesseract.side_effect = ImportError("mock import error")
+    mock_easyocr.side_effect = ImportError("mock import error")
+    ocr_options = resolve_ocr_options()
+    assert ocr_options is None
+    mock_logger.assert_called()

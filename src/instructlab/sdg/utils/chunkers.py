@@ -12,12 +12,19 @@ import re
 from datasets import Dataset
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
-from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.datamodel.pipeline_options import (
+    EasyOcrOptions,
+    OcrOptions,
+    PdfPipelineOptions,
+    TesseractOcrOptions,
+)
 from docling.document_converter import (
     ConversionStatus,
     DocumentConverter,
     PdfFormatOption,
 )
+from docling.models.easyocr_model import EasyOcrModel
+from docling.models.tesseract_ocr_model import TesseractOcrModel
 from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
@@ -33,6 +40,29 @@ def _num_tokens_from_words(num_words) -> int:
 
 def _num_chars_from_tokens(num_tokens) -> int:
     return int(num_tokens * 4)  # 1 token ~ 4 English character
+
+
+def resolve_ocr_options() -> OcrOptions:
+    # First, attempt to use tesserocr
+    try:
+        ocr_options = TesseractOcrOptions()
+        _ = TesseractOcrModel(True, ocr_options)
+        return ocr_options
+    except ImportError:
+        # No tesserocr, so try something else
+        pass
+    try:
+        ocr_options = EasyOcrOptions()
+        # Keep easyocr models on the CPU instead of GPU
+        ocr_options.use_gpu = False
+        _ = EasyOcrModel(True, ocr_options)
+        return ocr_options
+    except ImportError:
+        # no easyocr either, so don't use any OCR
+        logger.error(
+            "Failed to load Tesseract and EasyOCR - disabling optical character recognition in PDF documents"
+        )
+        return None
 
 
 class FileTypes(Enum):
@@ -212,9 +242,14 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
             return []
 
         model_artifacts_path = StandardPdfPipeline.download_models_hf()
-        pipeline_options = PdfPipelineOptions(artifacts_path=model_artifacts_path)
-        # Keep OCR models on the CPU instead of GPU
-        pipeline_options.ocr_options.use_gpu = False
+        pipeline_options = PdfPipelineOptions(
+            artifacts_path=model_artifacts_path,
+            do_ocr=False,
+        )
+        ocr_options = resolve_ocr_options()
+        if ocr_options is not None:
+            pipeline_options.do_ocr = True
+            pipeline_options.ocr_options = ocr_options
         converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
