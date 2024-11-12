@@ -145,7 +145,7 @@ jobs:
         working-directory: ./instructlab
         run: |
           . venv/bin/activate
-          ./scripts/e2e-custom.sh -msq
+          ./scripts/e2e-custom.sh -mSsq
 
   stop-runner:
     name: Stop external EC2 runner
