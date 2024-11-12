@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import tempfile
@@ -21,10 +22,16 @@ from instructlab.sdg.utils.chunkers import (
 # Local
 from .testdata import testdata
 
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 
 @pytest.fixture
 def documents_dir():
-    return Path(__file__).parent / "testdata" / "sample_documents"
+    return Path(TEST_DATA_DIR) / "sample_documents"
+
+
+@pytest.fixture
+def tokenizer_model_name():
+    return os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab")
 
 
 @pytest.mark.parametrize(
@@ -34,7 +41,7 @@ def documents_dir():
         ([Path("document.pdf")], ContextAwareChunker),
     ],
 )
-def test_chunker_factory(filepaths, chunker_type, documents_dir):
+def test_chunker_factory(filepaths, chunker_type, documents_dir, tokenizer_model_name):
     """Test that the DocumentChunker factory class returns the proper Chunker type"""
     leaf_node = [
         {
@@ -48,12 +55,12 @@ def test_chunker_factory(filepaths, chunker_type, documents_dir):
             leaf_node=leaf_node,
             taxonomy_path=documents_dir,
             output_dir=temp_dir,
-            tokenizer_model_name="instructlab/merlinite-7b-lab",
+            tokenizer_model_name=tokenizer_model_name,
         )
         assert isinstance(chunker, chunker_type)
 
 
-def test_chunker_factory_unsupported_filetype(documents_dir):
+def test_chunker_factory_unsupported_filetype(documents_dir, tokenizer_model_name):
     """Test that the DocumentChunker factory class fails when provided an unsupported document"""
     leaf_node = [
         {
@@ -68,7 +75,7 @@ def test_chunker_factory_unsupported_filetype(documents_dir):
                 leaf_node=leaf_node,
                 taxonomy_path=documents_dir,
                 output_dir=temp_dir,
-                tokenizer_model_name="instructlab/merlinite-7b-lab",
+                tokenizer_model_name=tokenizer_model_name,
             )
 
 
@@ -87,7 +94,7 @@ def test_chunker_factory_empty_filetype(documents_dir):
                 leaf_node=leaf_node,
                 taxonomy_path=documents_dir,
                 output_dir=temp_dir,
-                tokenizer_model_name="instructlab/merlinite-7b-lab",
+                tokenizer_model_name=tokenizer_model_name,
             )
 
 
@@ -138,3 +145,20 @@ def test_resolve_ocr_options_none_found_logs_error(
     ocr_options = resolve_ocr_options()
     assert ocr_options is None
     mock_logger.assert_called()
+
+
+def test_create_tokenizer(tokenizer_model_name):
+    ContextAwareChunker.create_tokenizer(tokenizer_model_name)
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        os.path.join(TEST_DATA_DIR, "models/invalid_gguf.gguf"),
+        os.path.join(TEST_DATA_DIR, "models/invalid_safetensors_dir/"),
+        os.path.join(TEST_DATA_DIR, "bad_path)"),
+    ]
+)
+def test_invalid_tokenizer(model_name):
+    with pytest.raises(Exception):
+        ContextAwareChunker.create_tokenizer(model_name)

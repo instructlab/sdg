@@ -369,20 +369,23 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         )
         try:
             if is_model_safetensors(model_path):
-                tokenizer = AutoTokenizer.from_pretrained(model_path)
                 error_info_message = error_info_message.format(
                     download_args=f"--repository {model_path}"
                 )
+                tokenizer = AutoTokenizer.from_pretrained(model_path)
+
             elif is_model_gguf(model_path):
+                error_info_message = error_info_message.format(
+                    download_args=f"--repository {model_dir} --filename {model_filename}"
+                )
                 model_dir, model_filename = model_path.parent, model_path.name
                 tokenizer = AutoTokenizer.from_pretrained(
                     model_dir, gguf_file=model_filename
                 )
-                error_info_message = error_info_message.format(
-                    download_args=f"--repository {model_dir} --filename {model_filename}"
-                )
+
             else:
                 raise Exception(f"Received path to invalid model format {model_path}")
+
             logger.info(f"Successfully loaded tokenizer from: {model_path}")
             return tokenizer
 
