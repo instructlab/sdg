@@ -124,6 +124,7 @@ jobs:
           python3.11 -m venv --upgrade-deps venv
           . venv/bin/activate
           git clone https://github.com/instructlab/instructlab
+          git checkout release-v0.19
           cd instructlab
           sed 's/\[.*\]//' requirements.txt > constraints.txt
           python3.11 -m pip cache remove llama_cpp_python
@@ -142,7 +143,7 @@ jobs:
         run: |
           . venv/bin/activate
           cd instructlab
-          SKIP_TRAIN=1 ./scripts/basic-workflow-tests.sh -mFM
+          SKIP_TRAIN=1 ./scripts/e2e-custom.sh -mFM
 
       - name: Add comment to PR if the workflow failed
         if: failure() && steps.check_pr.outputs.is_pr == 'true'
