@@ -221,9 +221,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                 f"Docling model path {self.docling_model_path} not found, downloading models..."
             )
             os.makedirs(self.docling_model_path, exist_ok=True)
-            StandardPdfPipeline.download_models_hf(
-                destination_path=self.docling_model_path
-            )
+            self.docling_model_path = StandardPdfPipeline.download_models_hf()
         else:
             logger.info("Found the docling models")
 
