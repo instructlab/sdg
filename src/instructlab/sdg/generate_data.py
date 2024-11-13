@@ -220,11 +220,19 @@ def _sdg_init(ctx, pipeline):
     data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
     data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
 
-    # Initialize docling model path
-    docling_model_path = os.path.join(xdg_data_home(), "models", "docling")
-    # Ensure the `docling_model_path` directory exists
-    os.makedirs(docling_model_path, exist_ok=True)
-
+    sdg_models_path = docling_models_path = None 
+    for d in data_dirs:
+        if os.path.exists(os.path.join(d, "models")):
+          sdg_models_path = os.path.join(d, "models")
+          break
+     
+     if sdg_models_path is not None:
+       try:
+          with open(os.path.join(sdg_models_path, "config.yaml"), "r", encoding="utf-8") as file:
+              config = yaml.safe_load(file)
+              docling_models_path = config['models'][0]['path']
+        except (FileNotFoundError, NotADirectoryError, PermissionsError) as e:
+              log.warning(f"unable to read docling models path from config.yaml")
     for d in data_dirs:
         pipeline_path = os.path.join(d, "pipelines", pipeline)
         if os.path.exists(pipeline_path):
