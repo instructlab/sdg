@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import DefaultDict, Iterable, List, Tuple
 import json
 import logging
-import os
 import re
 
 # Third Party
@@ -217,9 +216,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
             return []
 
         if self.docling_model_path is None:
-            logger.info(
-                f"Docling models not found on disk, downloading models..."
-            )
+            logger.info("Docling models not found on disk, downloading models...")
             self.docling_model_path = StandardPdfPipeline.download_models_hf()
         else:
             logger.info("Found the docling models")
