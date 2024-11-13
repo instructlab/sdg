@@ -100,7 +100,7 @@ def test_resolve_ocr_options_is_not_none():
     assert ocr_options is not None
 
 
-@patch("instructlab.sdg.utils.chunkers.TesseractOcrModel")
+@patch("docling.models.tesseract_ocr_model.TesseractOcrModel")
 def test_resolve_ocr_options_prefers_tessserocr(mock_tesseract):
     """
     Ensure resolve_ocr_options defaults to tesserocr if we're able
@@ -111,7 +111,7 @@ def test_resolve_ocr_options_prefers_tessserocr(mock_tesseract):
     assert isinstance(ocr_options, TesseractOcrOptions)
 
 
-@patch("instructlab.sdg.utils.chunkers.TesseractOcrModel")
+@patch("docling.models.tesseract_ocr_model.TesseractOcrModel")
 def test_resolve_ocr_options_falls_back_to_easyocr(mock_tesseract):
     """
     Ensure resolve_ocr_options falls back to easyocr if we cannot
@@ -122,8 +122,8 @@ def test_resolve_ocr_options_falls_back_to_easyocr(mock_tesseract):
     assert isinstance(ocr_options, EasyOcrOptions)
 
 
-@patch("instructlab.sdg.utils.chunkers.TesseractOcrModel")
-@patch("instructlab.sdg.utils.chunkers.EasyOcrModel")
+@patch("docling.models.tesseract_ocr_model.TesseractOcrModel")
+@patch("docling.models.easyocr_model.EasyOcrModel")
 @patch("logging.Logger.error")
 def test_resolve_ocr_options_none_found_logs_error(
     mock_logger, mock_easyocr, mock_tesseract
