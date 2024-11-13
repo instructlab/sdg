@@ -18,17 +18,8 @@ from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TesseractOcrOptions,
 )
-from docling.document_converter import (
-    ConversionStatus,
-    DocumentConverter,
-    PdfFormatOption,
-)
-from docling.models.easyocr_model import EasyOcrModel
-from docling.models.tesseract_ocr_model import TesseractOcrModel
-from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
-from transformers import AutoTokenizer
 
 logger = logging.getLogger(__name__)
 _DEFAULT_CHUNK_OVERLAP = 100
@@ -46,6 +37,10 @@ def resolve_ocr_options() -> OcrOptions:
     # First, attempt to use tesserocr
     try:
         ocr_options = TesseractOcrOptions()
+        # pylint: disable=import-outside-toplevel
+        # Third Party
+        from docling.models.tesseract_ocr_model import TesseractOcrModel
+
         _ = TesseractOcrModel(True, ocr_options)
         return ocr_options
     except ImportError:
@@ -55,6 +50,11 @@ def resolve_ocr_options() -> OcrOptions:
         ocr_options = EasyOcrOptions()
         # Keep easyocr models on the CPU instead of GPU
         ocr_options.use_gpu = False
+        # triggers torch loading, import lazily
+        # pylint: disable=import-outside-toplevel
+        # Third Party
+        from docling.models.easyocr_model import EasyOcrModel
+
         _ = EasyOcrModel(True, ocr_options)
         return ocr_options
     except ImportError:
@@ -238,6 +238,12 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         Returns:
             List: a list of chunks from the documents
         """
+        # triggers torch loading, import lazily
+        # pylint: disable=import-outside-toplevel
+        # Third Party
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+        from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
+
         if self.document_paths == []:
             return []
 
@@ -344,6 +350,11 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         Returns:
             AutoTokenizer: The tokenizer instance.
         """
+        # import lazily to not load transformers at top level
+        # pylint: disable=import-outside-toplevel
+        # Third Party
+        from transformers import AutoTokenizer
+
         try:
             tokenizer = AutoTokenizer.from_pretrained(model_name)
             logger.info(f"Successfully loaded tokenizer from: {model_name}")
@@ -575,6 +586,11 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         Returns:
             Path: path to directory with docling json artifacts
         """
+        # triggers torch loading, import lazily
+        # pylint: disable=import-outside-toplevel
+        # Third Party
+        from docling.document_converter import ConversionStatus
+
         docling_artifacts_path = self.output_dir / "docling-artifacts"
         docling_artifacts_path.mkdir(parents=True, exist_ok=True)
 
