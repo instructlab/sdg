@@ -12,8 +12,6 @@ import os
 import time
 
 # Third Party
-from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from xdg_base_dirs import xdg_data_dirs, xdg_data_home
 import openai
