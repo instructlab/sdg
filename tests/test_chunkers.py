@@ -1,9 +1,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-import os
 from pathlib import Path
+<<<<<<< HEAD
 from unittest.mock import MagicMock, patch
+=======
+import os
+>>>>>>> 192e500 (Increase Exception specificity for invalid model paths)
 import tempfile
 
 # Third Party
@@ -23,6 +26,7 @@ from instructlab.sdg.utils.chunkers import (
 from .testdata import testdata
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
+
 
 @pytest.fixture
 def documents_dir():
@@ -154,11 +158,12 @@ def test_create_tokenizer(tokenizer_model_name):
 @pytest.mark.parametrize(
     "model_name",
     [
-        os.path.join(TEST_DATA_DIR, "models/invalid_gguf.gguf"),
-        os.path.join(TEST_DATA_DIR, "models/invalid_safetensors_dir/"),
-        os.path.join(TEST_DATA_DIR, "bad_path)"),
-    ]
+        "models/invalid_gguf.gguf",
+        "models/invalid_safetensors_dir/",
+        "bad_path",
+    ],
 )
 def test_invalid_tokenizer(model_name):
-    with pytest.raises(Exception):
-        ContextAwareChunker.create_tokenizer(model_name)
+    model_path = os.path.join(TEST_DATA_DIR, model_name)
+    with pytest.raises(ValueError):
+        ContextAwareChunker.create_tokenizer(model_path)

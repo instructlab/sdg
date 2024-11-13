@@ -418,7 +418,6 @@ def _knowledge_leaf_node_to_samples(
     model_name,
     docling_model_path=None,
 ):
-    import ipdb; ipdb.set_trace()
     chunker = DocumentChunker(
         leaf_node=leaf_node,
         taxonomy_path=taxonomy_path,

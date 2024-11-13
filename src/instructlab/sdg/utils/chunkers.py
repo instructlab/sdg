@@ -18,9 +18,11 @@ from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TesseractOcrOptions,
 )
-from instructlab.model.backends.backends import is_model_gguf, is_model_safetensors
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
+
+# First Party
+from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
 
 logger = logging.getLogger(__name__)
 _DEFAULT_CHUNK_OVERLAP = 100
@@ -375,16 +377,16 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                 tokenizer = AutoTokenizer.from_pretrained(model_path)
 
             elif is_model_gguf(model_path):
+                model_dir, model_filename = model_path.parent, model_path.name
                 error_info_message = error_info_message.format(
                     download_args=f"--repository {model_dir} --filename {model_filename}"
                 )
-                model_dir, model_filename = model_path.parent, model_path.name
                 tokenizer = AutoTokenizer.from_pretrained(
                     model_dir, gguf_file=model_filename
                 )
 
             else:
-                raise Exception(f"Received path to invalid model format {model_path}")
+                raise ValueError(f"Received path to invalid model format {model_path}")
 
             logger.info(f"Successfully loaded tokenizer from: {model_path}")
             return tokenizer
