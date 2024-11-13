@@ -90,6 +90,7 @@ class DocumentChunker:
         server_ctx_size=4096,
         chunk_word_count=1024,
         tokenizer_model_name: str | None = None,
+        docling_model_path: str | None = None,
     ):
         """Insantiate the appropriate chunker for the provided document
 
@@ -145,6 +146,7 @@ class DocumentChunker:
                 output_dir,
                 chunk_word_count,
                 tokenizer_model_name,
+                docling_model_path=docling_model_path,
             )
 
     @staticmethod
@@ -219,6 +221,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         output_dir: Path,
         chunk_word_count: int,
         tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        docling_model_path=None
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
@@ -231,6 +234,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         )
 
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
+        self.docling_model_path = docling_model_path
 
     def chunk_documents(self) -> List:
         """Semantically chunk PDF documents.
@@ -247,6 +251,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         if self.document_paths == []:
             return []
 
+<<<<<<< HEAD
         model_artifacts_path = StandardPdfPipeline.download_models_hf()
         pipeline_options = PdfPipelineOptions(
             artifacts_path=model_artifacts_path,
@@ -256,6 +261,15 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         if ocr_options is not None:
             pipeline_options.do_ocr = True
             pipeline_options.ocr_options = ocr_options
+=======
+        if not self.docling_model_path.exists():
+            raise FileNotFoundError(f"Docling model path not found: {self.docling_model_path}")
+        print("docling_model_path", docling_model_path)
+        pipeline_options = PdfPipelineOptions(artifacts_path=docling_model_path)
+
+        # Keep OCR models on the CPU instead of GPU
+        pipeline_options.ocr_options.use_gpu = False
+>>>>>>> 1b984e0 (Rebase)
         converter = DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
