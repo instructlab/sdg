@@ -467,6 +467,6 @@ def leaf_node_to_samples(
             chunk_word_count,
             document_output_dir,
             model_name,
-            docling_model_path=docling_model_path,
+            docling_model_path,
         )
     return _skill_leaf_node_to_samples(leaf_node)
