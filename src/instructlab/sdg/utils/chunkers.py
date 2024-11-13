@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import DefaultDict, Iterable, List, Tuple
 import json
 import logging
+import os
 import re
 
 # Third Party
@@ -191,7 +192,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         output_dir: Path,
         chunk_word_count: int,
         tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
-        docling_model_path=None
+        docling_model_path=None,
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
@@ -216,9 +217,17 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
             return []
 
         if not self.docling_model_path.exists():
-            raise FileNotFoundError(f"Docling model path not found: {self.docling_model_path}")
-        print("docling_model_path", docling_model_path)
-        pipeline_options = PdfPipelineOptions(artifacts_path=docling_model_path)
+            logger.info(
+                f"Docling model path {self.docling_model_path} not found, downloading models..."
+            )
+            os.makedirs(self.docling_model_path, exist_ok=True)
+            StandardPdfPipeline.download_models_hf(
+                destination_path=self.docling_model_path
+            )
+        else:
+            logger.info("Found the docling models")
+
+        pipeline_options = PdfPipelineOptions(artifacts_path=self.docling_model_path)
 
         # Keep OCR models on the CPU instead of GPU
         pipeline_options.ocr_options.use_gpu = False
