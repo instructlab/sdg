@@ -362,6 +362,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         # pylint: disable=import-outside-toplevel
         # Third Party
         from transformers import AutoTokenizer
+
         if model_name is None:
             raise TypeError("No model path provided")
 

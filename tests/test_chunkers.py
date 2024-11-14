@@ -2,11 +2,8 @@
 
 # Standard
 from pathlib import Path
-<<<<<<< HEAD
 from unittest.mock import MagicMock, patch
-=======
 import os
->>>>>>> 192e500 (Increase Exception specificity for invalid model paths)
 import tempfile
 
 # Third Party
