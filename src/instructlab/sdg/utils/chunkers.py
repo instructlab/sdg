@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Tuple
+from typing import DefaultDict, Iterable, List, Optional, Tuple
 import json
 import logging
 import re
@@ -20,6 +20,9 @@ from docling.datamodel.pipeline_options import (
 )
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 from tabulate import tabulate
+
+# First Party
+from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
 
 logger = logging.getLogger(__name__)
 _DEFAULT_CHUNK_OVERLAP = 100
@@ -89,8 +92,8 @@ class DocumentChunker:
         output_dir: Path,
         server_ctx_size=4096,
         chunk_word_count=1024,
-        tokenizer_model_name: str | None = None,
-        docling_model_path: str | None = None,
+        tokenizer_model_name: Optional[str] = None,
+        docling_model_path: Optional[str] = None,
     ):
         """Insantiate the appropriate chunker for the provided document
 
@@ -100,7 +103,7 @@ class DocumentChunker:
             output_dir (Path): directory where artifacts should be stored
             server_ctx_size (int): Context window size of server
             chunk_word_count (int): Maximum number of words to chunk a document
-            tokenizer_model_name (str): name of huggingface model to get
+            tokenizer_model_name (Optional[str]): name of huggingface model to get
                 tokenizer from
         Returns:
             TextSplitChunker | ContextAwareChunker: Object of the appropriate
@@ -220,19 +223,13 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         filepaths,
         output_dir: Path,
         chunk_word_count: int,
-        tokenizer_model_name="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        tokenizer_model_name: Optional[str],
         docling_model_path=None,
     ):
         self.document_paths = document_paths
         self.filepaths = filepaths
         self.output_dir = self._path_validator(output_dir)
         self.chunk_word_count = chunk_word_count
-        self.tokenizer_model_name = (
-            tokenizer_model_name
-            if tokenizer_model_name is not None
-            else "mistralai/Mixtral-8x7B-Instruct-v0.1"
-        )
-
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
         self.docling_model_path = docling_model_path
 
@@ -350,7 +347,8 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
 
         return fused_texts
 
-    def create_tokenizer(self, model_name: str):
+    @staticmethod
+    def create_tokenizer(model_name: Optional[str]):
         """
         Create a tokenizer instance from a pre-trained model or a local directory.
 
@@ -365,13 +363,41 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         # Third Party
         from transformers import AutoTokenizer
 
+        if model_name is None:
+            raise TypeError("No model path provided")
+
+        model_path = Path(model_name)
+        error_info_message = (
+            "Please run `ilab model download {download_args}` and try again"
+        )
         try:
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            logger.info(f"Successfully loaded tokenizer from: {model_name}")
+            if is_model_safetensors(model_path):
+                error_info_message = error_info_message.format(
+                    download_args=f"--repository {model_path}"
+                )
+                tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+            elif is_model_gguf(model_path):
+                model_dir, model_filename = model_path.parent, model_path.name
+                error_info_message = error_info_message.format(
+                    download_args=f"--repository {model_dir} --filename {model_filename}"
+                )
+                tokenizer = AutoTokenizer.from_pretrained(
+                    model_dir, gguf_file=model_filename
+                )
+
+            else:
+                error_info_message = "Please provide a path to a valid model format. For help on downloading models, run `ilab model download --help`."
+                raise ValueError()
+
+            logger.info(f"Successfully loaded tokenizer from: {model_path}")
             return tokenizer
-        except Exception as e:
-            logger.error(f"Failed to load tokenizer from {model_name}: {str(e)}")
-            raise
+
+        except (OSError, ValueError) as e:
+            logger.error(
+                f"Failed to load tokenizer as no valid model was not found at {model_path}. {error_info_message}"
+            )
+            raise e
 
     def get_token_count(self, text, tokenizer):
         """

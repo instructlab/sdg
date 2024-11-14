@@ -2,13 +2,21 @@
 from pathlib import Path
 import os
 
+# Third Party
+import pytest
+
 # First Party
 from instructlab.sdg.utils.chunkers import DocumentChunker
 
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "testdata")
 
 
-def test_chunk_pdf(tmp_path):
+@pytest.fixture
+def tokenizer_model_name():
+    return os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab")
+
+
+def test_chunk_pdf(tmp_path, tokenizer_model_name):
     pdf_path = Path(os.path.join(TEST_DATA_DIR, "sample_documents", "phoenix.pdf"))
     leaf_node = [
         {
@@ -23,7 +31,7 @@ def test_chunk_pdf(tmp_path):
         output_dir=tmp_path,
         server_ctx_size=4096,
         chunk_word_count=500,
-        tokenizer_model_name="instructlab/merlinite-7b-lab",
+        tokenizer_model_name=tokenizer_model_name,
     )
     chunks = chunker.chunk_documents()
     assert len(chunks) > 9
@@ -33,7 +41,7 @@ def test_chunk_pdf(tmp_path):
         assert len(chunk) < 2500
 
 
-def test_chunk_md(tmp_path):
+def test_chunk_md(tmp_path, tokenizer_model_name):
     markdown_path = Path(os.path.join(TEST_DATA_DIR, "sample_documents", "phoenix.md"))
     leaf_node = [
         {
@@ -48,7 +56,7 @@ def test_chunk_md(tmp_path):
         output_dir=tmp_path,
         server_ctx_size=4096,
         chunk_word_count=500,
-        tokenizer_model_name="instructlab/merlinite-7b-lab",
+        tokenizer_model_name=tokenizer_model_name,
     )
     chunks = chunker.chunk_documents()
     assert len(chunks) > 7
