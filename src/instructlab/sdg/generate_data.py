@@ -15,6 +15,7 @@ import time
 # instructlab - All of these need to go away (other than sdg) - issue #6
 from xdg_base_dirs import xdg_data_dirs, xdg_data_home
 import openai
+import yaml
 
 # First Party
 # pylint: disable=ungrouped-imports
@@ -220,6 +221,23 @@ def _sdg_init(ctx, pipeline):
     data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
     data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
 
+    docling_model_path = None
+    sdg_models_path = docling_model_path
+    for d in data_dirs:
+        if os.path.exists(os.path.join(d, "models")):
+            sdg_models_path = os.path.join(d, "models")
+            break
+
+    if sdg_models_path is not None:
+        try:
+            with open(
+                os.path.join(sdg_models_path, "config.yaml"), "r", encoding="utf-8"
+            ) as file:
+                config = yaml.safe_load(file)
+                docling_model_path = config["models"][0]["path"]
+        except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
+            logger.warning(f"unable to read docling models path from config.yaml {e}")
+
     for d in data_dirs:
         pipeline_path = os.path.join(d, "pipelines", pipeline)
         if os.path.exists(pipeline_path):
@@ -251,6 +269,7 @@ def _sdg_init(ctx, pipeline):
         load_pipeline("knowledge.yaml"),
         load_pipeline("freeform_skills.yaml"),
         load_pipeline("grounded_skills.yaml"),
+        docling_model_path,
     )
 
 
@@ -363,8 +382,8 @@ def generate_data(
         max_num_tokens=max_num_tokens,
     )
 
-    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe = _sdg_init(
-        ctx, pipeline
+    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe, docling_model_path = (
+        _sdg_init(ctx, pipeline)
     )
 
     # Make sure checkpointing is disabled (we don't want this pipeline to load checkpoints from the main pipeline)
@@ -392,6 +411,7 @@ def generate_data(
             chunk_word_count,
             document_output_dir,
             model_name,
+            docling_model_path=docling_model_path,
         )
 
         if not samples:
