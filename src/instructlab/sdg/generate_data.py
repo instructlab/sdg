@@ -236,9 +236,7 @@ def _sdg_init(ctx, pipeline):
                 config = yaml.safe_load(file)
                 docling_model_path = config["models"][0]["path"]
         except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
-            logger.warning(
-                f"unable to read docling models path from config.yaml {e}"
-            )
+            logger.warning(f"unable to read docling models path from config.yaml {e}")
 
     for d in data_dirs:
         pipeline_path = os.path.join(d, "pipelines", pipeline)
@@ -271,7 +269,7 @@ def _sdg_init(ctx, pipeline):
         load_pipeline("knowledge.yaml"),
         load_pipeline("freeform_skills.yaml"),
         load_pipeline("grounded_skills.yaml"),
-        docling_model_path
+        docling_model_path,
     )
 
 
@@ -384,8 +382,8 @@ def generate_data(
         max_num_tokens=max_num_tokens,
     )
 
-    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe, docling_model_path = _sdg_init(
-        ctx, pipeline
+    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe, docling_model_path = (
+        _sdg_init(ctx, pipeline)
     )
 
     # Make sure checkpointing is disabled (we don't want this pipeline to load checkpoints from the main pipeline)
