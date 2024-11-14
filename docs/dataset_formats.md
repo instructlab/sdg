@@ -178,7 +178,7 @@ The generated samples are converted to a training dataset in in the "messages" f
 
 ### Leaf Node Dataset (Output)
 
-In order to facilitate [data mixing](./data_mixing.md), the generated samples for each leaf node are stored at ```node_datasets_{self.date_suffix}/{leaf_node_path}.jsonl``. These datasets are suitable for either the "phase 1" (knowledge, aka "phase 0.7" or "p07") or the "phase 2" (skills, aka phase "1.0" or "p10") training phase, and are then referenced by the knowledge and skills data mixing recipes described below.
+In order to facilitate [data mixing](./data_mixing.md), the generated samples for each leaf node are stored at `node_datasets_{self.date_suffix}/{leaf_node_path}.jsonl`. These datasets are suitable for either the "phase 1" (knowledge, aka "phase 0.7" or "p07") or the "phase 2" (skills, aka phase "1.0" or "p10") training phase, and are then referenced by the knowledge and skills data mixing recipes described below.
 
 The contents of a dataset for a skill leaf node is straightforward - all of the the generated samples fields along with a "messages" column (as above in [Messages Training Dataset (Output)](#messages-training-dataset-output)) and an additional `id` column containing a unique UUID per sample.
 
