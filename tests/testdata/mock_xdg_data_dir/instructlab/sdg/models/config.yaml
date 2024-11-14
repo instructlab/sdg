@@ -1,0 +1,4 @@
+models:
+- path: /mock/docling-models
+  source: https://huggingface.co/ds4sd/docling-models
+  revision: main
