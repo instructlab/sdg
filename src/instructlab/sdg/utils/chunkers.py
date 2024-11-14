@@ -368,7 +368,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
 
         model_path = Path(model_name)
         error_info_message = (
-            "Please run ilab model download {download_args} and try again"
+            "Please run `ilab model download {download_args}` and try again"
         )
         try:
             if is_model_safetensors(model_path):
@@ -387,14 +387,15 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                 )
 
             else:
-                raise ValueError(f"Received path to invalid model format {model_path}")
+                error_info_message = "Please provide a path to a valid model format. For help on downloading models, run `ilab model download --help`."
+                raise ValueError()
 
             logger.info(f"Successfully loaded tokenizer from: {model_path}")
             return tokenizer
 
         except (OSError, ValueError) as e:
             logger.error(
-                f"Failed to load tokenizer as model was not found at {model_path}. {error_info_message}"
+                f"Failed to load tokenizer as no valid model was not found at {model_path}. {error_info_message}"
             )
             raise e
 
