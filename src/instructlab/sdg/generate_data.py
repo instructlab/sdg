@@ -273,7 +273,13 @@ def _sdg_init(ctx, pipeline):
     )
 
 
-def _mixer_init(ctx, output_dir, date_suffix, knowledge_auxiliary_inst, system_prompt):
+def _mixer_init(
+    ctx,
+    output_dir,
+    date_suffix,
+    knowledge_auxiliary_inst,
+    system_prompt,
+):
     data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
     data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
 
@@ -391,7 +397,11 @@ def generate_data(
     mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
 
     mixer = _mixer_init(
-        ctx, output_dir, date_suffix, knowledge_pipe.auxiliary_inst, system_prompt
+        ctx,
+        output_dir,
+        date_suffix,
+        knowledge_pipe.auxiliary_inst,
+        system_prompt,
     )
 
     if console_output:
