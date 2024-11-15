@@ -203,7 +203,9 @@ def _get_documents(
                                         )
                                         if text.strip():  # Only append non-empty text
                                             pdf_text += text.strip() + "\n"
-                                except Exception as page_error:  # pylint: disable=broad-exception-caught
+                                except (
+                                    Exception
+                                ) as page_error:  # pylint: disable=broad-exception-caught
                                     logger.warning(
                                         f"Error parsing page {page + 1} of '{file_path}': {page_error}"
                                     )
@@ -219,7 +221,9 @@ def _get_documents(
 
                         else:
                             logger.info(f"Skipping unsupported file type: {file_path}")
-                    except Exception as file_error:  # pylint: disable=broad-exception-caught
+                    except (
+                        Exception
+                    ) as file_error:  # pylint: disable=broad-exception-caught
                         logger.error(
                             f"Error processing file '{file_path}': {file_error}"
                         )
@@ -232,8 +236,22 @@ def _get_documents(
         raise SystemExit("Couldn't find knowledge documents")
 
     except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
-        logger.error("Error retrieving documents: %s", str(e))
-        raise e
+        if os.path.exists(source.get("folder")):
+            logger.debug("Processing files...")
+            file_contents = []
+
+            for pattern in file_patterns:
+                for file_path in glob.glob(os.path.join(source.get("folder"), pattern)):
+                    if os.path.isfile(file_path) and file_path.endswith(".md"):
+                        with open(file_path, "r", encoding="utf-8") as file:
+                            file_contents.append(file.read())
+
+            if file_contents:
+                return file_contents
+            raise SystemExit("Couldn't find knowledge documents")
+        else:
+            logger.error("Error retrieving documents: %s", str(e))
+            raise e
 
 
 def _read_taxonomy_file(
