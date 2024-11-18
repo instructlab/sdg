@@ -43,6 +43,7 @@ blocks:
         parsing_pattern: '\[(?:Question|QUESTION)\]\s*(.*?)\s*\[(?:Answer|ANSWER)\]\s*(.*?)\s*(?=\[(?:Question|QUESTION)\]|$)'
         parser_cleanup_tags:
           - "[END]"
+          - "[End]"
       gen_kwargs:
         max_tokens: 2048
     drop_duplicates:
