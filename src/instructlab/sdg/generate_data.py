@@ -295,7 +295,7 @@ def _mixer_init(
 
 # This is part of the public API, and used by instructlab.
 # TODO - parameter removal needs to be done in sync with a CLI change.
-# to be removed: logger, prompt_file_path, rouge_threshold, tls_*
+# to be removed: logger
 def generate_data(
     client: openai.OpenAI,
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
@@ -308,10 +308,6 @@ def generate_data(
     taxonomy: Optional[str] = None,  # TODO rename to taxonomy_path to match config
     taxonomy_base: Optional[str] = None,
     output_dir: Optional[str] = None,
-    # TODO - not used and should be removed from the CLI
-    prompt_file_path: Optional[str] = None,  # pylint: disable=unused-argument
-    # TODO - probably should be removed
-    rouge_threshold: Optional[float] = None,  # pylint: disable=unused-argument
     console_output=True,
     yaml_rules: Optional[str] = None,
     chunk_word_count=None,
