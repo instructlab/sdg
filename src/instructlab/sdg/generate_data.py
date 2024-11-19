@@ -33,6 +33,7 @@ from instructlab.sdg.pipeline import (
     PipelineContext,
 )
 from instructlab.sdg.utils import GenerateException, models
+from instructlab.sdg.utils.json import jldump
 from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
@@ -112,15 +113,9 @@ def _gen_train_data(
             }
             messages_data.append(_convert_to_messages(sample))
 
-    with open(output_file_train, "w", encoding="utf-8") as outfile:
-        for entry in train_data:
-            json.dump(entry, outfile, ensure_ascii=False)
-            outfile.write("\n")
+    jldump(train_data, output_file_train)
 
-    with open(output_file_messages, "w", encoding="utf-8") as outfile:
-        for entry in messages_data:
-            json.dump(entry, outfile, ensure_ascii=False)
-            outfile.write("\n")
+    jldump(messages_data, output_file_messages)
 
 
 def _knowledge_seed_example_to_test_data(seed_example, system_prompt):
@@ -170,10 +165,7 @@ def _gen_test_data(
                 }
             )
 
-    with open(output_file_test, "w", encoding="utf-8") as outfile:
-        for entry in test_data:
-            json.dump(entry, outfile, ensure_ascii=False)
-            outfile.write("\n")
+        jldump(test_data, output_file_test)
 
 
 def _check_pipeline_dir(pipeline):

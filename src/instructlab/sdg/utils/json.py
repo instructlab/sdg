@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from typing import Any, Iterable
 import io
 import json
 import os
@@ -46,3 +47,16 @@ def jload(f, mode="r"):
     """Load a .json file into a dictionary."""
     with _make_r_io_base(f, mode) as f_:
         return json.load(f_)
+
+
+def jldump(data: Iterable[Any], out: str | io.IOBase) -> None:
+    """Dump a list to a file in jsonl format.
+
+    Args:
+        data: An data to be written.
+        f: io.IOBase or file path
+    """
+    with _make_w_io_base(out, "w") as outfile:
+        for entry in data:
+            json.dump(entry, outfile, ensure_ascii=False)
+            outfile.write("\n")
