@@ -41,37 +41,38 @@ You can import SDG into your Python files with the following items:
 
 ## Pipelines
 
-There are four pipelines that are used in SDG. Each pipeline requires specific hardware specifications.
-<!--TODO: Add explanations of pipelines-->
+A pipeline describes a series of steps to execute in-order to generate data.
 
-*Full* -
+There are three default pipelines shipped in SDG. These are the `simple`, `full`, and `eval` pipelines. Each pipeline requires specific hardware specifications
 
-This pipeline is targeted for running SDG on consumer grade accelerators (GPUs).
+### Simple Pipeline
 
-*Simple* -
+The [simple pipeline](src/instructlab/sdg/pipelines/simple) is designed to be used with [quantized Merlinite](https://huggingface.co/instructlab/merlinite-7b-lab-GGUF) as the teacher model. It exists to enable basic data generation results on lower end consumer grade hardware, such as laptops and desktops with small or no discrete GPUs.
+
+### Full Pipeline
+
+The [full pipeline](src/instructlab/sdg/pipelines/full) is designed to be used with [Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1) as the the teacher model, but has also been successfully tested with smaller models such as [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) and even some quantized versions of the two above. This is the preferred data generation pipeline on higher end consumer grade hardware and on all enterprise hardware.
+
+### Eval Pipeline
+
+The [eval pipeline](src/instructlab/sdg/pipelines/eval) is used to generate [MMLU](https://en.wikipedia.org/wiki/MMLU) benchmark data that can be used to later evaluate a trained model on your knowledge dataset. It does not generate data for use during model training.
 
 ### Pipeline architecture
 
-All the pipelines are written in YAML format.
+All the pipelines are written in a YAML format and must adhere to a [specific schema](src/instructlab/sdg/pipelines/schema/v1.json).
 
-Knowledge:
-
-Grounded Skills:
-
-Freeform Skills:
-
-<!--TODO: Add content here-->
+The pipelines that generate data for model training (simple and full pipelines) expect to have three different pipeline configs - one each for knowledge, grounded skills, and freeform skills. They are expected to exist in files called `knowledge.yaml`, `grounded_skills.yaml`, and `freeform_skills.yaml` respectively. For background on the difference in knowledge, grounded skills, and freeform skills, refer to the [InstructLab Taxonomy repository](https://github.com/instructlab/taxonomy).
 
 ## Repository structure
 
 ```bash
-|-- sdg/src/instructlab/ (1)
-|-- sdg/docs/ (2)
-|-- sdg/scripts/ (3)
-|-- sgd/tests/ (4)
+|-- src/instructlab/ (1)
+|-- docs/ (2)
+|-- scripts/ (3)
+|-- tests/ (4)
 ```
 
 1. Contains the SDG code that interacts with InstructLab.
 2. Contains documentation on various SDG methodologies.
-3. Contains the code that tests the SDG data types: Knowledge, grounded skills, and freeform skills.
-4. Contains all the CI tests for the SDG repository.
+3. Contains some utility scripts, but not part of any supported API.
+4. Contains all the tests for the SDG repository.
