@@ -10,7 +10,7 @@ from httpx import URL
 from openai import InternalServerError, NotFoundError
 
 # First Party
-from src.instructlab.sdg.llmblock import LLMBlock, server_supports_batched
+from src.instructlab.sdg.llmblock import ConditionalLLMBlock, LLMBlock, server_supports_batched
 
 
 @patch("src.instructlab.sdg.block.Block._load_config")
@@ -185,3 +185,32 @@ class TestLLMBlockBatching(unittest.TestCase):
         self.mock_client.completions = mock_completion
         supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
         assert supports_batched
+
+@patch("src.instructlab.sdg.block.Block._load_config")
+class TestConditionalLLMBlock(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+
+    def test_validate(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{var1}} {{var2}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        block = ConditionalLLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_paths=[["/foo/bar", "_A_"]],
+            output_cols=[],
+            selector_column_name="selector",
+        )
+
+        assert not block._validate(block.prompt_template, {})
+        assert not block._validate(block.prompt_template, {"selector": "_B_", "var1": "foo", "var2": "bar"})
+        assert block._validate(block.prompt_template, {"selector": "_A_", "var1": "foo", "var2": "bar"})
