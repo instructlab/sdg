@@ -19,7 +19,7 @@ from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
 
 # Local
-from . import filterblock, importblock, llmblock, utilblocks
+from . import filterblock, llmblock, utilblocks
 from .block import Block
 
 logger = logging.getLogger(__name__)
@@ -261,7 +261,6 @@ _block_types = {
     "DuplicateColumnsBlock": utilblocks.DuplicateColumnsBlock,
     "FilterByValueBlock": filterblock.FilterByValueBlock,
     "FlattenColumnsBlock": utilblocks.FlattenColumnsBlock,
-    "ImportBlock": importblock.ImportBlock,
     "LLMBlock": llmblock.LLMBlock,
     "RenameColumnsBlock": utilblocks.RenameColumnsBlock,
     "SamplePopulatorBlock": utilblocks.SamplePopulatorBlock,
