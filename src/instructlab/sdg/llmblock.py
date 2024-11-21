@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from collections import ChainMap
 from typing import Any, Dict
 import logging
 import re
 
 # Third Party
 from datasets import Dataset
+from jinja2 import StrictUndefined, Template
 from tqdm import tqdm
 import httpx
 import openai
@@ -70,6 +70,12 @@ def server_supports_batched(client, model_id: str) -> bool:
     logger.info(f"LLM server supports batched inputs: {client.server_supports_batched}")
     return supported
 
+def template_from_struct_and_config(struct, config):
+    # replace None with empty strings
+    filtered_config = {
+            k: (v if v is not None else "") for k, v in config.items()
+    }
+    return Template(struct.format(**filtered_config), undefined=StrictUndefined)
 
 # This is part of the public API.
 # pylint: disable=dangerous-default-value
@@ -92,7 +98,7 @@ class LLMBlock(Block):
         self.prompt_struct = (
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )
-        self.prompt_template = self.prompt_struct.format(**self.block_config)
+        self.prompt_template = template_from_struct_and_config(self.prompt_struct, self.block_config)
         self.model_prompt = model_prompt
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
@@ -162,7 +168,7 @@ class LLMBlock(Block):
     # 2. Non-empty string - the pipeline has specified a custom model prompt
     # 3. Empty string - the pipeline has specified that no model prompt is needed
     def _format_prompt(self, sample: Dict) -> str:
-        prompt = self.prompt_template.format(**sample).strip()
+        prompt = self.prompt_template.render(sample).strip()
 
         model_prompt = None
         if self.model_prompt is None:
@@ -265,25 +271,6 @@ class LLMBlock(Block):
 
         return Dataset.from_list(new_data)
 
-    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
-        """
-        Validate the input data for this block. This method should be implemented by subclasses
-        to define how the block validates its input data.
-
-        :return: True if the input data is valid, False otherwise.
-        """
-
-        class Default(dict):
-            def __missing__(self, key: str) -> None:
-                raise KeyError(key)
-
-        try:
-            prompt_template.format_map(ChainMap(input_dict, Default()))
-            return True
-        except KeyError as e:
-            logger.error("Missing key: {}".format(e))
-            return False
-
 
 # This is part of the public API.
 class ConditionalLLMBlock(LLMBlock):
@@ -300,6 +287,9 @@ class ConditionalLLMBlock(LLMBlock):
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
+        assert config_paths, "ConditionalLLMBlock config_paths requires at least one entry"
+        for config_path in config_paths:
+            assert len(config_path) == 2, "ConditionalLLMBlock config_paths each entry should be a list of config path and selector column names"
         super().__init__(
             ctx,
             pipe,
@@ -314,12 +304,10 @@ class ConditionalLLMBlock(LLMBlock):
         self.selector_column_name = selector_column_name
         self.prompt_template = {}
         if len(config_paths) == 1 and config_paths[0][1] == "All":
-            self.prompt_template = self.prompt_struct.format(**self.block_config)
+            self.prompt_template = template_from_struct_and_config(self.prompt_struct, self.block_config)
         else:
             for config, config_key in config_paths:
-                self.prompt_template[config_key] = self.prompt_struct.format(
-                    **self._load_config(config)
-                )
+                self.prompt_template[config_key] = template_from_struct_and_config(self.prompt_struct, self._load_config(config))
 
     def _format_prompt(self, sample: Dict) -> str:
         if isinstance(self.prompt_template, dict):
@@ -333,5 +321,12 @@ class ConditionalLLMBlock(LLMBlock):
 
     def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
-            prompt_template = prompt_template[input_dict[self.selector_column_name]]
+            if not self.selector_column_name in input_dict:
+                logger.error(f"ConditionalLLMBlock {self.block_name} missing key: {self.selector_column_name}")
+                return False
+            config_key = input_dict[self.selector_column_name]
+            if not config_key in prompt_template:
+                logger.error(f"ConditionalLLMBlock {self.block_name} selector key {config_key} not found in block config")
+                return False
+            prompt_template = prompt_template[config_key]
         return super()._validate(prompt_template, input_dict)
