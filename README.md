@@ -41,17 +41,17 @@ You can import SDG into your Python files with the following items:
 
 ## Pipelines
 
-A pipeline describes a series of steps to execute in-order to generate data.
+A pipeline is a series of steps to execute in order to generate data.
 
-There are three default pipelines shipped in SDG. These are the `simple`, `full`, and `eval` pipelines. Each pipeline requires specific hardware specifications
+There are three default pipelines shipped in SDG: `simple`, `full`, and `eval`. Each pipeline requires specific hardware specifications
 
 ### Simple Pipeline
 
-The [simple pipeline](src/instructlab/sdg/pipelines/simple) is designed to be used with [quantized Merlinite](https://huggingface.co/instructlab/merlinite-7b-lab-GGUF) as the teacher model. It exists to enable basic data generation results on lower end consumer grade hardware, such as laptops and desktops with small or no discrete GPUs.
+The [simple pipeline](src/instructlab/sdg/pipelines/simple) is designed to be used with [quantized Merlinite](https://huggingface.co/instructlab/merlinite-7b-lab-GGUF) as the teacher model. It enables basic data generation results on low-end consumer grade hardware, such as laptops and desktops with small or no discrete GPUs.
 
 ### Full Pipeline
 
-The [full pipeline](src/instructlab/sdg/pipelines/full) is designed to be used with [Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1) as the the teacher model, but has also been successfully tested with smaller models such as [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) and even some quantized versions of the two above. This is the preferred data generation pipeline on higher end consumer grade hardware and on all enterprise hardware.
+The [full pipeline](src/instructlab/sdg/pipelines/full) is designed to be used with [Mixtral-8x7B-Instruct-v0.1](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1) as the the teacher model, but has also been successfully tested with smaller models such as [Mistral-7B-Instruct-v0.2](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2) and even some quantized versions of the two teacher models. This is the preferred data generation pipeline on higher end consumer grade hardware and all enterprise hardware.
 
 ### Eval Pipeline
 
