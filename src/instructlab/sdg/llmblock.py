@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from collections import ChainMap
 from typing import Any, Dict
 import logging
 import re
 
 # Third Party
 from datasets import Dataset
+from jinja2 import StrictUndefined, Template
 from tqdm import tqdm
 import httpx
 import openai
@@ -92,7 +92,10 @@ class LLMBlock(Block):
         self.prompt_struct = (
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )
-        self.prompt_template = self.prompt_struct.format(**self.block_config)
+        filtered_config = {
+            k: (v if v is not None else "") for k, v in self.block_config.items()
+        }
+        self.prompt_template = Template(self.prompt_struct.format(**filtered_config), undefined=StrictUndefined)
         self.model_prompt = model_prompt
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
@@ -162,7 +165,7 @@ class LLMBlock(Block):
     # 2. Non-empty string - the pipeline has specified a custom model prompt
     # 3. Empty string - the pipeline has specified that no model prompt is needed
     def _format_prompt(self, sample: Dict) -> str:
-        prompt = self.prompt_template.format(**sample).strip()
+        prompt = self.prompt_template.render(sample).strip()
 
         model_prompt = None
         if self.model_prompt is None:
@@ -264,25 +267,6 @@ class LLMBlock(Block):
                 new_data.append({**sample, **dict(zip(parsed_outputs.keys(), values))})
 
         return Dataset.from_list(new_data)
-
-    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
-        """
-        Validate the input data for this block. This method should be implemented by subclasses
-        to define how the block validates its input data.
-
-        :return: True if the input data is valid, False otherwise.
-        """
-
-        class Default(dict):
-            def __missing__(self, key: str) -> None:
-                raise KeyError(key)
-
-        try:
-            prompt_template.format_map(ChainMap(input_dict, Default()))
-            return True
-        except KeyError as e:
-            logger.error("Missing key: {}".format(e))
-            return False
 
 
 # This is part of the public API.
