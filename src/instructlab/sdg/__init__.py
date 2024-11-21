@@ -11,7 +11,6 @@ __all__ = (
     "FilterByValueBlockError",
     "FlattenColumnsBlock",
     "GenerateException",
-    "ImportBlock",
     "LLMBlock",
     "Pipeline",
     "PipelineBlockError",
@@ -30,7 +29,6 @@ __all__ = (
 from .block import Block
 from .filterblock import FilterByValueBlock, FilterByValueBlockError
 from .generate_data import generate_data
-from .importblock import ImportBlock
 from .llmblock import ConditionalLLMBlock, LLMBlock
 from .pipeline import (
     FULL_PIPELINES_PACKAGE,
