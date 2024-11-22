@@ -13,7 +13,7 @@ import httpx
 import openai
 
 # Local
-from .registry import BlockRegistry
+from ..registry import BlockRegistry
 from .block import Block
 
 logger = logging.getLogger(__name__)

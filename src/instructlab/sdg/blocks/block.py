@@ -12,7 +12,7 @@ from jinja2 import Template, UndefinedError
 import yaml
 
 # Local
-from .registry import BlockRegistry
+from ..registry import BlockRegistry
 
 logger = logging.getLogger(__name__)
 

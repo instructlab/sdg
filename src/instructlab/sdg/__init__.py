@@ -26,10 +26,19 @@ __all__ = (
 )
 
 # Local
-from .block import Block
-from .filterblock import FilterByValueBlock, FilterByValueBlockError
+from .blocks.block import Block
+from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
+from .blocks.llmblock import ConditionalLLMBlock, LLMBlock
+from .blocks.utilblocks import (
+    CombineColumnsBlock,
+    DuplicateColumnsBlock,
+    FlattenColumnsBlock,
+    RenameColumnsBlock,
+    SamplePopulatorBlock,
+    SelectorBlock,
+    SetToMajorityValueBlock,
+)
 from .generate_data import generate_data
-from .llmblock import ConditionalLLMBlock, LLMBlock
 from .pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
@@ -38,15 +47,6 @@ from .pipeline import (
     PipelineBlockError,
     PipelineConfigParserError,
     PipelineContext,
-)
-from .utilblocks import (
-    CombineColumnsBlock,
-    DuplicateColumnsBlock,
-    FlattenColumnsBlock,
-    RenameColumnsBlock,
-    SamplePopulatorBlock,
-    SelectorBlock,
-    SetToMajorityValueBlock,
 )
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException

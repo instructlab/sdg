@@ -21,8 +21,8 @@ import yaml
 
 # First Party
 from instructlab.sdg.generate_data import _context_init, _sdg_init, generate_data
-from instructlab.sdg.llmblock import LLMBlock
-from instructlab.sdg.pipeline import PipelineContext
+from instructlab.sdg import LLMBlock
+from instructlab.sdg import PipelineContext
 
 TEST_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 

@@ -21,7 +21,7 @@ import yaml
 # pylint: disable=ungrouped-imports
 from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
-from instructlab.sdg.llmblock import (
+from instructlab.sdg.blocks.llmblock import (
     DEFAULT_MAX_NUM_TOKENS,
     MODEL_FAMILY_MERLINITE,
     MODEL_FAMILY_MIXTRAL,
