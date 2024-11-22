@@ -10,10 +10,11 @@ from httpx import URL
 from openai import InternalServerError, NotFoundError
 
 # First Party
-from src.instructlab.sdg.llmblock import ConditionalLLMBlock, LLMBlock, server_supports_batched
+from src.instructlab.sdg import ConditionalLLMBlock, LLMBlock
+from src.instructlab.sdg.blocks.llmblock import server_supports_batched
 
 
-@patch("src.instructlab.sdg.block.Block._load_config")
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestLLMBlockModelPrompt(unittest.TestCase):
     def setUp(self):
         self.mock_ctx = MagicMock()
@@ -87,7 +88,7 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             "model_prompt should be a non-empty string when set to None",
         )
 
-@patch("src.instructlab.sdg.block.Block._load_config")
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestLLMBlockOtherFunctions(unittest.TestCase):
     def setUp(self):
         self.mock_ctx = MagicMock()
@@ -186,7 +187,7 @@ class TestLLMBlockBatching(unittest.TestCase):
         supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
         assert supports_batched
 
-@patch("src.instructlab.sdg.block.Block._load_config")
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestConditionalLLMBlock(unittest.TestCase):
     def setUp(self):
         self.mock_ctx = MagicMock()

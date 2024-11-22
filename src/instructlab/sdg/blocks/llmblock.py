@@ -13,6 +13,7 @@ import httpx
 import openai
 
 # Local
+from ..registry import BlockRegistry
 from .block import Block
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,7 @@ def template_from_struct_and_config(struct, config):
     return Template(struct.format(**filtered_config), undefined=StrictUndefined)
 
 # This is part of the public API.
+@BlockRegistry.register("LLMBlock")
 # pylint: disable=dangerous-default-value
 class LLMBlock(Block):
     # pylint: disable=too-many-instance-attributes
@@ -273,6 +275,7 @@ class LLMBlock(Block):
 
 
 # This is part of the public API.
+@BlockRegistry.register("ConditionalLLMBlock")
 class ConditionalLLMBlock(LLMBlock):
     def __init__(
         self,

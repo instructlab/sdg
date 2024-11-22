@@ -19,8 +19,8 @@ from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
 
 # Local
-from . import filterblock, llmblock, utilblocks
-from .block import Block
+from .blocks import filterblock, llmblock, utilblocks
+from .blocks.block import Block
 
 logger = logging.getLogger(__name__)
 

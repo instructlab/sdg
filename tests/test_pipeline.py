@@ -14,8 +14,8 @@ from datasets import Dataset
 import pytest
 
 # First Party
-from instructlab.sdg.block import Block
-from instructlab.sdg.pipeline import Pipeline, PipelineBlockError
+from instructlab.sdg import Block
+from instructlab.sdg import Pipeline, PipelineBlockError
 
 ## Helpers ##
 

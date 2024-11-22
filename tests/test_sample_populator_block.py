@@ -8,7 +8,7 @@ import unittest
 from datasets import Dataset, Features, Value
 
 # First Party
-from instructlab.sdg.utilblocks import SamplePopulatorBlock
+from instructlab.sdg import SamplePopulatorBlock
 
 
 class TestSamplePopulatorBlock(unittest.TestCase):
@@ -17,7 +17,7 @@ class TestSamplePopulatorBlock(unittest.TestCase):
         self.ctx.dataset_num_procs = 1
         self.pipe = MagicMock()
 
-    @patch("instructlab.sdg.block.Block._load_config")
+    @patch("instructlab.sdg.blocks.block.Block._load_config")
     def test_generate(self, mock_load_config):
         def load_config(file_name):
             if file_name == "coffee.yaml" or file_name == "tea.yaml":

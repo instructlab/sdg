@@ -11,10 +11,14 @@ import os.path
 from jinja2 import Template, UndefinedError
 import yaml
 
+# Local
+from ..registry import BlockRegistry
+
 logger = logging.getLogger(__name__)
 
 
 # This is part of the public API.
+@BlockRegistry.register("Block")
 class Block(ABC):
     def __init__(self, ctx, pipe, block_name: str) -> None:
         self.ctx = ctx
