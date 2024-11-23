@@ -425,13 +425,13 @@ def _knowledge_leaf_node_to_samples(
     model_name,
     docling_model_path=None,
 ):
+    document_paths = leaf_node[0]["filepaths"]
     chunker = DocumentChunker(
-        leaf_node=leaf_node,
-        taxonomy_path=taxonomy_path,
+        document_paths=document_paths,
         output_dir=document_output_dir,
+        tokenizer_model_name=model_name,
         server_ctx_size=server_ctx_size,
         chunk_word_count=chunk_word_count,
-        tokenizer_model_name=model_name,
         docling_model_path=docling_model_path,
     )
     chunks = chunker.chunk_documents()
