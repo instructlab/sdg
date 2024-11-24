@@ -19,7 +19,7 @@ import yaml
 
 # First Party
 # pylint: disable=ungrouped-imports
-from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
+from instructlab.sdg.utils.datamixing import Recipe, load_default_recipe
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
 from instructlab.sdg.llmblock import (
     DEFAULT_MAX_NUM_TOKENS,
@@ -37,46 +37,19 @@ from instructlab.sdg.utils.taxonomy import (
     leaf_node_to_samples,
     read_taxonomy_leaf_nodes,
 )
+from instructlab.sdg.utils.parse_and_convert import (
+    _convert_to_messages,
+    _unescape,
+    _get_question,
+    _get_response,
+    create_knowledge_pretraining_ds,
+    create_knowledge_regular_ds
+)
 
 logger = logging.getLogger(__name__)
+NUM_SYNTH_SKILLS = 30
 
 _SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
-
-
-def _unescape(s):
-    return bytes(s, "utf-8").decode("utf-8").strip()
-
-
-def _convert_to_messages(sample):
-    """
-    Convert a sample dictionary to contain 'messages' and 'metadata' columns required for training.
-
-    Note that this is for the legacy messages format, used before data
-    mixing was introduced. Once we can drop the older `messages_*.jsonl`
-    output files, this can go away.
-    """
-    # Create user query message
-    user_query = sample["inputs"]
-    # TODO: in the future we can remove the combinecolumnsblock and combine them here for simplicity
-    # if "context" in sample:
-    #     user_query = f"{sample['context']}\n\n{sample['inputs']}"
-
-    sample["messages"] = [
-        {"content": user_query, "role": "user"},
-        {"content": sample["targets"], "role": "assistant"},
-    ]
-    metadata = {
-        key: value
-        for key, value in sample.items()
-        if key not in ["messages", "inputs", "targets"]
-    }
-    sample["metadata"] = json.dumps(metadata)
-
-    # keeping required keys for messages training format
-    sample = {"messages": sample["messages"], "metadata": sample["metadata"]}
-
-    return sample
-
 
 def _gen_train_data(
     machine_instruction_data, output_file_train, output_file_messages, system_prompt
@@ -95,10 +68,10 @@ def _gen_train_data(
     for output_dataset in machine_instruction_data:
         for synth_example in output_dataset:
             logger.debug(synth_example)
-            user = _get_question_hack(synth_example)
+            user = _get_question(synth_example)
             if len(synth_example.get("context", "")) > 0:
                 user += "\n" + synth_example["context"]
-            assistant = _unescape(_get_response_hack(synth_example))
+            assistant = _unescape(_get_response(synth_example))
             train_entry = {
                 "system": system_prompt,
                 "user": _unescape(user),
@@ -273,26 +246,6 @@ def _sdg_init(ctx, pipeline):
     )
 
 
-def _mixer_init(
-    ctx,
-    output_dir,
-    date_suffix,
-    knowledge_auxiliary_inst,
-    system_prompt,
-):
-    data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
-    data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
-
-    return DataMixer(
-        data_dirs,
-        output_dir,
-        date_suffix,
-        system_prompt,
-        ctx.dataset_num_procs,
-        knowledge_auxiliary_inst,
-    )
-
-
 # This is part of the public API, and used by instructlab.
 # TODO - parameter removal needs to be done in sync with a CLI change.
 # to be removed: logger
@@ -392,13 +345,25 @@ def generate_data(
     mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
     mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
 
-    mixer = _mixer_init(
-        ctx,
-        output_dir,
-        date_suffix,
-        knowledge_pipe.auxiliary_inst,
-        system_prompt,
-    )
+    # mixer = _mixer_init(
+    #     ctx,
+    #     output_dir,
+    #     date_suffix,
+    #     knowledge_pipe.auxiliary_inst,
+    #     system_prompt,
+    # )
+
+    data_dirs = [os.path.join(xdg_data_home(), "instructlab", "sdg")]
+    data_dirs.extend(os.path.join(dir, "instructlab", "sdg") for dir in xdg_data_dirs())
+
+    knowledge_recipe = load_default_recipe(data_dirs, "knowledge.yaml")
+    skills_recipe = load_default_recipe(data_dirs, "skills.yaml")
+
+    sys_prompt = knowledge_recipe.sys_prompt
+    logger.info(f"System prompt: {sys_prompt}")
+    assert (
+        sys_prompt == skills_recipe.sys_prompt
+    ), "System prompts must be the same for both knowledge and skills"
 
     if console_output:
         logger.info(
@@ -458,12 +423,46 @@ def generate_data(
                 date_suffix,
             )
 
-        mixer.collect(
-            leaf_node_path,
-            new_generated_data,
-            is_knowledge,
-            use_legacy_pretraining_format,
-        )
+            knowledge_fpath = os.path.join(
+                output_dir,
+                leaf_node_path,
+                "knowledge_pretraining_generated_data.jsonl",
+            )
+            skills_fpath = os.path.join(
+                output_dir,
+                leaf_node_path,
+                "knowledge_qa_generated_data.jsonl",
+            )
+            knowledge_phase_data = create_knowledge_pretraining_ds(generated_data)
+            skills_phase_data = create_knowledge_regular_ds(generated_data)
+            knowledge_phase_data.to_json(knowledge_fpath, orient="records", lines=True)
+            skills_phase_data.to_json(skills_fpath, orient="records", lines=True)
+
+            knowledge_recipe.add_dataset(knowledge_fpath)
+            skills_recipe.add_dataset(skills_fpath)
+
+        else:
+            messages = generated_data.map(
+                _convert_to_messages,
+                fn_kwargs={"sys_prompt": sys_prompt},
+                num_proc=8,
+            )
+
+            fpath = os.path.join(
+                output_dir,
+                leaf_node_path,
+                "skills_generated_data.jsonl",
+            )
+            messages.to_json(fpath, orient="records", lines=True)
+            skills_recipe.add_dataset(fpath, NUM_SYNTH_SKILLS)
+
+
+        # mixer.collect(
+        #     leaf_node_path,
+        #     new_generated_data,
+        #     is_knowledge,
+        #     use_legacy_pretraining_format,
+        # )
 
     if generated_data is None:
         generated_data = []
@@ -474,8 +473,32 @@ def generate_data(
         os.path.join(output_dir, output_file_messages),
         system_prompt,
     )
+    
+    # mixer.generate()
 
-    mixer.generate()
+    if knowledge_recipe.dataset_added:
+        knowledge_recipe.save_recipe(
+            os.path.join(
+                output_dir,
+                date_suffix,
+                "knowledge_recipe.yaml",
+            )
+        )
+        knowledge_recipe.save_mixed_dataset(
+            os.path.join(
+                output_dir,
+                date_suffix,
+                "knowledge_train_msgs.jsonl",
+            )
+        )
+    
+    if skills_recipe.dataset_added:
+        skills_recipe.save_recipe(
+            os.path.join(output_dir, date_suffix, "skills_recipe.yaml")
+        )
+        skills_recipe.save_mixed_dataset(
+            os.path.join(output_dir, date_suffix, "skills_train_msgs.jsonl")
+        )
 
     generate_duration = time.time() - generate_start
     logger.info(f"Generation took {generate_duration:.2f}s")
@@ -485,3 +508,5 @@ def generate_data(
                 " ".join(empty_sdg_leaf_nodes)
             )
         )
+
+
