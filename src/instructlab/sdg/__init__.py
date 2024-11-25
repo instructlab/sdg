@@ -20,12 +20,15 @@ __all__ = (
     "SamplePopulatorBlock",
     "SelectorBlock",
     "SetToMajorityValueBlock",
-    "SIMPLE_PIPELINES_PACKAGE",
+    "MODEL_FAMILY_MERLINITE",
+    "MODEL_FAMILY_MIXTRAL",
     "FULL_PIPELINES_PACKAGE",
+    "SIMPLE_PIPELINES_PACKAGE",
     "generate_data",
 )
 
 # Local
+from .prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from .blocks.block import Block
 from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
 from .blocks.llmblock import ConditionalLLMBlock, LLMBlock

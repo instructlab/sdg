@@ -35,7 +35,7 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
 
     def test_model_prompt_empty_string(self, mock_load_config):
         mock_load_config.return_value = self.config_return_value
-        # Ensure that if an empty model_prompt is not specified, no model prompt is used.
+        # Ensure that if an empty model_prompt is specified, no model prompt is used.
         block = LLMBlock(
             ctx=self.mock_ctx,
             pipe=self.mock_pipe,
@@ -79,13 +79,13 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             block_name="test_block",
             config_path="",
             output_cols=[],
-            model_prompt="FOO {prompt} BAR",
+            model_prompt="FOO {{prompt}} BAR",
         )
         prompt = block._format_prompt(self.dataset[1])
         self.assertEqual(
             prompt,
             "FOO pear\nintroduction\nprinciples\nexamples\ngeneration BAR",
-            "model_prompt should be a non-empty string when set to None",
+            "custom model_prompt was not used when explicitly set",
         )
 
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
