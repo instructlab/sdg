@@ -18,20 +18,16 @@ import openai
 import yaml
 
 # First Party
-# pylint: disable=ungrouped-imports
+from instructlab.sdg.blocks.llmblock import DEFAULT_MAX_NUM_TOKENS
 from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
-from instructlab.sdg.blocks.llmblock import (
-    DEFAULT_MAX_NUM_TOKENS,
-    MODEL_FAMILY_MERLINITE,
-    MODEL_FAMILY_MIXTRAL,
-)
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
     Pipeline,
     PipelineContext,
 )
+from instructlab.sdg.prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.utils import GenerateException, models
 from instructlab.sdg.utils.json import jldump
 from instructlab.sdg.utils.taxonomy import (

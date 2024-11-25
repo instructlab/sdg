@@ -13,29 +13,12 @@ import httpx
 import openai
 
 # Local
-from ..registry import BlockRegistry
+from ..registry import BlockRegistry, PromptRegistry
 from .block import Block
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_NUM_TOKENS = 4096
-
-MODEL_FAMILY_MIXTRAL = "mixtral"
-MODEL_FAMILY_MERLINITE = "merlinite"
-
-_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
-_MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
-
-_MODEL_PROMPTS = {
-    MODEL_FAMILY_MIXTRAL: _MODEL_PROMPT_MIXTRAL,
-    MODEL_FAMILY_MERLINITE: _MODEL_PROMPT_MERLINITE,
-}
-
-
-def _get_model_prompt(model_family):
-    if model_family not in _MODEL_PROMPTS:
-        raise ValueError(f"Unknown model family: {model_family}")
-    return _MODEL_PROMPTS[model_family]
 
 
 def server_supports_batched(client, model_id: str) -> bool:
@@ -71,12 +54,12 @@ def server_supports_batched(client, model_id: str) -> bool:
     logger.info(f"LLM server supports batched inputs: {client.server_supports_batched}")
     return supported
 
+
 def template_from_struct_and_config(struct, config):
     # replace None with empty strings
-    filtered_config = {
-            k: (v if v is not None else "") for k, v in config.items()
-    }
+    filtered_config = {k: (v if v is not None else "") for k, v in config.items()}
     return Template(struct.format(**filtered_config), undefined=StrictUndefined)
+
 
 # This is part of the public API.
 @BlockRegistry.register("LLMBlock")
@@ -100,7 +83,9 @@ class LLMBlock(Block):
         self.prompt_struct = (
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )
-        self.prompt_template = template_from_struct_and_config(self.prompt_struct, self.block_config)
+        self.prompt_template = template_from_struct_and_config(
+            self.prompt_struct, self.block_config
+        )
         self.model_prompt = model_prompt
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
@@ -170,15 +155,30 @@ class LLMBlock(Block):
     # 2. Non-empty string - the pipeline has specified a custom model prompt
     # 3. Empty string - the pipeline has specified that no model prompt is needed
     def _format_prompt(self, sample: Dict) -> str:
-        prompt = self.prompt_template.render(sample).strip()
+        prompt_templated_str = self.prompt_template.render(sample).strip()
+        wrap_in_messages_format = True
 
         model_prompt = None
         if self.model_prompt is None:
-            model_prompt = _get_model_prompt(self.ctx.model_family)
+            model_prompt = PromptRegistry.get_template(self.ctx.model_family)
         elif self.model_prompt:
-            model_prompt = self.model_prompt
+            model_prompt = Template(self.model_prompt)
+        else:
+            # Our model prompt is an empty string, which we'll render
+            # verbatim without wrapping in the messages format
+            model_prompt = PromptRegistry.get_template("blank")
+            wrap_in_messages_format = False
 
-        return prompt if model_prompt is None else model_prompt.format(prompt=prompt)
+        if wrap_in_messages_format:
+            messages = [{"role": "user", "content": prompt_templated_str}]
+        else:
+            messages = prompt_templated_str
+
+        return model_prompt.render(
+            messages=messages,
+            prompt=prompt_templated_str,
+            add_generation_prompt=True,
+        ).strip()
 
     def _gen_kwargs(self, max_num_token_override, gen_kwargs, **defaults):
         gen_kwargs = {**defaults, **gen_kwargs}
@@ -290,9 +290,13 @@ class ConditionalLLMBlock(LLMBlock):
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
-        assert config_paths, "ConditionalLLMBlock config_paths requires at least one entry"
+        assert (
+            config_paths
+        ), "ConditionalLLMBlock config_paths requires at least one entry"
         for config_path in config_paths:
-            assert len(config_path) == 2, "ConditionalLLMBlock config_paths each entry should be a list of config path and selector column names"
+            assert (
+                len(config_path) == 2
+            ), "ConditionalLLMBlock config_paths each entry should be a list of config path and selector column names"
         super().__init__(
             ctx,
             pipe,
@@ -307,10 +311,14 @@ class ConditionalLLMBlock(LLMBlock):
         self.selector_column_name = selector_column_name
         self.prompt_template = {}
         if len(config_paths) == 1 and config_paths[0][1] == "All":
-            self.prompt_template = template_from_struct_and_config(self.prompt_struct, self.block_config)
+            self.prompt_template = template_from_struct_and_config(
+                self.prompt_struct, self.block_config
+            )
         else:
             for config, config_key in config_paths:
-                self.prompt_template[config_key] = template_from_struct_and_config(self.prompt_struct, self._load_config(config))
+                self.prompt_template[config_key] = template_from_struct_and_config(
+                    self.prompt_struct, self._load_config(config)
+                )
 
     def _format_prompt(self, sample: Dict) -> str:
         if isinstance(self.prompt_template, dict):
@@ -325,11 +333,15 @@ class ConditionalLLMBlock(LLMBlock):
     def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
             if not self.selector_column_name in input_dict:
-                logger.error(f"ConditionalLLMBlock {self.block_name} missing key: {self.selector_column_name}")
+                logger.error(
+                    f"ConditionalLLMBlock {self.block_name} missing key: {self.selector_column_name}"
+                )
                 return False
             config_key = input_dict[self.selector_column_name]
             if not config_key in prompt_template:
-                logger.error(f"ConditionalLLMBlock {self.block_name} selector key {config_key} not found in block config")
+                logger.error(
+                    f"ConditionalLLMBlock {self.block_name} selector key {config_key} not found in block config"
+                )
                 return False
             prompt_template = prompt_template[config_key]
         return super()._validate(prompt_template, input_dict)

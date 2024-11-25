@@ -1,5 +1,5 @@
 # Standard
-from typing import Dict, List, Union
+from typing import Dict
 import logging
 
 # Third Party
@@ -70,7 +70,7 @@ class PromptRegistry:
         :return: The Jinja2 template instance.
         """
         if name not in cls._registry:
-            raise KeyError(f"Template '{name}' not found.")
+            raise KeyError(f"Prompt template '{name}' not found.")
         logger.debug(f"Retrieving prompt template '{name}'")
         return cls._registry[name]
 
@@ -83,38 +83,3 @@ class PromptRegistry:
         """
         logger.debug("Fetching the block registry map.")
         return cls._registry
-
-    @classmethod
-    def render_template(
-        cls,
-        name: str,
-        messages: Union[str, List[Dict[str, str]]],
-        add_generation_prompt: bool = True,
-    ) -> str:
-        """Render the template with the provided messages or query.
-
-        :param name: Name of the template to render.
-        :param messages: Either a single query string or a list of messages (each as a dict with 'role' and 'content').
-        :param add_generation_prompt: Whether to add a generation prompt at the end.
-        :return: The rendered prompt as a string.
-        """
-
-        # Special handling for "blank" template
-        if name == "blank":
-            if not isinstance(messages, str):
-                raise ValueError(
-                    "The 'blank' template can only be used with a single query string, not a list of messages."
-                )
-            return messages  # Return the query as-is without templating
-
-        # Get the template
-        template = cls.get_template(name)
-
-        # If `messages` is a string, wrap it in a list with a default user role
-        if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
-
-        # Render the template with the `messages` list
-        return template.render(
-            messages=messages, add_generation_prompt=add_generation_prompt
-        )
