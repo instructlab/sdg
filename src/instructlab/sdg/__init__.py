@@ -28,7 +28,6 @@ __all__ = (
 )
 
 # Local
-from .prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from .blocks.block import Block
 from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
 from .blocks.llmblock import ConditionalLLMBlock, LLMBlock
@@ -51,5 +50,6 @@ from .pipeline import (
     PipelineConfigParserError,
     PipelineContext,
 )
+from .prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException

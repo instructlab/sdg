@@ -4,6 +4,7 @@ from .registry import PromptRegistry
 MODEL_FAMILY_MIXTRAL = "mixtral"
 MODEL_FAMILY_MERLINITE = "merlinite"
 
+
 @PromptRegistry.register("blank")
 def blank_chat_template():
     return """{{ messages }}"""

@@ -1,5 +1,5 @@
 # Standard
-from typing import Dict, List, Union
+from typing import Dict
 import logging
 
 # Third Party
