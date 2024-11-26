@@ -162,7 +162,7 @@ class LLMBlock(Block):
         if self.model_prompt is None:
             model_prompt = PromptRegistry.get_template(self.ctx.model_family)
         elif self.model_prompt:
-            model_prompt = Template(self.model_prompt)
+            model_prompt = Template(self.model_prompt, undefined=StrictUndefined)
         else:
             # Our model prompt is an empty string, which we'll render
             # verbatim without wrapping in the messages format

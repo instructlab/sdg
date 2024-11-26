@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from importlib import resources
 from unittest.mock import MagicMock, patch
+import os
 import unittest
 
 # Third Party
@@ -92,6 +94,66 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             "FOO pear\nintroduction\nprinciples\nexamples\ngeneration BAR",
             "custom model_prompt was not used when explicitly set",
         )
+
+
+class TestLLMBlockWithRealConfigs(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+
+    def test_knowledge_configs_with_invalid_sample(self):
+        configs = [
+            "evaluate_faithfulness.yaml",
+            "evaluate_question.yaml",
+            "evaluate_relevancy.yaml",
+            "generate_questions_responses.yaml",
+            "mcq_generation.yaml",
+            "spellcheck.yaml",
+            "simple_generate_qa.yaml",
+        ]
+        for config in configs:
+            config_yaml = os.path.join(
+                resources.files("instructlab.sdg.configs.knowledge"), config
+            )
+            block = LLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name=config,
+                config_path=config_yaml,
+                output_cols=[],
+            )
+            sample = {"foo": "bar"}
+            assert not block._validate(
+                block.prompt_template, sample
+            ), f"knowledge config {config} validated even though it was given a sample with none of the expected fields"
+
+    def test_simple_generate_qa_with_valid_sample(self):
+        config_yaml = os.path.join(
+            resources.files("instructlab.sdg.configs.knowledge"),
+            "simple_generate_qa.yaml",
+        )
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path=config_yaml,
+            output_cols=[],
+        )
+        sample = {
+            "domain": "domain goes here",
+            "document": "document goes here",
+            "document_outline": "document outline goes here",
+            "icl_document": "context goes here",
+            "icl_query_1": "query 1 goes here",
+            "icl_response_1": "response 1 goes here",
+            "icl_query_2": "query 2 goes here",
+            "icl_response_2": "response 2 goes here",
+            "icl_query_3": "query 3 goes here",
+            "icl_response_3": "response 3 goes here",
+        }
+        assert block._validate(block.prompt_template, sample)
 
 
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
