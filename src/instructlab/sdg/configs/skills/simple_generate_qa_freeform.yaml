@@ -13,12 +13,12 @@ principles: |
   7. The output should be an appropriate response to the input and the instruction. Long outputs are preferable.
 
 examples: |
-  The task is {task_description}.
+  The task is {{task_description}}.
 
   Here is an example to help you understand the type of questions that are asked for:
 
-  {seed_question}
-  {seed_response}
+  {{seed_question}}
+  {{seed_response}}
 
 generation: |
   Provide a single question and answer pair based on the examples.

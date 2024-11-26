@@ -103,31 +103,24 @@ class TestLLMBlockWithRealConfigs(unittest.TestCase):
         self.mock_ctx.model_id = "test_model"
         self.mock_pipe = MagicMock()
 
-    def test_knowledge_configs_with_invalid_sample(self):
-        configs = [
-            "evaluate_faithfulness.yaml",
-            "evaluate_question.yaml",
-            "evaluate_relevancy.yaml",
-            "generate_questions_responses.yaml",
-            "mcq_generation.yaml",
-            "spellcheck.yaml",
-            "simple_generate_qa.yaml",
-        ]
-        for config in configs:
-            config_yaml = os.path.join(
-                resources.files("instructlab.sdg.configs.knowledge"), config
-            )
-            block = LLMBlock(
-                ctx=self.mock_ctx,
-                pipe=self.mock_pipe,
-                block_name=config,
-                config_path=config_yaml,
-                output_cols=[],
-            )
-            sample = {"foo": "bar"}
-            assert not block._validate(
-                block.prompt_template, sample
-            ), f"knowledge config {config} validated even though it was given a sample with none of the expected fields"
+    def test_configs_with_invalid_sample(self):
+        for config_type in ["knowledge", "skills"]:
+            for config_yaml in resources.files(
+                f"instructlab.sdg.configs.{config_type}"
+            ).iterdir():
+                if config_yaml.suffix != ".yaml":
+                    continue
+                block = LLMBlock(
+                    ctx=self.mock_ctx,
+                    pipe=self.mock_pipe,
+                    block_name=config_yaml.stem,
+                    config_path=config_yaml,
+                    output_cols=[],
+                )
+                sample = {"foo": "bar"}
+                assert not block._validate(
+                    block.prompt_template, sample
+                ), f"{config_type} config {config_yaml.name} validated even though it was given a sample with none of the expected fields"
 
     def test_simple_generate_qa_with_valid_sample(self):
         config_yaml = os.path.join(

@@ -37,7 +37,6 @@ class BlockRegistry:
 
         :return: Dictionary of registered block names and classes.
         """
-        logger.debug("Fetching the block registry map.")
         return cls._registry
 
 
@@ -71,7 +70,6 @@ class PromptRegistry:
         """
         if name not in cls._registry:
             raise KeyError(f"Prompt template '{name}' not found.")
-        logger.debug(f"Retrieving prompt template '{name}'")
         return cls._registry[name]
 
     @classmethod
@@ -81,5 +79,4 @@ class PromptRegistry:
 
         :return: Dictionary of registered block names and classes.
         """
-        logger.debug("Fetching the block registry map.")
         return cls._registry
