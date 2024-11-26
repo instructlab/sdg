@@ -10,7 +10,12 @@ from httpx import URL
 from openai import InternalServerError, NotFoundError
 
 # First Party
-from src.instructlab.sdg import ConditionalLLMBlock, LLMBlock
+from src.instructlab.sdg import (
+    ConditionalLLMBlock,
+    LLMBlock,
+    LLMLogProbBlock,
+    LLMMessagesBlock,
+)
 from src.instructlab.sdg.blocks.llmblock import server_supports_batched
 
 
@@ -88,6 +93,7 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             "custom model_prompt was not used when explicitly set",
         )
 
+
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestLLMBlockOtherFunctions(unittest.TestCase):
     def setUp(self):
@@ -138,6 +144,7 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert not block._validate(block.prompt_template, {})
         assert block._validate(block.prompt_template, {"var1": "foo", "var2": "bar"})
 
+
 class TestLLMBlockBatching(unittest.TestCase):
     def setUp(self):
         self.mock_ctx = MagicMock()
@@ -187,6 +194,7 @@ class TestLLMBlockBatching(unittest.TestCase):
         supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
         assert supports_batched
 
+
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestConditionalLLMBlock(unittest.TestCase):
     def setUp(self):
@@ -213,5 +221,63 @@ class TestConditionalLLMBlock(unittest.TestCase):
         )
 
         assert not block._validate(block.prompt_template, {})
-        assert not block._validate(block.prompt_template, {"selector": "_B_", "var1": "foo", "var2": "bar"})
-        assert block._validate(block.prompt_template, {"selector": "_A_", "var1": "foo", "var2": "bar"})
+        assert not block._validate(
+            block.prompt_template, {"selector": "_B_", "var1": "foo", "var2": "bar"}
+        )
+        assert block._validate(
+            block.prompt_template, {"selector": "_A_", "var1": "foo", "var2": "bar"}
+        )
+
+
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
+class TestLLMLogProbBlock(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+        self.config_return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+
+    def test_constructor_works(self, mock_load_config):
+        mock_load_config.return_value = self.config_return_value
+        block = LLMLogProbBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block is not None
+
+
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
+class TestLLMMessagesBlock(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+        self.config_return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+
+    def test_constructor_works(self, mock_load_config):
+        mock_load_config.return_value = self.config_return_value
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block is not None
