@@ -21,9 +21,11 @@ from instructlab.sdg import Block, Pipeline, PipelineBlockError
 
 @contextmanager
 def block_types(block_types_dict):
+    get_registry_mock = mock.MagicMock()
+    get_registry_mock.return_value = block_types_dict
     with mock.patch(
-        "instructlab.sdg.pipeline._block_types",
-        block_types_dict,
+        "instructlab.sdg.registry.BlockRegistry.get_registry",
+        get_registry_mock,
     ):
         yield
 

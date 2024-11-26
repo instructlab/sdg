@@ -8,6 +8,7 @@ import operator
 from datasets import Dataset
 
 # Local
+from ..registry import BlockRegistry
 from .block import Block
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,7 @@ def _map_dtype(samples, column, dtype, num_proc=1):
 
 
 # This is part of the public API.
+@BlockRegistry.register("FilterByValueBlock")
 class FilterByValueBlock(Block):
     def __init__(
         self,
