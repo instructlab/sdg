@@ -3,6 +3,7 @@
 # NOTE: This package imports Torch and other heavy packages.
 __all__ = (
     "Block",
+    "BlockRegistry",
     "CombineColumnsBlock",
     "ConditionalLLMBlock",
     "DuplicateColumnsBlock",
@@ -18,6 +19,7 @@ __all__ = (
     "PipelineBlockError",
     "PipelineConfigParserError",
     "PipelineContext",
+    "PromptRegistry",
     "RenameColumnsBlock",
     "SamplePopulatorBlock",
     "SelectorBlock",
@@ -58,5 +60,6 @@ from .pipeline import (
     PipelineContext,
 )
 from .prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
+from .registry import BlockRegistry, PromptRegistry
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException

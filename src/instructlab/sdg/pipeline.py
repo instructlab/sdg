@@ -19,8 +19,9 @@ from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
 
 # Local
-from .blocks import filterblock, llmblock, utilblocks
+from .blocks import llmblock
 from .blocks.block import Block
+from .registry import BlockRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -255,24 +256,11 @@ class Pipeline:
         )
 
 
-_block_types = {
-    "CombineColumnsBlock": utilblocks.CombineColumnsBlock,
-    "ConditionalLLMBlock": llmblock.ConditionalLLMBlock,
-    "DuplicateColumnsBlock": utilblocks.DuplicateColumnsBlock,
-    "FilterByValueBlock": filterblock.FilterByValueBlock,
-    "FlattenColumnsBlock": utilblocks.FlattenColumnsBlock,
-    "LLMBlock": llmblock.LLMBlock,
-    "RenameColumnsBlock": utilblocks.RenameColumnsBlock,
-    "SamplePopulatorBlock": utilblocks.SamplePopulatorBlock,
-    "SelectorBlock": utilblocks.SelectorBlock,
-    "SetToMajorityValueBlock": utilblocks.SetToMajorityValueBlock,
-}
-
-
 def _lookup_block_type(block_type):
-    if not block_type in _block_types:
+    block_types = BlockRegistry.get_registry()
+    if not block_type in block_types:
         raise PipelineConfigParserError(f"Unknown block type {block_type}")
-    return _block_types[block_type]
+    return block_types[block_type]
 
 
 _PIPELINE_CONFIG_PARSER_MAJOR = 1
