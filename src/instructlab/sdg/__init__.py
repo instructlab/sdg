@@ -12,6 +12,8 @@ __all__ = (
     "FlattenColumnsBlock",
     "GenerateException",
     "LLMBlock",
+    "LLMLogProbBlock",
+    "LLMMessagesBlock",
     "Pipeline",
     "PipelineBlockError",
     "PipelineConfigParserError",
@@ -30,7 +32,12 @@ __all__ = (
 # Local
 from .blocks.block import Block
 from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
-from .blocks.llmblock import ConditionalLLMBlock, LLMBlock
+from .blocks.llmblock import (
+    ConditionalLLMBlock,
+    LLMBlock,
+    LLMLogProbBlock,
+    LLMMessagesBlock,
+)
 from .blocks.utilblocks import (
     CombineColumnsBlock,
     DuplicateColumnsBlock,

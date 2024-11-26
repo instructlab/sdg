@@ -345,3 +345,157 @@ class ConditionalLLMBlock(LLMBlock):
                 return False
             prompt_template = prompt_template[config_key]
         return super()._validate(prompt_template, input_dict)
+
+
+# This is part of the public API.
+@BlockRegistry.register("LLMLogProbBlock")
+class LLMLogProbBlock(LLMBlock):
+    def __init__(
+        self,
+        ctx,
+        pipe,
+        block_name,
+        config_path,
+        output_cols,
+        model_prompt=None,
+        gen_kwargs={},
+        parser_kwargs={},
+        batch_kwargs={},
+    ) -> None:
+        super().__init__(
+            ctx,
+            pipe,
+            block_name,
+            config_path,
+            output_cols,
+            model_prompt=model_prompt,
+            gen_kwargs=gen_kwargs,
+            parser_kwargs=parser_kwargs,
+            batch_kwargs=batch_kwargs,
+        )
+
+    # def _generate_logprobs(self, samples, **gen_kwargs):
+    #     prompts = [
+    #         self.model_prompt.format(prompt=self._format_prompt(sample))
+    #         for sample in samples
+    #     ]
+    #     generate_args = {**self.defaults, **gen_kwargs}
+
+    #     # verify if logprobs is mentioned in the generate_args, if not add it and return top10 logprobs
+    #     if "logprobs" not in generate_args:
+    #         generate_args["logprobs"] = 10
+
+    #     if self.server_supports_batched:
+    #         response = self.client.completions.create(prompt=prompts, **generate_args)
+    #         return [choice.logprobs.top_logprobs for choice in response.choices]
+
+    #     n = gen_kwargs.get("n", 1)
+    #     results = []
+    #     for prompt in prompts:
+    #         for _ in range(n):
+    #             response = self.client.completions.create(
+    #                 prompt=prompt, **generate_args
+    #             )
+    #             results.append(response.choices[0].logprobs.top_logprobs)
+    #     return results
+
+    # def _parse(self, generations: List[List[Dict]]) -> List[List[str]]:
+    #     # override the parse method to convert the generations to json string
+    #     # convert the generations to json string to save as dataset
+    #     # this is because the dataset can only store key value pairs which are consistent
+    #     return [[json.dumps(item) for item in sublist] for sublist in generations]
+
+    # def generate(self, samples: Dataset, **gen_kwargs) -> Dataset:
+    #     """
+    #     Generate the output from the block. This method should first validate the input data,
+    #     then generate the output, and finally parse the generated output before returning it.
+
+    #     :return: The parsed output after generation.
+    #     """
+    #     num_samples = self.block_config.get("num_samples", None)
+    #     logger.debug("Generating outputs for {} samples".format(len(samples)))
+
+    #     if (num_samples is not None) and ("num_samples" not in samples.column_names):
+    #         samples = samples.add_column("num_samples", [num_samples] * len(samples))
+
+    #     # validate each sample
+    #     # Log errors and remove invalid samples
+    #     valid_samples = []
+
+    #     for sample in samples:
+    #         if self._validate(self.prompt_template, sample):
+    #             valid_samples.append(sample)
+    #         else:
+    #             logger.warning(
+    #                 f"Sample failed validation: {sample}"
+    #             )  # Log details of the failed sample
+
+    #     samples = valid_samples
+
+    #     if len(samples) == 0:
+    #         logger.warning(
+    #             "No valid samples to generate outputs for, returning empty dataset"
+    #         )
+    #         return Dataset.from_list([])
+
+    #     # generate the output
+
+    #     outputs = self._generate_logprobs(samples, **gen_kwargs)
+    #     logger.debug("Generated outputs: %s", outputs)
+
+    #     output_dataset = Dataset.from_list(samples)
+    #     output_dataset = output_dataset.add_column(
+    #         self.output_cols[0],
+    #         self._parse(outputs),  # pylint: disable=no-value-for-parameter
+    #     )
+
+    #     return output_dataset
+
+
+# This is part of the public API.
+@BlockRegistry.register("LLMMessagesBlock")
+class LLMMessagesBlock(LLMBlock):
+    def __init__(
+        self,
+        ctx,
+        pipe,
+        block_name,
+        config_path,
+        output_cols,
+        model_prompt=None,
+        gen_kwargs={},
+        parser_kwargs={},
+        batch_kwargs={},
+    ) -> None:
+        super().__init__(
+            ctx,
+            pipe,
+            block_name,
+            config_path,
+            output_cols,
+            model_prompt=model_prompt,
+            gen_kwargs=gen_kwargs,
+            parser_kwargs=parser_kwargs,
+            batch_kwargs=batch_kwargs,
+        )
+
+    # def _generate(self, samples) -> list:
+    #     generate_args = {**self.defaults, **gen_kwargs}
+
+    #     if "n" in generate_args and generate_args.get("temperature", 0) <= 0:
+    #         generate_args["temperature"] = 0.7
+    #         logger.warning(
+    #             "Temperature should be greater than 0 for n > 1, setting temperature to 0.7"
+    #         )
+
+    #     messages = samples[self.input_col]
+
+    #     results = []
+    #     n = gen_kwargs.get("n", 1)
+    #     for message in messages:
+    #         responses = self.client.chat.completions.create(messages=message, **generate_args)
+    #         if n > 1:
+    #             results.append([choice.message.content for choice in responses.choices])
+    #         else:
+    #             results.append(responses.choices[0].message.content)
+    #     return results
