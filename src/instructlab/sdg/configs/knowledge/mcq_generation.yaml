@@ -75,7 +75,7 @@ generation: |
 
   Here is the document:
   [Start of Document]
-  {document}
+  {{document}}
   [End of Document]
 
 start_tags: ["[Start of Question]", "[Start of Answer]"]

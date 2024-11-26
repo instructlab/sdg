@@ -3,7 +3,7 @@ from typing import Dict
 import logging
 
 # Third Party
-from jinja2 import Template
+from jinja2 import StrictUndefined, Template
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class PromptRegistry:
 
         def decorator(func):
             template_str = func()
-            cls._registry[name] = Template(template_str)
+            cls._registry[name] = Template(template_str, undefined=StrictUndefined)
             logger.debug(f"Registered prompt template '{name}'")
             return func
 
