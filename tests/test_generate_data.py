@@ -119,10 +119,10 @@ def validate_phase_leaf_node_dataset(dataset_file_name):
     assert ds.features["messages"][0]["role"].dtype == "string"
 
 
-def validate_recipe(recipe_file_name):
+def validate_recipe(recipe_file_name, num_datasets):
     with open(recipe_file_name, encoding="utf-8") as fp:
         yaml_contents = yaml.safe_load(fp)
-        assert len(yaml_contents["datasets"]) == 1
+        assert len(yaml_contents["datasets"]) == num_datasets
         assert yaml_contents["datasets"][0]["path"].endswith(".jsonl")
         assert "sampling_size" in yaml_contents["datasets"][0]
         assert yaml_contents["metadata"]["sys_prompt"] == TEST_SYS_PROMPT
@@ -344,7 +344,7 @@ class TestGenerateCompositionalData(unittest.TestCase):
             if name.endswith("compositional_skills_new.jsonl"):
                 validate_skill_leaf_node_dataset(matches[0])
             elif name.startswith("skills_recipe_"):
-                validate_recipe(matches[0])
+                validate_recipe(matches[0], 1)
             elif name.startswith("skills_train_msgs_"):
                 validate_mixed_dataset(matches[0])
 
@@ -374,13 +374,19 @@ class TestGenerateKnowledgeData(unittest.TestCase):
             TEST_DATA_DIR, "test_valid_knowledge_skill.yaml"
         )
         tracked_knowledge_file = os.path.join("knowledge  ", "tracked", "qna.yaml")
-        untracked_knowledge_file = os.path.join("knowledge", "new", "qna.yaml")
+        # Explicitly add 2 files here to ensure multiple knowledge leaf nodes
+        # don't conflict in anything like document_output_dir for knowledge docs
+        untracked_knowledge_file1 = os.path.join("knowledge", "new1", "qna.yaml")
+        untracked_knowledge_file2 = os.path.join("knowledge", "new2", "qna.yaml")
         test_valid_knowledge_skill = load_test_skills(test_valid_knowledge_skill_file)
         self.test_taxonomy.add_tracked(
             tracked_knowledge_file, test_valid_knowledge_skill
         )
         self.test_taxonomy.create_untracked(
-            untracked_knowledge_file, test_valid_knowledge_skill
+            untracked_knowledge_file1, test_valid_knowledge_skill
+        )
+        self.test_taxonomy.create_untracked(
+            untracked_knowledge_file2, test_valid_knowledge_skill
         )
         self.expected_test_samples = generate_test_samples(test_valid_knowledge_skill)
         self.expected_train_samples = generate_train_samples(test_valid_knowledge_skill)
@@ -412,40 +418,46 @@ class TestGenerateKnowledgeData(unittest.TestCase):
             elif name.startswith("messages_"):
                 validate_messages_dataset(matches[0], self.expected_train_samples)
 
-        node_p07_file = os.path.join("node_datasets_*", "knowledge_new_p07.jsonl")
-        node_p10_file = os.path.join("node_datasets_*", "knowledge_new_p10.jsonl")
+        node1_p07_file = os.path.join("node_datasets_*", "knowledge_new1_p07.jsonl")
+        node1_p10_file = os.path.join("node_datasets_*", "knowledge_new1_p10.jsonl")
+        node2_p07_file = os.path.join("node_datasets_*", "knowledge_new2_p07.jsonl")
+        node2_p10_file = os.path.join("node_datasets_*", "knowledge_new2_p10.jsonl")
         for name in [
             "skills_recipe_*.yaml",
             "skills_train_*.jsonl",
             "knowledge_recipe_*.yaml",
             "knowledge_train_msgs_*.jsonl",
-            node_p07_file,
-            node_p10_file,
+            node1_p07_file,
+            node1_p10_file,
+            node2_p07_file,
+            node2_p10_file,
         ]:
             matches = glob.glob(os.path.join(self.tmp_path, name))
             assert len(matches) == 1
-            if name.endswith("knowledge_new_p07.jsonl") or name.endswith(
-                "knowledge_new_p10.jsonl"
+            if name.endswith("knowledge_new1_p07.jsonl") or name.endswith(
+                "knowledge_new1_p10.jsonl"
             ):
                 validate_phase_leaf_node_dataset(matches[0])
             elif name.startswith("skills_recipe_") or name.startswith(
                 "knowledge_recipe_"
             ):
-                validate_recipe(matches[0])
+                validate_recipe(matches[0], 2)
             elif name.startswith("skills_train_msgs_") or name.startswith(
                 "knowledge_train_msgs_"
             ):
                 validate_mixed_dataset(matches[0])
 
         for name in [
-            "knowledge_new_task.yaml",
-            "mmlubench_knowledge_new.jsonl",
+            "knowledge_new1_task.yaml",
+            "mmlubench_knowledge_new1.jsonl",
+            "knowledge_new2_task.yaml",
+            "mmlubench_knowledge_new2.jsonl",
         ]:
             matches = glob.glob(os.path.join(self.tmp_path, "node_datasets_*", name))
             assert len(matches) == 1
-            if name == "knowledge_new_task.yaml":
+            if name == "knowledge_new1_task.yaml":
                 validate_lm_eval_task(matches[0])
-            elif name == "mmlubench_knowledge_new.jsonl":
+            elif name == "mmlubench_knowledge_new1.jsonl":
                 validate_mmlubench_dataset(matches[0])
 
     def teardown(self) -> None:
