@@ -27,7 +27,6 @@ from instructlab.sdg.pipeline import (
     Pipeline,
     PipelineContext,
 )
-from instructlab.sdg.prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from instructlab.sdg.utils import GenerateException, models
 from instructlab.sdg.utils.json import jldump
 from instructlab.sdg.utils.taxonomy import (
@@ -355,10 +354,7 @@ def generate_data(
 
     logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
 
-    if models.get_model_family(model_family, model_name) == "mixtral":
-        model_family = MODEL_FAMILY_MIXTRAL
-    else:
-        model_family = MODEL_FAMILY_MERLINITE
+    model_family = models.get_model_family(model_family, model_name)
 
     ctx = _context_init(
         client,

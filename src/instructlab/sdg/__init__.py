@@ -24,8 +24,6 @@ __all__ = (
     "SamplePopulatorBlock",
     "SelectorBlock",
     "SetToMajorityValueBlock",
-    "MODEL_FAMILY_MERLINITE",
-    "MODEL_FAMILY_MIXTRAL",
     "FULL_PIPELINES_PACKAGE",
     "SIMPLE_PIPELINES_PACKAGE",
     "generate_data",
@@ -59,7 +57,6 @@ from .pipeline import (
     PipelineConfigParserError,
     PipelineContext,
 )
-from .prompts import MODEL_FAMILY_MERLINITE, MODEL_FAMILY_MIXTRAL
 from .registry import BlockRegistry, PromptRegistry
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException

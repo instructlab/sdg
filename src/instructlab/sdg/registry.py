@@ -46,7 +46,7 @@ class PromptRegistry:
     _registry: Dict[str, Template] = {}
 
     @classmethod
-    def register(cls, name: str):
+    def register(cls, *names: str):
         """Decorator to register a Jinja2 template function by name.
 
         :param name: Name of the template to register.
@@ -55,8 +55,10 @@ class PromptRegistry:
 
         def decorator(func):
             template_str = func()
-            cls._registry[name] = Template(template_str, undefined=StrictUndefined)
-            logger.debug(f"Registered prompt template '{name}'")
+            template = Template(template_str, undefined=StrictUndefined)
+            for name in names:
+                cls._registry[name] = template
+                logger.debug(f"Registered prompt template '{name}'")
             return func
 
         return decorator
