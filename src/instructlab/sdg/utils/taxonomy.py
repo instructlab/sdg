@@ -2,6 +2,7 @@
 
 # Standard
 from pathlib import Path
+from tempfile import mkdtemp
 from typing import Dict, List, Tuple, Union
 import glob
 import logging
@@ -257,14 +258,20 @@ def _read_taxonomy_file(
     try:
         # get seed instruction data
         tax_path = "->".join(taxonomy.path.parent.parts)
+        leaf_node_path = tax_path.replace("->", "_")
         contents = taxonomy.contents
         task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
         document_contents, doc_filepaths = None, None
         if documents:
+            os.makedirs(document_output_dir, exist_ok=True)
+            unique_output_dir = mkdtemp(
+                prefix=f"{leaf_node_path}_", dir=document_output_dir
+            )
             document_contents, doc_filepaths = _get_documents(
-                source=documents, document_output_dir=document_output_dir
+                source=documents,
+                document_output_dir=unique_output_dir,
             )
             logger.debug("Content from git repo fetched")
 
