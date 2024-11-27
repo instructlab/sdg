@@ -7,7 +7,6 @@ import re
 
 # Third Party
 from datasets import Dataset
-from jinja2 import StrictUndefined, Template
 from tqdm import tqdm
 import httpx
 import openai
@@ -60,7 +59,7 @@ def server_supports_batched(client, model_id: str) -> bool:
 def template_from_struct_and_config(struct, config):
     # replace None with empty strings
     filtered_config = {k: (v if v is not None else "") for k, v in config.items()}
-    return Template(struct.format(**filtered_config), undefined=StrictUndefined)
+    return PromptRegistry.template_from_string(struct.format(**filtered_config))
 
 
 # This is part of the public API.
@@ -163,7 +162,7 @@ class LLMBlock(Block):
         if self.model_prompt is None:
             model_prompt = PromptRegistry.get_template(self.ctx.model_family)
         elif self.model_prompt:
-            model_prompt = Template(self.model_prompt, undefined=StrictUndefined)
+            model_prompt = PromptRegistry.template_from_string(self.model_prompt)
         else:
             # Our model prompt is an empty string, which we'll render
             # verbatim without wrapping in the messages format
@@ -222,7 +221,11 @@ class LLMBlock(Block):
         Generate the output from the block. This method should first validate the input data,
         then generate the output, and finally parse the generated output before returning it.
 
-        :return: The parsed output after generation.
+        Args:
+            samples (Dataset): The samples used as input data
+
+        Returns:
+            The parsed output after generation.
         """
         num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
@@ -407,7 +410,8 @@ class LLMLogProbBlock(LLMBlock):
     #     Generate the output from the block. This method should first validate the input data,
     #     then generate the output, and finally parse the generated output before returning it.
 
-    #     :return: The parsed output after generation.
+    #     Returns:
+    #         The parsed output after generation.
     #     """
     #     num_samples = self.block_config.get("num_samples", None)
     #     logger.debug("Generating outputs for {} samples".format(len(samples)))

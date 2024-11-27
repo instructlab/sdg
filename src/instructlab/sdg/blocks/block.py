@@ -2,7 +2,6 @@
 
 # Standard
 from abc import ABC
-from collections import ChainMap
 from typing import Any, Dict, Union
 import logging
 import os.path
@@ -30,20 +29,23 @@ class Block(ABC):
         Validate the input data for this block. This method validates whether all required
         variables in the Jinja template are provided in the input_dict.
 
-        :param prompt_template: The Jinja2 template object.
-        :param input_dict: A dictionary of input values to check against the template.
-        :return: True if the input data is valid (i.e., no missing variables), False otherwise.
-        """
+        Args:
+            prompt_template (Template): The Jinja2 template object.
+            input_dict (Dict[str, Any]): A dictionary of input values to check against
+                                         the template.
 
-        class Default(dict):
-            def __missing__(self, key: str) -> None:
-                raise KeyError(key)
+        Returns:
+            True if the input data is valid (i.e., no missing variables), False otherwise.
+        """
 
         try:
             # Try rendering the template with the input_dict
-            prompt_template.render(ChainMap(input_dict, Default()))
+            prompt_template.render(input_dict)
             return True
         except UndefinedError as e:
+            # Jinja throws an UndefinedError for any undefnined template variables,
+            # assuming the prompt_template was created using StrictUndefined. This
+            # is the case for anything using PromptRegistry.template_from_string.
             logger.error(f"Missing key: {e}")
             return False
 
@@ -54,8 +56,11 @@ class Block(ABC):
         If the supplied configuration file is a relative path, it is assumed
         to be part of this Python package.
 
-        :param config_path: The path to the configuration file.
-        :return: The loaded configuration.
+        Args:
+            config_path (str): The path to the configuration file.
+
+        Returns:
+            The loaded configuration.
         """
         if not os.path.isabs(config_path):
             config_path = os.path.join(

@@ -12,6 +12,7 @@ __all__ = (
     "FilterByValueBlockError",
     "FlattenColumnsBlock",
     "GenerateException",
+    "IterBlock",
     "LLMBlock",
     "LLMLogProbBlock",
     "LLMMessagesBlock",
@@ -32,6 +33,7 @@ __all__ = (
 # Local
 from .blocks.block import Block
 from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
+from .blocks.iterblock import IterBlock
 from .blocks.llmblock import (
     ConditionalLLMBlock,
     LLMBlock,

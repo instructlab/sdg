@@ -3,7 +3,7 @@ from typing import Dict
 import logging
 
 # Third Party
-from jinja2 import StrictUndefined, Template
+from jinja2 import Environment, StrictUndefined, Template
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,8 @@ class BlockRegistry:
         """
         Decorator to register a block class under a specified name.
 
-        :param block_name: Name under which to register the block.
+        Args:
+            block_name (str): Name under which to register the block.
         """
 
         def decorator(block_class):
@@ -35,7 +36,8 @@ class BlockRegistry:
         """
         Retrieve the current registry map of block types.
 
-        :return: Dictionary of registered block names and classes.
+        Returns:
+            Dictionary of registered block names and classes.
         """
         return cls._registry
 
@@ -44,18 +46,22 @@ class PromptRegistry:
     """Registry for managing Jinja2 prompt templates."""
 
     _registry: Dict[str, Template] = {}
+    _template_env: Environment = Environment(undefined=StrictUndefined)
 
     @classmethod
     def register(cls, *names: str):
-        """Decorator to register a Jinja2 template function by name.
+        """Decorator to register Jinja2 template functions by name.
 
-        :param name: Name of the template to register.
-        :return: A decorator that registers the Jinja2 template function.
+        Args:
+            names (str): Names of the templates to register.
+
+        Returns:
+            A decorator that registers the Jinja2 template functions.
         """
 
         def decorator(func):
             template_str = func()
-            template = Template(template_str, undefined=StrictUndefined)
+            template = cls.template_from_string(template_str)
             for name in names:
                 cls._registry[name] = template
                 logger.debug(f"Registered prompt template '{name}'")
@@ -67,8 +73,11 @@ class PromptRegistry:
     def get_template(cls, name: str) -> Template:
         """Retrieve a Jinja2 template by name.
 
-        :param name: Name of the template to retrieve.
-        :return: The Jinja2 template instance.
+        Args:
+            name (str): Name of the template to retrieve.
+
+        Returns:
+            The Jinja2 template instance.
         """
         if name not in cls._registry:
             raise KeyError(f"Prompt template '{name}' not found.")
@@ -79,6 +88,20 @@ class PromptRegistry:
         """
         Retrieve the current registry map of block types.
 
-        :return: Dictionary of registered block names and classes.
+        Returns:
+            Dictionary of registered block names and classes.
         """
         return cls._registry
+
+    @classmethod
+    def template_from_string(cls, template_str):
+        """
+        Create a Jinja Template using our Environment from the source string
+
+        Args:
+            template_str: The template source, as a string-like thing
+
+        Returns:
+            Jinja Template
+        """
+        return cls._template_env.from_string(template_str)
