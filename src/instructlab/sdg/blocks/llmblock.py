@@ -13,6 +13,8 @@ import httpx
 import openai
 
 # Local
+# Import prompts to register default chat templates
+from .. import prompts as default_prompts  # pylint: disable=unused-import
 from ..registry import BlockRegistry, PromptRegistry
 from .block import Block
 
@@ -156,7 +158,6 @@ class LLMBlock(Block):
     # 3. Empty string - the pipeline has specified that no model prompt is needed
     def _format_prompt(self, sample: Dict) -> str:
         prompt_templated_str = self.prompt_template.render(sample).strip()
-        wrap_in_messages_format = True
 
         model_prompt = None
         if self.model_prompt is None:
@@ -167,12 +168,8 @@ class LLMBlock(Block):
             # Our model prompt is an empty string, which we'll render
             # verbatim without wrapping in the messages format
             model_prompt = PromptRegistry.get_template("blank")
-            wrap_in_messages_format = False
 
-        if wrap_in_messages_format:
-            messages = [{"role": "user", "content": prompt_templated_str}]
-        else:
-            messages = prompt_templated_str
+        messages = [{"role": "user", "content": prompt_templated_str}]
 
         return model_prompt.render(
             messages=messages,

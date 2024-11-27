@@ -8,6 +8,8 @@ Advanced users are now able to supply custom Pipeline `Block` implementations by
 
 See the `tests/testdata/custom_block.py` and `tests/testdata/custom_block_pipeline.yaml` files in this repository for an example of how to create custom blocks and use them from your own pipeline config yamls.
 
+See the `tests/testdata/custom_prompt.py` file in this repository for an example how to register custom chat templates used when formatting prompts.
+
 ## Breaking Changes
 
 ### Pipeline configs and Prompt templates switched to Jinja
