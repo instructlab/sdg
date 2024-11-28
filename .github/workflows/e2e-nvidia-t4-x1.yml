@@ -128,7 +128,7 @@ jobs:
           . ../instructlab/venv/bin/activate
           pip install .
 
-      - name: Check disk
+      - name: Check disk before tests
         run: |
           df -h
 
@@ -137,6 +137,10 @@ jobs:
         run: |
           . venv/bin/activate
           ./scripts/e2e-ci.sh -s
+
+      - name: Check disk after tests
+        run: |
+          df -h
 
   stop-small-ec2-runner:
     needs:
