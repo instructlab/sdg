@@ -30,9 +30,13 @@ class Block(ABC):
         Validate the input data for this block. This method validates whether all required
         variables in the Jinja template are provided in the input_dict.
 
-        :param prompt_template: The Jinja2 template object.
-        :param input_dict: A dictionary of input values to check against the template.
-        :return: True if the input data is valid (i.e., no missing variables), False otherwise.
+        Args:
+            prompt_template (Template): The Jinja2 template object.
+            input_dict (Dict[str, Any]): A dictionary of input values to check against
+                                         the template.
+
+        Returns:
+            True if the input data is valid (i.e., no missing variables), False otherwise.
         """
 
         class Default(dict):
@@ -54,8 +58,11 @@ class Block(ABC):
         If the supplied configuration file is a relative path, it is assumed
         to be part of this Python package.
 
-        :param config_path: The path to the configuration file.
-        :return: The loaded configuration.
+        Args:
+            config_path (str): The path to the configuration file.
+
+        Returns:
+            The loaded configuration.
         """
         if not os.path.isabs(config_path):
             config_path = os.path.join(

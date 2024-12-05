@@ -222,7 +222,11 @@ class LLMBlock(Block):
         Generate the output from the block. This method should first validate the input data,
         then generate the output, and finally parse the generated output before returning it.
 
-        :return: The parsed output after generation.
+        Args:
+            samples (Dataset): The samples used as input data
+
+        Returns:
+            The parsed output after generation.
         """
         num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
@@ -407,7 +411,8 @@ class LLMLogProbBlock(LLMBlock):
     #     Generate the output from the block. This method should first validate the input data,
     #     then generate the output, and finally parse the generated output before returning it.
 
-    #     :return: The parsed output after generation.
+    #     Returns:
+    #         The parsed output after generation.
     #     """
     #     num_samples = self.block_config.get("num_samples", None)
     #     logger.debug("Generating outputs for {} samples".format(len(samples)))

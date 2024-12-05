@@ -18,7 +18,8 @@ class BlockRegistry:
         """
         Decorator to register a block class under a specified name.
 
-        :param block_name: Name under which to register the block.
+        Args:
+            block_name (str): Name under which to register the block.
         """
 
         def decorator(block_class):
@@ -35,7 +36,8 @@ class BlockRegistry:
         """
         Retrieve the current registry map of block types.
 
-        :return: Dictionary of registered block names and classes.
+        Returns:
+            Dictionary of registered block names and classes.
         """
         return cls._registry
 
@@ -47,10 +49,13 @@ class PromptRegistry:
 
     @classmethod
     def register(cls, *names: str):
-        """Decorator to register a Jinja2 template function by name.
+        """Decorator to register Jinja2 template functions by name.
 
-        :param name: Name of the template to register.
-        :return: A decorator that registers the Jinja2 template function.
+        Args:
+            names (str): Names of the templates to register.
+
+        Returns:
+            A decorator that registers the Jinja2 template functions.
         """
 
         def decorator(func):
@@ -67,8 +72,11 @@ class PromptRegistry:
     def get_template(cls, name: str) -> Template:
         """Retrieve a Jinja2 template by name.
 
-        :param name: Name of the template to retrieve.
-        :return: The Jinja2 template instance.
+        Args:
+            name (str): Name of the template to retrieve.
+
+        Returns:
+            The Jinja2 template instance.
         """
         if name not in cls._registry:
             raise KeyError(f"Prompt template '{name}' not found.")
@@ -79,6 +87,7 @@ class PromptRegistry:
         """
         Retrieve the current registry map of block types.
 
-        :return: Dictionary of registered block names and classes.
+        Returns:
+            Dictionary of registered block names and classes.
         """
         return cls._registry
