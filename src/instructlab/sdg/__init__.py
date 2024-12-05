@@ -29,6 +29,7 @@ __all__ = (
     "FULL_PIPELINES_PACKAGE",
     "SIMPLE_PIPELINES_PACKAGE",
     "generate_data",
+    "taxonomy_to_samples",
 )
 
 # Local
@@ -61,5 +62,6 @@ from .pipeline import (
     PipelineContext,
 )
 from .registry import BlockRegistry, PromptRegistry
+from .taxonomy import taxonomy_to_samples
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException
