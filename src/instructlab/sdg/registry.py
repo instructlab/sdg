@@ -3,7 +3,7 @@ from typing import Dict
 import logging
 
 # Third Party
-from jinja2 import StrictUndefined, Template
+from jinja2 import Environment, StrictUndefined, Template
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,7 @@ class PromptRegistry:
     """Registry for managing Jinja2 prompt templates."""
 
     _registry: Dict[str, Template] = {}
+    _template_env: Environment = Environment(undefined=StrictUndefined)
 
     @classmethod
     def register(cls, *names: str):
@@ -60,7 +61,7 @@ class PromptRegistry:
 
         def decorator(func):
             template_str = func()
-            template = Template(template_str, undefined=StrictUndefined)
+            template = cls.template_from_string(template_str)
             for name in names:
                 cls._registry[name] = template
                 logger.debug(f"Registered prompt template '{name}'")
@@ -91,3 +92,16 @@ class PromptRegistry:
             Dictionary of registered block names and classes.
         """
         return cls._registry
+
+    @classmethod
+    def template_from_string(cls, template_str):
+        """
+        Create a Jinja Template using our Environment from the source string
+
+        Args:
+            template_str: The template source, as a string-like thing
+
+        Returns:
+            Jinja Template
+        """
+        return cls._template_env.from_string(template_str)
