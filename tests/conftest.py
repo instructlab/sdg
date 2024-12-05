@@ -30,7 +30,7 @@ def testdata_path() -> typing.Generator[pathlib.Path, None, None]:
 
 def get_ctx(**kwargs) -> PipelineContext:
     kwargs.setdefault("client", mock.MagicMock())
-    kwargs.setdefault("model_family", "test")
+    kwargs.setdefault("model_family", "merlinite")
     kwargs.setdefault("model_id", "test-model")
     kwargs.setdefault("num_instructions_to_generate", 10)
     kwargs.setdefault("dataset_num_procs", 1)

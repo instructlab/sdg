@@ -22,5 +22,10 @@ def get_model_family(model_family, model_path):
         return model_family
 
     # Try to guess the model family based on the model's filename
-    guess = re.match(r"^\w*", os.path.basename(model_path)).group(0).lower()
-    return guess if guess in registry else DEFAULT_MODEL_FAMILY
+    if model_path:
+        guess = re.match(r"^\w*", os.path.basename(model_path)).group(0).lower()
+        if guess in registry:
+            return guess
+
+    # Nothing was found, so just return the default
+    return DEFAULT_MODEL_FAMILY

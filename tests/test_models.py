@@ -64,3 +64,6 @@ class TestModels:
                 "foobar", "./models/mixtral-8x7b-instruct-v0.1.Q4_K_M.gguf"
             )
         assert "Unknown model family: foobar" in str(exc.value)
+
+    def test_none_args(self):
+        assert models.get_model_family(None, None) == "merlinite"

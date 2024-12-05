@@ -418,6 +418,7 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
                 "icl_document": icl_.get("context", ""),
                 "document_outline": icl_.get("document_outline", ""),
                 "domain": domain,
+                "leaf_node_type": "knowledge",
             }
 
             qna_pairs = icl_.get("questions_and_answers", [])
@@ -431,7 +432,7 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
 
             chunked_dataset.append(record)
 
-    return Dataset.from_list(chunked_dataset)
+    return chunked_dataset
 
 
 def _knowledge_leaf_node_to_samples(
@@ -464,12 +465,23 @@ def _skill_leaf_node_to_samples(leaf_node):
     for i in range(len(leaf_node)):
         samples.append({})
         samples[-1]["task_description"] = leaf_node[i]["task_description"]
+        sample_type = "freeform_skill"
         if leaf_node[i].get("input"):
+            sample_type = "grounded_skill"
             samples[-1]["seed_context"] = leaf_node[i]["input"]
         samples[-1]["seed_question"] = leaf_node[i]["instruction"]
         samples[-1]["seed_response"] = leaf_node[i]["output"]
+        samples[-1]["leaf_node_type"] = sample_type
 
-    return Dataset.from_list(samples)
+    return samples
+
+
+def _enrich_metadata(samples, leaf_node):
+    leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
+    for i, sample in enumerate(samples):
+        sample["leaf_node_path"] = leaf_node_path
+        samples[i] = sample
+    return samples
 
 
 def leaf_node_to_samples(
@@ -480,15 +492,17 @@ def leaf_node_to_samples(
     model_name,
     docling_model_path=None,
 ):
-    if not leaf_node:
-        return []
-    if leaf_node[0].get("documents"):
-        return _knowledge_leaf_node_to_samples(
-            leaf_node,  # pylint: disable=duplicate-code
+    samples = []
+    if leaf_node and leaf_node[0].get("documents"):
+        samples = _knowledge_leaf_node_to_samples(
+            leaf_node,
             server_ctx_size,
             chunk_word_count,
             document_output_dir,
             model_name,
             docling_model_path,
         )
-    return _skill_leaf_node_to_samples(leaf_node)
+    elif leaf_node:
+        samples = _skill_leaf_node_to_samples(leaf_node)
+    samples = _enrich_metadata(samples, leaf_node)
+    return Dataset.from_list(samples)
