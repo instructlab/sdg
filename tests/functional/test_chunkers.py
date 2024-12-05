@@ -26,12 +26,11 @@ def test_chunk_pdf(tmp_path, tokenizer_model_name):
         }
     ]
     chunker = DocumentChunker(
-        leaf_node=leaf_node,
-        taxonomy_path=tmp_path,
+        document_paths=[pdf_path],
         output_dir=tmp_path,
+        tokenizer_model_name=tokenizer_model_name,
         server_ctx_size=4096,
         chunk_word_count=500,
-        tokenizer_model_name=tokenizer_model_name,
     )
     chunks = chunker.chunk_documents()
     assert len(chunks) > 9
@@ -51,12 +50,11 @@ def test_chunk_md(tmp_path, tokenizer_model_name):
         }
     ]
     chunker = DocumentChunker(
-        leaf_node=leaf_node,
-        taxonomy_path=tmp_path,
+        document_paths=[markdown_path],
         output_dir=tmp_path,
+        tokenizer_model_name=tokenizer_model_name,
         server_ctx_size=4096,
         chunk_word_count=500,
-        tokenizer_model_name=tokenizer_model_name,
     )
     chunks = chunker.chunk_documents()
     assert len(chunks) > 7
