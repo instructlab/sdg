@@ -160,7 +160,7 @@ jobs:
           pip install .
           pip install .[cuda]
 
-      - name: Check disk
+      - name: Check disk before tests
         run: |
           df -h
 
@@ -171,6 +171,10 @@ jobs:
         run: |
           . venv/bin/activate
           ./scripts/e2e-ci.sh -l
+
+      - name: Check disk after tests
+        run: |
+          df -h
 
       - name: Add comment to PR if the workflow failed
         if: failure() && steps.check_pr.outputs.is_pr == 'true'
