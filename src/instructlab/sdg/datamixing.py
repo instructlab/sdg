@@ -587,14 +587,12 @@ def _convert_to_leaf_node_messages(sample: dict, sys_prompt: str):
 class DataMixer:
     # pylint: disable=too-many-instance-attributes
 
-    # This determines how many samples to pick from each skill when mixing
-    # skill datasets. It's only used for skills, as knowledge may require
-    # a variable number of samples depending on the length of the
-    # knowledge documents in question. The expectation is that this is
-    # enough samples to sufficiently learn a new skill while also ensuring
-    # a balance of overall mixed data when learning multiple skills at
-    # once.
-    NUM_SYNTH_SKILLS = 30
+    # This determines how many samples to pick from each skill when
+    # mixing skill datasets. A value of "1.0" means to mix all
+    # generated skills, while an integer value would be a fixed
+    # upscaling or downscaling to the number of skills mixed per leaf
+    # node by default.
+    DEFAULT_SKILLS_SAMPLING_SIZE = 1.0
 
     def __init__(
         self,
@@ -723,7 +721,7 @@ class DataMixer:
                 messages,
                 self.skills_recipe,
                 output_file_leaf,
-                sampling_size=self.NUM_SYNTH_SKILLS,
+                sampling_size=self.DEFAULT_SKILLS_SAMPLING_SIZE,
             )
 
     def _gen_mixed_data(self, recipe, output_file_recipe, output_file_data):
