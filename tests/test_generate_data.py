@@ -313,8 +313,8 @@ class TestGenerateCompositionalData(unittest.TestCase):
             generate_data(
                 client=MagicMock(),
                 logger=mocked_logger,
-                model_family="merlinite",
-                model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
+                model_family="granite",
+                model_name=os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab"),
                 num_instructions_to_generate=10,
                 taxonomy=self.test_taxonomy.root,
                 taxonomy_base=TEST_TAXONOMY_BASE,
@@ -396,8 +396,8 @@ class TestGenerateKnowledgeData(unittest.TestCase):
             generate_data(
                 client=MagicMock(),
                 logger=mocked_logger,
-                model_family="merlinite",
-                model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
+                model_family="granite",
+                model_name=os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab"),
                 num_instructions_to_generate=10,
                 taxonomy=self.test_taxonomy.root,
                 taxonomy_base=TEST_TAXONOMY_BASE,
@@ -500,8 +500,8 @@ class TestGenerateEmptyDataset(unittest.TestCase):
             generate_data(
                 client=MagicMock(),
                 logger=mocked_logger,
-                model_family="merlinite",
-                model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
+                model_family="granite",
+                model_name=os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab"),
                 num_instructions_to_generate=10,
                 taxonomy=self.test_taxonomy.root,
                 taxonomy_base=TEST_TAXONOMY_BASE,

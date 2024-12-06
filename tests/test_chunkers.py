@@ -12,10 +12,7 @@ import pytest
 
 # First Party
 from instructlab.sdg.utils.chunkers import (
-    ContextAwareChunker,
     DocumentChunker,
-    FileTypes,
-    TextSplitChunker,
     resolve_ocr_options,
 )
 
@@ -35,65 +32,25 @@ def tokenizer_model_name():
     return os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab")
 
 
-@pytest.mark.parametrize(
-    "filepaths, chunker_type",
-    [
-        ([Path("document.md")], TextSplitChunker),
-        ([Path("document.pdf")], ContextAwareChunker),
-    ],
-)
-def test_chunker_factory(filepaths, chunker_type, documents_dir, tokenizer_model_name):
-    """Test that the DocumentChunker factory class returns the proper Chunker type"""
-    leaf_node = [
-        {
-            "documents": ["Lorem ipsum"],
-            "taxonomy_path": "",
-            "filepaths": filepaths,
-        }
-    ]
-    with tempfile.TemporaryDirectory() as temp_dir:
-        chunker = DocumentChunker(
-            leaf_node=leaf_node,
-            taxonomy_path=documents_dir,
-            output_dir=temp_dir,
-            tokenizer_model_name=tokenizer_model_name,
-        )
-        assert isinstance(chunker, chunker_type)
-
-
-def test_chunker_factory_unsupported_filetype(documents_dir, tokenizer_model_name):
+def test_init_document_chunker_unsupported_filetype(documents_dir, tokenizer_model_name):
     """Test that the DocumentChunker factory class fails when provided an unsupported document"""
-    leaf_node = [
-        {
-            "documents": ["Lorem ipsum"],
-            "taxonomy_path": "",
-            "filepaths": [Path("document.jpg")],
-        }
-    ]
+    document_paths = [documents_dir / "document.jpg"]
     with pytest.raises(ValueError):
         with tempfile.TemporaryDirectory() as temp_dir:
             _ = DocumentChunker(
-                leaf_node=leaf_node,
-                taxonomy_path=documents_dir,
+                document_paths=document_paths,
                 output_dir=temp_dir,
                 tokenizer_model_name=tokenizer_model_name,
             )
 
 
-def test_chunker_factory_empty_filetype(documents_dir):
+def test_chunker_factory_empty_document_paths(tokenizer_model_name):
     """Test that the DocumentChunker factory class fails when provided no document"""
-    leaf_node = [
-        {
-            "documents": [],
-            "taxonomy_path": "",
-            "filepaths": [],
-        }
-    ]
+    document_paths = []
     with pytest.raises(ValueError):
         with tempfile.TemporaryDirectory() as temp_dir:
             _ = DocumentChunker(
-                leaf_node=leaf_node,
-                taxonomy_path=documents_dir,
+                document_paths=document_paths,
                 output_dir=temp_dir,
                 tokenizer_model_name=tokenizer_model_name,
             )
@@ -149,7 +106,7 @@ def test_resolve_ocr_options_none_found_logs_error(
 
 
 def test_create_tokenizer(tokenizer_model_name):
-    ContextAwareChunker.create_tokenizer(tokenizer_model_name)
+    DocumentChunker.create_tokenizer(tokenizer_model_name)
 
 
 @pytest.mark.parametrize(
@@ -163,4 +120,4 @@ def test_create_tokenizer(tokenizer_model_name):
 def test_invalid_tokenizer(model_name):
     model_path = os.path.join(TEST_DATA_DIR, model_name)
     with pytest.raises(ValueError):
-        ContextAwareChunker.create_tokenizer(model_path)
+        DocumentChunker.create_tokenizer(model_path)

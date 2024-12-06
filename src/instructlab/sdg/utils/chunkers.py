@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from enum import Enum
 from pathlib import Path
-from typing import DefaultDict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 import json
 import logging
 import re
@@ -26,6 +26,7 @@ from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetens
 
 logger = logging.getLogger(__name__)
 _DEFAULT_CHUNK_OVERLAP = 100
+SUPPORTED_FILETYPES = [".pdf", ".md"]
 
 
 def _num_tokens_from_words(num_words) -> int:
@@ -68,185 +69,211 @@ def resolve_ocr_options() -> OcrOptions:
         return None
 
 
-class FileTypes(Enum):
-    MD = ".md"
-    PDF = ".pdf"
+def split_docs_by_filetype(document_paths: List[Path]) -> Dict[str, List[Path]]:
+    """Split document paths into a dict of lists based on their file extension.
+    """
+    document_dict = defaultdict(list)
+    for path in document_paths:
+        filetype = path.suffix
+        if filetype not in SUPPORTED_FILETYPES:
+            raise ValueError(f"Provided unsupported filetype {filetype}")
+
+        document_dict[filetype].append(path)
+
+    return dict(document_dict)
 
 
-class ChunkerBase(ABC):
-    @abstractmethod
-    def chunk_documents(self):
-        pass
+
+# class DocumentChunker:
+#     """A factory chunker class that instantiates the applicable chunker
+
+#     Currently, only Markdown and PDF are supported. For Markdown, returns
+#     TextSplitChunker, and for PDF, returns ContextAwareChunker"""
+
+#     def __new__(
+#         cls,
+#         doc_filepaths: List[Path],
+#         output_dir: Path,
+#         server_ctx_size=4096,
+#         chunk_word_count=1024,
+#         tokenizer_model_name: Optional[str] = None,
+#         docling_model_path: Optional[str] = None,
+#     ):
+#         """Insantiate the appropriate chunker for the provided document
+
+#         Args:
+#             leaf_node: a leaf node dict containing "documents",
+#                 "filepaths", and "taxonomy_path" keys
+#             output_dir (Path): directory where artifacts should be stored
+#             server_ctx_size (int): Context window size of server
+#             chunk_word_count (int): Maximum number of words to chunk a document
+#             tokenizer_model_name (Optional[str]): name of huggingface model to get
+#                 tokenizer from
+#         Returns:
+#             TextSplitChunker | ContextAwareChunker: Object of the appropriate
+#                 chunker class for the provided filetype
+#         """
+#         documents = leaf_node[0]["documents"]
+
+#         if not isinstance(taxonomy_path, Path):
+#             taxonomy_path = Path(taxonomy_path)
+
+#         if isinstance(documents, str):
+#             documents = [documents]
+#             logger.info(
+#                 "Converted single string into a list of string. Assumed the string passed in is the document. Normally, chunk_document() should take a list as input."
+#             )
+#         elif not isinstance(documents, list):
+#             raise TypeError(
+#                 "Expected: documents to be a list, but got {}".format(type(documents))
+#             )
+
+#         filepaths = leaf_node[0]["filepaths"]
+
+#         doc_dict = cls._split_docs_by_filetype(documents, filepaths)
+#         if len(doc_dict.keys()) > 1:
+#             raise ValueError("Received multiple document types")
+#         if len(doc_dict.keys()) < 1:
+#             raise ValueError("Received no document types")
+
+#         if SupportedFileTypes.MD in doc_dict:
+#             doc_contents = [d for d, _ in doc_dict[SupportedFileTypes.MD]]
+#             # return TextSplitChunker(
+#             #     doc_contents,
+#             #     server_ctx_size,
+#             #     chunk_word_count,
+#             #     output_dir,
+#             # )
+
+#             # TODO CHUNK AS MARKDOWN
+#             pass
+
+#         if SupportedFileTypes.PDF in doc_dict:
+#             doc_paths = [p for _, p in doc_dict[SupportedFileTypes.PDF]]
+#             # return ContextAwareChunker(
+#             #     doc_paths,
+#             #     filepaths,
+#             #     output_dir,
+#             #     chunk_word_count,
+#             #     tokenizer_model_name,
+#             #     docling_model_path=docling_model_path,
+#             # )
+
+#             # TODO CHUNK AS PDF
+#             pass
+
+#     @staticmethod
+#     def _split_docs_by_filetype(
+#         documents: List[str], filepaths: List[Path]
+#     ) -> DefaultDict[SupportedFileTypes, List[Tuple[str, Path]]]:
+#         """Separate documents into lists based on their filetype.
+
+#         Currently, only Markdown and PDF are supported.
+#         Args:
+#             documents (List[str]): A list of the document contents as strings
+#             filepaths (List[Path]): Corresponding document filepaths
+#         Returns:
+#             DefaultDict: Dictionary with either ".md" or ".pdf" as a key.
+#                 Markdown items contain document contents, PDF items contain
+#                 paths to documents.
+#         """
+#         doc_dict = defaultdict(list)
+#         for doc, path in zip(documents, filepaths):
+#             if path.suffix == ".md":
+#                 # append doc contents
+#                 doc_dict[SupportedFileTypes.MD].append((doc, path))
+#             elif path.suffix == ".pdf":
+#                 # append doc paths
+#                 doc_dict[SupportedFileTypes.PDF].append((doc, path))
+#             else:
+#                 raise ValueError(
+#                     f"Received document of type .{path.suffix}, which is not a supported filetype"
+#                 )
+#         return doc_dict
 
 
-class DocumentChunker:
-    """A factory chunker class that instantiates the applicable chunker
+# class TextSplitChunker(ChunkerBase):
+#     def __init__(
+#         self,
+#         document_contents: List | str,
+#         server_ctx_size: int,
+#         chunk_word_count: int,
+#         output_dir: Path,
+#     ):
+#         self.document_contents = document_contents
+#         self.server_ctx_size = server_ctx_size
+#         self.chunk_word_count = chunk_word_count
+#         self.output_dir = output_dir
 
-    Currently, only Markdown and PDF are supported. For Markdown, returns
-    TextSplitChunker, and for PDF, returns ContextAwareChunker"""
+#     def chunk_documents(self) -> List:
+#         """Naively chunk markdown documents based on the word count provided by the user.
+#         Returns:
+#             List[str]: List of chunked documents.
+#         """
+#         num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
+#         if num_tokens_per_doc > int(self.server_ctx_size - 1024):
+#             raise ValueError(
+#                 "Error: {}".format(
+#                     str(
+#                         f"Given word count ({self.chunk_word_count}) per doc will exceed the server context window size ({self.server_ctx_size})"
+#                     )
+#                 )
+#             )
+#         if self.document_contents == []:
+#             return []
 
-    def __new__(
-        cls,
-        leaf_node,
-        taxonomy_path,
-        output_dir: Path,
-        server_ctx_size=4096,
-        chunk_word_count=1024,
-        tokenizer_model_name: Optional[str] = None,
-        docling_model_path: Optional[str] = None,
-    ):
-        """Insantiate the appropriate chunker for the provided document
-
-        Args:
-            leaf_node: a leaf node dict containing "documents",
-                "filepaths", and "taxonomy_path" keys
-            output_dir (Path): directory where artifacts should be stored
-            server_ctx_size (int): Context window size of server
-            chunk_word_count (int): Maximum number of words to chunk a document
-            tokenizer_model_name (Optional[str]): name of huggingface model to get
-                tokenizer from
-        Returns:
-            TextSplitChunker | ContextAwareChunker: Object of the appropriate
-                chunker class for the provided filetype
-        """
-        documents = leaf_node[0]["documents"]
-
-        if not isinstance(taxonomy_path, Path):
-            taxonomy_path = Path(taxonomy_path)
-
-        if isinstance(documents, str):
-            documents = [documents]
-            logger.info(
-                "Converted single string into a list of string. Assumed the string passed in is the document. Normally, chunk_document() should take a list as input."
-            )
-        elif not isinstance(documents, list):
-            raise TypeError(
-                "Expected: documents to be a list, but got {}".format(type(documents))
-            )
-
-        filepaths = leaf_node[0]["filepaths"]
-
-        doc_dict = cls._split_docs_by_filetype(documents, filepaths)
-        if len(doc_dict.keys()) > 1:
-            raise ValueError("Received multiple document types")
-        if len(doc_dict.keys()) < 1:
-            raise ValueError("Received no document types")
-
-        if FileTypes.MD in doc_dict:
-            doc_contents = [d for d, _ in doc_dict[FileTypes.MD]]
-            return TextSplitChunker(
-                doc_contents,
-                server_ctx_size,
-                chunk_word_count,
-                output_dir,
-            )
-
-        if FileTypes.PDF in doc_dict:
-            doc_paths = [p for _, p in doc_dict[FileTypes.PDF]]
-            return ContextAwareChunker(
-                doc_paths,
-                filepaths,
-                output_dir,
-                chunk_word_count,
-                tokenizer_model_name,
-                docling_model_path=docling_model_path,
-            )
-
-    @staticmethod
-    def _split_docs_by_filetype(
-        documents: List[str], filepaths: List[Path]
-    ) -> DefaultDict[FileTypes, List[Tuple[str, Path]]]:
-        """Separate documents into lists based on their filetype.
-
-        Currently, only Markdown and PDF are supported.
-        Args:
-            documents (List[str]): A list of the document contents as strings
-            filepaths (List[Path]): Corresponding document filepaths
-        Returns:
-            DefaultDict: Dictionary with either ".md" or ".pdf" as a key.
-                Markdown items contain document contents, PDF items contain
-                paths to documents.
-        """
-        doc_dict = defaultdict(list)
-        for doc, path in zip(documents, filepaths):
-            if path.suffix == ".md":
-                # append doc contents
-                doc_dict[FileTypes.MD].append((doc, path))
-            elif path.suffix == ".pdf":
-                # append doc paths
-                doc_dict[FileTypes.PDF].append((doc, path))
-            else:
-                raise ValueError(
-                    f"Received document of type .{path.suffix}, which is not a supported filetype"
-                )
-        return doc_dict
+#         chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
+#         return chunk_markdowns(self.document_contents, chunk_size)
 
 
-class TextSplitChunker(ChunkerBase):
+class DocumentChunker():  # pylint: disable=too-many-instance-attributes
+
+    # def __new__(
+    #     cls,
+    #     leaf_node,
+    #     taxonomy_path,
+    #     output_dir: Path,
+    #     server_ctx_size=4096,
+    #     chunk_word_count=1024,
+    #     tokenizer_model_name: Optional[str] = None,
+    #     docling_model_path: Optional[str] = None,
+    # ):
+
     def __init__(
         self,
-        document_contents: List | str,
-        server_ctx_size: int,
-        chunk_word_count: int,
+        document_paths: List[Path],
         output_dir: Path,
+        tokenizer_model_name: str,
+        docling_model_path: Optional[Path] = None,
+        server_ctx_size: int = 4096,
+        chunk_word_count: int = 1024,
     ):
-        self.document_contents = document_contents
+        if len(document_paths) == 0:
+            raise ValueError("Provided empty list of documents")
+
+        document_dict = split_docs_by_filetype(document_paths)
+
+        if len(document_dict) > 1:
+            raise ValueError("Provided multiple document types")
+
+        # We know there is only 1 key, value pair, so we take the first
+        self.document_filetype, self.document_paths = next(iter(document_dict.items()))
+        self.docling_model_path = docling_model_path
+        self.converter = self._init_docling_converter()
+
+        self.output_dir = self._path_validator(output_dir)
         self.server_ctx_size = server_ctx_size
         self.chunk_word_count = chunk_word_count
-        self.output_dir = output_dir
-
-    def chunk_documents(self) -> List:
-        """Naively chunk markdown documents based on the word count provided by the user.
-        Returns:
-            List[str]: List of chunked documents.
-        """
-        num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
-        if num_tokens_per_doc > int(self.server_ctx_size - 1024):
-            raise ValueError(
-                "Error: {}".format(
-                    str(
-                        f"Given word count ({self.chunk_word_count}) per doc will exceed the server context window size ({self.server_ctx_size})"
-                    )
-                )
-            )
-        if self.document_contents == []:
-            return []
-
-        chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
-        return chunk_markdowns(self.document_contents, chunk_size)
-
-
-class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-attributes
-    def __init__(
-        self,
-        document_paths,
-        filepaths,
-        output_dir: Path,
-        chunk_word_count: int,
-        tokenizer_model_name: Optional[str],
-        docling_model_path=None,
-    ):
-        self.document_paths = document_paths
-        self.filepaths = filepaths
-        self.output_dir = self._path_validator(output_dir)
-        self.chunk_word_count = chunk_word_count
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
-        self.docling_model_path = docling_model_path
 
-    def chunk_documents(self) -> List:
-        """Semantically chunk PDF documents.
-
-        Returns:
-            List: a list of chunks from the documents
+    def _init_docling_converter(self):
+        """Initialize docling converter with filetype-specific configurations
         """
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
         # Third Party
-        from docling.document_converter import DocumentConverter, PdfFormatOption
         from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
-
-        if self.document_paths == []:
-            return []
+        from docling.document_converter import DocumentConverter, PdfFormatOption
 
         if self.docling_model_path is None:
             logger.info("Docling models not found on disk, downloading models...")
@@ -258,17 +285,29 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
             artifacts_path=self.docling_model_path,
             do_ocr=False,
         )
+        
         ocr_options = resolve_ocr_options()
         if ocr_options is not None:
             pipeline_options.do_ocr = True
             pipeline_options.ocr_options = ocr_options
 
-        converter = DocumentConverter(
+        return DocumentConverter(
             format_options={
                 InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
             }
         )
-        parsed_documents = converter.convert_all(self.filepaths)
+
+    def chunk_documents(self) -> List:
+        """Split a list of documents into chunks
+
+        Returns:
+            List: a list of chunks from the documents
+        """
+
+        if self.document_paths == []:
+            return []
+
+        parsed_documents = self.converter.convert_all(self.document_paths)
 
         docling_artifacts_path = self.export_documents(parsed_documents)
 
@@ -348,7 +387,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         return fused_texts
 
     @staticmethod
-    def create_tokenizer(model_name: Optional[str]):
+    def create_tokenizer(model_name: str):
         """
         Create a tokenizer instance from a pre-trained model or a local directory.
 
@@ -363,10 +402,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
         # Third Party
         from transformers import AutoTokenizer
 
-        if model_name is None:
-            raise TypeError("No model path provided")
-
-        model_path = Path(model_name)
+        model_path = Path(model_name)  # TODO expect a path from the DocumentChunker constructor
         error_info_message = (
             "Please run `ilab model download {download_args}` and try again"
         )
@@ -486,7 +522,7 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                 prev_page_num = book_element["prov"][0]["page"]
                 break
         for book_element in json_book["main-text"][idx:]:
-            if "prov" in book_element:
+            if "prov" in book_element and book_element["prov"]:
                 next_page_num = book_element["prov"][0]["page"]
                 break
         if prev_page_num is not None and next_page_num is not None:
@@ -545,8 +581,12 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
                     current_book_page_number = self.get_table_page_number(
                         json_book, idx
                     )
+                    book_text = self.get_table(json_book, book_element["$ref"])
+                elif book_element["prov"]:
+                    current_book_page_number = book_element["prov"][0]["page"]  # TODO export to function to handle empty ["prov"]
+                    book_text = book_element["text"]
                 else:
-                    current_book_page_number = book_element["prov"][0]["page"]
+                    current_book_page_number = None
                     book_text = book_element["text"]
 
                 if book_element["type"] == "subtitle-level-1":
@@ -599,8 +639,6 @@ class ContextAwareChunker(ChunkerBase):  # pylint: disable=too-many-instance-att
 
                 if book_element["type"] == "paragraph":
                     book_text = self.add_heading_formatting(book_text)
-                elif book_element["type"] == "table":
-                    book_text = self.get_table(json_book, book_element["$ref"])
                 if "## References" in book_text or "## Acknowledgements" in book_text:
                     # For research papers we ignore everything after this sections
                     break
