@@ -32,7 +32,7 @@ examples: ""
 generation: |
 
   [Start of Question]  
-  {question}
+  {{question}}
   [End of Question]
 
 start_tags: ["[Start of Explanation]", "[Start of Rating]"]

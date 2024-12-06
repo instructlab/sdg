@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 Backport
 backported
+CLI
 codebase
+config
 configs
 Dataset
 dataset
@@ -15,6 +17,8 @@ FIXME
 freeform
 ICL
 icl
+ie
+Jinja
 JSON
 Langchain's
 LLM
@@ -34,7 +38,10 @@ sdg
 Splitter
 subfolder
 Tatsu
+templating
+TODO
 unchunked
 UUID
 vLLM
 yaml
+yamls

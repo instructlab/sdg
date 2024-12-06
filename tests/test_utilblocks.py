@@ -8,7 +8,7 @@ import unittest
 from datasets import Dataset, Features, Value
 
 # First Party
-from src.instructlab.sdg.utilblocks import (
+from src.instructlab.sdg import (
     DuplicateColumnsBlock,
     FlattenColumnsBlock,
     RenameColumnsBlock,

@@ -10,12 +10,14 @@ from datasets import Dataset
 from instructlab.sdg.utils import pandas
 
 # Local
+from ..registry import BlockRegistry
 from .block import Block
 
 logger = logging.getLogger(__name__)
 
 
 # This is part of the public API.
+@BlockRegistry.register("SamplePopulatorBlock")
 class SamplePopulatorBlock(Block):
     def __init__(
         self, ctx, pipe, block_name, config_paths, column_name, post_fix=""
@@ -46,6 +48,7 @@ class SamplePopulatorBlock(Block):
 
 
 # This is part of the public API.
+@BlockRegistry.register("SelectorBlock")
 class SelectorBlock(Block):
     def __init__(
         self, ctx, pipe, block_name, choice_map, choice_col, output_col
@@ -75,6 +78,7 @@ class SelectorBlock(Block):
 
 
 # This is part of the public API.
+@BlockRegistry.register("CombineColumnsBlock")
 class CombineColumnsBlock(Block):
     def __init__(
         self, ctx, pipe, block_name, columns, output_col, separator="\n\n"
@@ -103,6 +107,7 @@ class CombineColumnsBlock(Block):
         )
 
 
+@BlockRegistry.register("FlattenColumnsBlock")
 class FlattenColumnsBlock(Block):
     """Melt/transform a data from a wide format to a long format see pandas.melt for a description
 
@@ -132,6 +137,7 @@ class FlattenColumnsBlock(Block):
         return pandas.dataset_from_pandas_dataframe(flatten_df)
 
 
+@BlockRegistry.register("DuplicateColumnsBlock")
 class DuplicateColumnsBlock(Block):
     def __init__(self, ctx, pipe, block_name: str, columns_map: dict) -> None:
         """Create duplicate of columns specified in column map.
@@ -150,6 +156,7 @@ class DuplicateColumnsBlock(Block):
         return samples
 
 
+@BlockRegistry.register("RenameColumnsBlock")
 class RenameColumnsBlock(Block):
     def __init__(self, ctx, pipe, block_name: str, columns_map: dict) -> None:
         """Rename dataset columns.
@@ -165,6 +172,7 @@ class RenameColumnsBlock(Block):
         return samples
 
 
+@BlockRegistry.register("SetToMajorityValueBlock")
 class SetToMajorityValueBlock(Block):
     """Set the value of the specified column to the most common value (the mode)
 
