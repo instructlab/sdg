@@ -1,3 +1,9 @@
+## v0.7.0
+
+### Features
+
+* Ability to configure skills recipe. This is managed through the `skills_recipe_path` option, which specifies the file path to a YAML file. This feature is helpful for adjusting the sample size.
+
 ## v0.6.1
 
 ### Fixes
