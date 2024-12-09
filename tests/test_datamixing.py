@@ -8,12 +8,16 @@ Unit tests for the top-level datamixing module.
 from importlib import resources
 from unittest.mock import patch
 import os
+import pathlib
 
 # Third Party
 from datasets import Dataset
+import pytest
+import yaml
 
 # First Party
 from instructlab.sdg.datamixing import DataMixer, Recipe, _add_extra_contexts_to_samples
+from instructlab.sdg.utils import GenerateException
 
 # We mock out the actual things that use num_procs anyway, but just
 # for a consistent value in the tests...
@@ -53,6 +57,79 @@ def test_datamixer_can_load_default_recipes():
     )
     assert mixer.knowledge_recipe.datasets[0]["path"] == "test/knowledge.jsonl"
     assert mixer.skills_recipe.datasets[0]["path"] == "test/skills.jsonl"
+
+
+@pytest.mark.parametrize(
+    "skills_recipe_case", ["directory", "non_existent", "invalid_yaml", "valid"]
+)
+def test_datamixer_can_load_specifix_recipe_file(
+    tmp_path: pathlib.Path, skills_recipe_case
+):
+    """
+    Test that DataMixer can load a given recipe file by pointing
+    it at a simple set of test recipe file.
+    This test checks when the skills_recipe_path is a directory,
+    does not exist, or is a valid file.
+    """
+    date_suffix = "2024-07-25T15_52_10"
+    prompt = "You are a useful AI assistant."
+
+    if skills_recipe_case == "valid":
+        skills_recipe_path = tmp_path / "skills_recipe_path.yaml"
+        skills_recipe_path.write_text("""
+        datasets:
+          - path: "test/skills.jsonl"
+            sampling_size: 1.0
+        """)
+    elif skills_recipe_case == "directory":
+        skills_recipe_path = tmp_path / "skills_recipe_dir"
+        skills_recipe_path.mkdir()
+    elif skills_recipe_case == "invalid_yaml":
+        skills_recipe_path = tmp_path / "invalid_yaml_recipe.yaml"
+        skills_recipe_path.write_text("[invalid_yaml")
+    else:  # non_existent
+        skills_recipe_path = tmp_path / "non_existent_recipe.yaml"
+
+    if skills_recipe_case == "valid":
+        mixer = DataMixer(
+            [TEST_DATA_DIR],
+            TEST_DATA_DIR,
+            date_suffix,
+            prompt,
+            TEST_NUM_PROCS,
+            skills_recipe_path=str(skills_recipe_path),
+        )
+        assert mixer.skills_recipe.datasets[0]["path"] == "test/skills.jsonl"
+    elif skills_recipe_case == "directory":
+        with pytest.raises(GenerateException, match="Recipe path is a directory"):
+            DataMixer(
+                [TEST_DATA_DIR],
+                TEST_DATA_DIR,
+                date_suffix,
+                prompt,
+                TEST_NUM_PROCS,
+                skills_recipe_path=str(skills_recipe_path),
+            )
+    elif skills_recipe_case == "invalid_yaml":
+        with pytest.raises(GenerateException, match="Invalid YAML format"):
+            DataMixer(
+                [TEST_DATA_DIR],
+                TEST_DATA_DIR,
+                date_suffix,
+                prompt,
+                TEST_NUM_PROCS,
+                skills_recipe_path=str(skills_recipe_path),
+            )
+    else:  # non_existent
+        with pytest.raises(GenerateException, match="Recipe file not found"):
+            DataMixer(
+                [TEST_DATA_DIR],
+                TEST_DATA_DIR,
+                date_suffix,
+                prompt,
+                TEST_NUM_PROCS,
+                skills_recipe_path=str(skills_recipe_path),
+            )
 
 
 def test_recipe_init_with_empty_params_adds_dataset():

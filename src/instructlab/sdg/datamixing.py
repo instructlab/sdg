@@ -604,6 +604,7 @@ class DataMixer:
         sys_prompt,
         num_procs,
         auxiliary_inst=None,
+        skills_recipe_path=None,
     ):
         # HACK(osilkin): This is used to upsample the knowledge dataset when the **pre-computed** skills dataset
         #                far exceeds the size of our knowledge samples. This will be removed in the future
@@ -616,19 +617,32 @@ class DataMixer:
         self.num_procs = num_procs
         self.auxiliary_inst = auxiliary_inst
 
-        self.knowledge_recipe = self._load_default_recipe("knowledge.yaml")
-        self.skills_recipe = self._load_default_recipe("skills.yaml")
+        self.knowledge_recipe = self._load_recipe("knowledge.yaml")
+        self.skills_recipe = self._load_recipe("skills.yaml", skills_recipe_path)
 
         self.output_file_knowledge_recipe = f"knowledge_recipe_{date_suffix}.yaml"
         self.output_file_skills_recipe = f"skills_recipe_{date_suffix}.yaml"
         self.output_file_mixed_knowledge = f"knowledge_train_msgs_{date_suffix}.jsonl"
         self.output_file_mixed_skills = f"skills_train_msgs_{date_suffix}.jsonl"
 
-    def _load_default_recipe(self, yaml_basename):
+    def _load_recipe(self, yaml_basename, recipe_path=None):
         """
-        Load a default system recipe from e.g. /usr/share/instructlab/sdg/default_data_recipes
-        if it exists, otherwise return an empty recipe.
+        Load a recipe from the specified file path or fallback to the default recipe. If the default
+        recipe is not present in any of the data directories, an empty recipe is returned.
+
+        Args:
+            yaml_basename (str): The base name of the default recipe YAML file.
+            recipe_path (str, optional): Full path to a custom recipe file. Defaults to None.
+
+        Returns:
+            Recipe: Loaded recipe object.
+
+        Raises:
+            GenerateException: If the provided path is a directory or does not exist.
         """
+        if recipe_path:
+            _validate_yaml_file_path(recipe_path)
+            return Recipe(recipe_path=recipe_path, sys_prompt=self.sys_prompt)
         for d in self.data_dirs:
             default_recipe_path = os.path.join(d, "default_data_recipes", yaml_basename)
             if os.path.exists(default_recipe_path):
@@ -750,3 +764,24 @@ class DataMixer:
             self.output_file_skills_recipe,
             self.output_file_mixed_skills,
         )
+
+
+def _validate_yaml_file_path(file_path):
+    try:
+        # Existing checks
+        with open(file_path, "r", encoding="utf-8") as f:
+            yaml.safe_load(f)  # Ensure valid YAML format
+    except IsADirectoryError as e:
+        raise GenerateException(
+            f"Recipe path is a directory, not a file: {file_path}"
+        ) from e
+    except PermissionError as e:
+        raise GenerateException(
+            f"Permission denied for recipe file: {file_path}"
+        ) from e
+    except FileNotFoundError as e:
+        raise GenerateException(f"Recipe file not found: {file_path}") from e
+    except yaml.YAMLError as e:
+        raise GenerateException(
+            f"Invalid YAML format in recipe file: {file_path}"
+        ) from e
