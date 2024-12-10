@@ -389,7 +389,7 @@ def generate_data(
             "Synthesizing new instructions. If you aren't satisfied with the generated instructions, interrupt training (Ctrl-C) and try adjusting your YAML files. Adding more examples may help."
         )
 
-    generated_data = None
+    generated_data = []
     empty_sdg_leaf_nodes = []
     for leaf_node in leaf_nodes.values():
         is_knowledge = False
@@ -424,11 +424,8 @@ def generate_data(
             empty_sdg_leaf_nodes.append(leaf_node_path)
             logger.warning("Empty dataset for qna node: %s", leaf_node_path)
             continue
-        generated_data = (
-            [new_generated_data]
-            if generated_data is None
-            else generated_data + [new_generated_data]
-        )
+        generated_data.append(new_generated_data)
+
         logger.info("Generated %d samples", len(generated_data))
         logger.debug("Generated data: %s", generated_data)
 
@@ -448,9 +445,6 @@ def generate_data(
             is_knowledge,
             use_legacy_pretraining_format,
         )
-
-    if generated_data is None:
-        generated_data = []
 
     _gen_train_data(
         generated_data,
