@@ -10,9 +10,11 @@ import unittest
 from datasets import Dataset, Features, Value
 from httpx import URL
 from openai import InternalServerError, NotFoundError
+import pytest
 
 # First Party
 from src.instructlab.sdg import (
+    BlockConfigParserError,
     ConditionalLLMBlock,
     LLMBlock,
     LLMLogProbBlock,
@@ -257,6 +259,29 @@ class TestConditionalLLMBlock(unittest.TestCase):
         self.mock_ctx.model_family = "mixtral"
         self.mock_ctx.model_id = "test_model"
         self.mock_pipe = MagicMock()
+
+    def test_invalid_config_paths(self, _mock_load_config):
+        with pytest.raises(BlockConfigParserError) as exc:
+            ConditionalLLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_paths=[],
+                output_cols=[],
+                selector_column_name="selector",
+            )
+        assert "at least one entry" in str(exc.value)
+
+        with pytest.raises(BlockConfigParserError) as exc:
+            ConditionalLLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_paths=[["foo"]],
+                output_cols=[],
+                selector_column_name="selector",
+            )
+        assert "config path and selector" in str(exc.value)
 
     def test_validate(self, mock_load_config):
         mock_load_config.return_value = {

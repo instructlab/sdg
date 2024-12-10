@@ -68,3 +68,8 @@ class Block(ABC):
             )
         with open(config_path, "r", encoding="utf-8") as config_file:
             return yaml.safe_load(config_file)
+
+
+# This is part of the public API.
+class BlockConfigParserError(Exception):
+    """An exception raised while parsing a block's configuration."""

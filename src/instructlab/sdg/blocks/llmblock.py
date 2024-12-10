@@ -15,7 +15,7 @@ import openai
 # Import prompts to register default chat templates
 from .. import prompts as default_prompts  # pylint: disable=unused-import
 from ..registry import BlockRegistry, PromptRegistry
-from .block import Block
+from .block import Block, BlockConfigParserError
 
 logger = logging.getLogger(__name__)
 
@@ -290,13 +290,15 @@ class ConditionalLLMBlock(LLMBlock):
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
-        assert (
-            config_paths
-        ), "ConditionalLLMBlock config_paths requires at least one entry"
+        if not config_paths:
+            raise BlockConfigParserError(
+                f"ConditionalLLMBlock config_paths of block {block_name} requires at least one entry"
+            )
         for config_path in config_paths:
-            assert (
-                len(config_path) == 2
-            ), "ConditionalLLMBlock config_paths each entry should be a list of config path and selector column names"
+            if len(config_path) != 2:
+                raise BlockConfigParserError(
+                    f"ConditionalLLMBlock config_paths of block {block_name} should be a list of config path and selector column names"
+                )
         super().__init__(
             ctx,
             pipe,

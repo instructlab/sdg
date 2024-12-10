@@ -3,6 +3,7 @@
 # NOTE: This package imports Torch and other heavy packages.
 __all__ = (
     "Block",
+    "BlockConfigParserError",
     "BlockRegistry",
     "CombineColumnsBlock",
     "ConditionalLLMBlock",
@@ -31,7 +32,7 @@ __all__ = (
 )
 
 # Local
-from .blocks.block import Block
+from .blocks.block import Block, BlockConfigParserError
 from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
 from .blocks.iterblock import IterBlock
 from .blocks.llmblock import (
