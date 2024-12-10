@@ -426,8 +426,8 @@ def generate_data(
             continue
         generated_data.append(new_generated_data)
 
-        logger.info("Generated %d samples", len(generated_data))
-        logger.debug("Generated data: %s", generated_data)
+        logger.info("Generated %d samples", len(new_generated_data))
+        logger.debug("Generated data: %s", new_generated_data)
 
         if is_knowledge:
             # generate mmlubench data for the current leaf node
