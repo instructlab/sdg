@@ -1,0 +1,5 @@
+version: "1.0"
+blocks:
+  - name: echo
+    type: EchoBlock
+    config: {}

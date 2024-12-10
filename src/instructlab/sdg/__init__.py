@@ -3,6 +3,8 @@
 # NOTE: This package imports Torch and other heavy packages.
 __all__ = (
     "Block",
+    "BlockConfigParserError",
+    "BlockRegistry",
     "CombineColumnsBlock",
     "ConditionalLLMBlock",
     "DuplicateColumnsBlock",
@@ -11,27 +13,44 @@ __all__ = (
     "FilterByValueBlockError",
     "FlattenColumnsBlock",
     "GenerateException",
-    "ImportBlock",
+    "IterBlock",
     "LLMBlock",
+    "LLMLogProbBlock",
+    "LLMMessagesBlock",
     "Pipeline",
     "PipelineBlockError",
     "PipelineConfigParserError",
     "PipelineContext",
+    "PromptRegistry",
     "RenameColumnsBlock",
     "SamplePopulatorBlock",
     "SelectorBlock",
     "SetToMajorityValueBlock",
-    "SIMPLE_PIPELINES_PACKAGE",
     "FULL_PIPELINES_PACKAGE",
+    "SIMPLE_PIPELINES_PACKAGE",
     "generate_data",
 )
 
 # Local
-from .block import Block
-from .filterblock import FilterByValueBlock, FilterByValueBlockError
+from .blocks.block import Block, BlockConfigParserError
+from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
+from .blocks.iterblock import IterBlock
+from .blocks.llmblock import (
+    ConditionalLLMBlock,
+    LLMBlock,
+    LLMLogProbBlock,
+    LLMMessagesBlock,
+)
+from .blocks.utilblocks import (
+    CombineColumnsBlock,
+    DuplicateColumnsBlock,
+    FlattenColumnsBlock,
+    RenameColumnsBlock,
+    SamplePopulatorBlock,
+    SelectorBlock,
+    SetToMajorityValueBlock,
+)
 from .generate_data import generate_data
-from .importblock import ImportBlock
-from .llmblock import ConditionalLLMBlock, LLMBlock
 from .pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
@@ -41,14 +60,6 @@ from .pipeline import (
     PipelineConfigParserError,
     PipelineContext,
 )
-from .utilblocks import (
-    CombineColumnsBlock,
-    DuplicateColumnsBlock,
-    FlattenColumnsBlock,
-    RenameColumnsBlock,
-    SamplePopulatorBlock,
-    SelectorBlock,
-    SetToMajorityValueBlock,
-)
+from .registry import BlockRegistry, PromptRegistry
 from .utils import GenerateException
 from .utils.taxonomy import TaxonomyReadingException

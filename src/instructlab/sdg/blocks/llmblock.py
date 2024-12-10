@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
-from collections import ChainMap
 from typing import Any, Dict
 import logging
 import re
@@ -13,28 +12,14 @@ import httpx
 import openai
 
 # Local
-from .block import Block
+# Import prompts to register default chat templates
+from .. import prompts as default_prompts  # pylint: disable=unused-import
+from ..registry import BlockRegistry, PromptRegistry
+from .block import Block, BlockConfigParserError
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_NUM_TOKENS = 4096
-
-MODEL_FAMILY_MIXTRAL = "mixtral"
-MODEL_FAMILY_MERLINITE = "merlinite"
-
-_MODEL_PROMPT_MIXTRAL = "<s> [INST] {prompt} [/INST]"
-_MODEL_PROMPT_MERLINITE = "'<|system|>\nYou are an AI language model developed by IBM Research. You are a cautious assistant. You carefully follow instructions. You are helpful and harmless and you follow ethical guidelines and promote positive behavior.\n<|user|>\n{prompt}\n<|assistant|>\n'"
-
-_MODEL_PROMPTS = {
-    MODEL_FAMILY_MIXTRAL: _MODEL_PROMPT_MIXTRAL,
-    MODEL_FAMILY_MERLINITE: _MODEL_PROMPT_MERLINITE,
-}
-
-
-def _get_model_prompt(model_family):
-    if model_family not in _MODEL_PROMPTS:
-        raise ValueError(f"Unknown model family: {model_family}")
-    return _MODEL_PROMPTS[model_family]
 
 
 def server_supports_batched(client, model_id: str) -> bool:
@@ -71,7 +56,14 @@ def server_supports_batched(client, model_id: str) -> bool:
     return supported
 
 
+def template_from_struct_and_config(struct, config):
+    # replace None with empty strings
+    filtered_config = {k: (v if v is not None else "") for k, v in config.items()}
+    return PromptRegistry.template_from_string(struct.format(**filtered_config))
+
+
 # This is part of the public API.
+@BlockRegistry.register("LLMBlock")
 # pylint: disable=dangerous-default-value
 class LLMBlock(Block):
     # pylint: disable=too-many-instance-attributes
@@ -92,7 +84,9 @@ class LLMBlock(Block):
         self.prompt_struct = (
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )
-        self.prompt_template = self.prompt_struct.format(**self.block_config)
+        self.prompt_template = template_from_struct_and_config(
+            self.prompt_struct, self.block_config
+        )
         self.model_prompt = model_prompt
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
@@ -162,15 +156,25 @@ class LLMBlock(Block):
     # 2. Non-empty string - the pipeline has specified a custom model prompt
     # 3. Empty string - the pipeline has specified that no model prompt is needed
     def _format_prompt(self, sample: Dict) -> str:
-        prompt = self.prompt_template.format(**sample).strip()
+        prompt_templated_str = self.prompt_template.render(sample).strip()
 
         model_prompt = None
         if self.model_prompt is None:
-            model_prompt = _get_model_prompt(self.ctx.model_family)
+            model_prompt = PromptRegistry.get_template(self.ctx.model_family)
         elif self.model_prompt:
-            model_prompt = self.model_prompt
+            model_prompt = PromptRegistry.template_from_string(self.model_prompt)
+        else:
+            # Our model prompt is an empty string, which we'll render
+            # verbatim without wrapping in the messages format
+            model_prompt = PromptRegistry.get_template("blank")
 
-        return prompt if model_prompt is None else model_prompt.format(prompt=prompt)
+        messages = [{"role": "user", "content": prompt_templated_str}]
+
+        return model_prompt.render(
+            messages=messages,
+            prompt=prompt_templated_str,
+            add_generation_prompt=True,
+        ).strip()
 
     def _gen_kwargs(self, max_num_token_override, gen_kwargs, **defaults):
         gen_kwargs = {**defaults, **gen_kwargs}
@@ -217,7 +221,11 @@ class LLMBlock(Block):
         Generate the output from the block. This method should first validate the input data,
         then generate the output, and finally parse the generated output before returning it.
 
-        :return: The parsed output after generation.
+        Args:
+            samples (Dataset): The samples used as input data
+
+        Returns:
+            The parsed output after generation.
         """
         num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
@@ -265,27 +273,9 @@ class LLMBlock(Block):
 
         return Dataset.from_list(new_data)
 
-    def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
-        """
-        Validate the input data for this block. This method should be implemented by subclasses
-        to define how the block validates its input data.
-
-        :return: True if the input data is valid, False otherwise.
-        """
-
-        class Default(dict):
-            def __missing__(self, key: str) -> None:
-                raise KeyError(key)
-
-        try:
-            prompt_template.format_map(ChainMap(input_dict, Default()))
-            return True
-        except KeyError as e:
-            logger.error("Missing key: {}".format(e))
-            return False
-
 
 # This is part of the public API.
+@BlockRegistry.register("ConditionalLLMBlock")
 class ConditionalLLMBlock(LLMBlock):
     def __init__(
         self,
@@ -300,6 +290,15 @@ class ConditionalLLMBlock(LLMBlock):
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
+        if not config_paths:
+            raise BlockConfigParserError(
+                f"ConditionalLLMBlock config_paths of block {block_name} requires at least one entry"
+            )
+        for config_path in config_paths:
+            if len(config_path) != 2:
+                raise BlockConfigParserError(
+                    f"ConditionalLLMBlock config_paths of block {block_name} should be a list of config path and selector column names"
+                )
         super().__init__(
             ctx,
             pipe,
@@ -314,11 +313,13 @@ class ConditionalLLMBlock(LLMBlock):
         self.selector_column_name = selector_column_name
         self.prompt_template = {}
         if len(config_paths) == 1 and config_paths[0][1] == "All":
-            self.prompt_template = self.prompt_struct.format(**self.block_config)
+            self.prompt_template = template_from_struct_and_config(
+                self.prompt_struct, self.block_config
+            )
         else:
             for config, config_key in config_paths:
-                self.prompt_template[config_key] = self.prompt_struct.format(
-                    **self._load_config(config)
+                self.prompt_template[config_key] = template_from_struct_and_config(
+                    self.prompt_struct, self._load_config(config)
                 )
 
     def _format_prompt(self, sample: Dict) -> str:
@@ -333,5 +334,171 @@ class ConditionalLLMBlock(LLMBlock):
 
     def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
-            prompt_template = prompt_template[input_dict[self.selector_column_name]]
+            if not self.selector_column_name in input_dict:
+                logger.error(
+                    f"ConditionalLLMBlock {self.block_name} missing key: {self.selector_column_name}"
+                )
+                return False
+            config_key = input_dict[self.selector_column_name]
+            if not config_key in prompt_template:
+                logger.error(
+                    f"ConditionalLLMBlock {self.block_name} selector key {config_key} not found in block config"
+                )
+                return False
+            prompt_template = prompt_template[config_key]
         return super()._validate(prompt_template, input_dict)
+
+
+# This is part of the public API.
+@BlockRegistry.register("LLMLogProbBlock")
+class LLMLogProbBlock(LLMBlock):
+    def __init__(
+        self,
+        ctx,
+        pipe,
+        block_name,
+        config_path,
+        output_cols,
+        model_prompt=None,
+        gen_kwargs={},
+        parser_kwargs={},
+        batch_kwargs={},
+    ) -> None:
+        super().__init__(
+            ctx,
+            pipe,
+            block_name,
+            config_path,
+            output_cols,
+            model_prompt=model_prompt,
+            gen_kwargs=gen_kwargs,
+            parser_kwargs=parser_kwargs,
+            batch_kwargs=batch_kwargs,
+        )
+
+    # def _generate_logprobs(self, samples, **gen_kwargs):
+    #     prompts = [
+    #         self.model_prompt.format(prompt=self._format_prompt(sample))
+    #         for sample in samples
+    #     ]
+    #     generate_args = {**self.defaults, **gen_kwargs}
+
+    #     # verify if logprobs is mentioned in the generate_args, if not add it and return top10 logprobs
+    #     if "logprobs" not in generate_args:
+    #         generate_args["logprobs"] = 10
+
+    #     if self.server_supports_batched:
+    #         response = self.client.completions.create(prompt=prompts, **generate_args)
+    #         return [choice.logprobs.top_logprobs for choice in response.choices]
+
+    #     n = gen_kwargs.get("n", 1)
+    #     results = []
+    #     for prompt in prompts:
+    #         for _ in range(n):
+    #             response = self.client.completions.create(
+    #                 prompt=prompt, **generate_args
+    #             )
+    #             results.append(response.choices[0].logprobs.top_logprobs)
+    #     return results
+
+    # def _parse(self, generations: List[List[Dict]]) -> List[List[str]]:
+    #     # override the parse method to convert the generations to json string
+    #     # convert the generations to json string to save as dataset
+    #     # this is because the dataset can only store key value pairs which are consistent
+    #     return [[json.dumps(item) for item in sublist] for sublist in generations]
+
+    # def generate(self, samples: Dataset, **gen_kwargs) -> Dataset:
+    #     """
+    #     Generate the output from the block. This method should first validate the input data,
+    #     then generate the output, and finally parse the generated output before returning it.
+
+    #     Returns:
+    #         The parsed output after generation.
+    #     """
+    #     num_samples = self.block_config.get("num_samples", None)
+    #     logger.debug("Generating outputs for {} samples".format(len(samples)))
+
+    #     if (num_samples is not None) and ("num_samples" not in samples.column_names):
+    #         samples = samples.add_column("num_samples", [num_samples] * len(samples))
+
+    #     # validate each sample
+    #     # Log errors and remove invalid samples
+    #     valid_samples = []
+
+    #     for sample in samples:
+    #         if self._validate(self.prompt_template, sample):
+    #             valid_samples.append(sample)
+    #         else:
+    #             logger.warning(
+    #                 f"Sample failed validation: {sample}"
+    #             )  # Log details of the failed sample
+
+    #     samples = valid_samples
+
+    #     if len(samples) == 0:
+    #         logger.warning(
+    #             "No valid samples to generate outputs for, returning empty dataset"
+    #         )
+    #         return Dataset.from_list([])
+
+    #     # generate the output
+
+    #     outputs = self._generate_logprobs(samples, **gen_kwargs)
+    #     logger.debug("Generated outputs: %s", outputs)
+
+    #     output_dataset = Dataset.from_list(samples)
+    #     output_dataset = output_dataset.add_column(
+    #         self.output_cols[0],
+    #         self._parse(outputs),  # pylint: disable=no-value-for-parameter
+    #     )
+
+    #     return output_dataset
+
+
+# This is part of the public API.
+@BlockRegistry.register("LLMMessagesBlock")
+class LLMMessagesBlock(LLMBlock):
+    def __init__(
+        self,
+        ctx,
+        pipe,
+        block_name,
+        config_path,
+        output_cols,
+        model_prompt=None,
+        gen_kwargs={},
+        parser_kwargs={},
+        batch_kwargs={},
+    ) -> None:
+        super().__init__(
+            ctx,
+            pipe,
+            block_name,
+            config_path,
+            output_cols,
+            model_prompt=model_prompt,
+            gen_kwargs=gen_kwargs,
+            parser_kwargs=parser_kwargs,
+            batch_kwargs=batch_kwargs,
+        )
+
+    # def _generate(self, samples) -> list:
+    #     generate_args = {**self.defaults, **gen_kwargs}
+
+    #     if "n" in generate_args and generate_args.get("temperature", 0) <= 0:
+    #         generate_args["temperature"] = 0.7
+    #         logger.warning(
+    #             "Temperature should be greater than 0 for n > 1, setting temperature to 0.7"
+    #         )
+
+    #     messages = samples[self.input_col]
+
+    #     results = []
+    #     n = gen_kwargs.get("n", 1)
+    #     for message in messages:
+    #         responses = self.client.chat.completions.create(messages=message, **generate_args)
+    #         if n > 1:
+    #             results.append([choice.message.content for choice in responses.choices])
+    #         else:
+    #             results.append(responses.choices[0].message.content)
+    #     return results

@@ -9,8 +9,7 @@ import unittest
 from datasets import Dataset, Features, Value
 
 # First Party
-from instructlab.sdg.filterblock import FilterByValueBlock
-from instructlab.sdg.pipeline import PipelineContext
+from instructlab.sdg import FilterByValueBlock
 
 
 class TestFilterByValueBlock(unittest.TestCase):
