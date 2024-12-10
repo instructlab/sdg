@@ -43,9 +43,13 @@ Release mechanics are done by a Release Manager identified for that release.
 The Release Manager is a member of the SDG Maintainers team that has agreed to take on these responsibilities.
 The Release Manager can change on a per-release basis.
 
-The following are the steps for how Y-stream and Z-stream releases gets cut.
+### Prepare CHANGELOG.md for the release
+
+In the `main` branch, move the appropriate unreleased items in the top level CHANGELOG.md to a section for the new release. And, audit commits in the release and add notes for any missed items. Ensure any changes to CHANGELOG.md also end up on the appropriate release branch, which may involve backporting changes as necessary.
 
 ### Y-Stream
+
+Follow these steps when creating a new Y-stream release:
 
 1. Determine a commit on the main branch that will serve as the basis for the next release - most of the time this should be the latest commit.
 1. Create a new release branch in the format `release-vX.Y` off of the determined commit (will match `main` if the latest commit is chosen).
@@ -55,6 +59,8 @@ The following are the steps for how Y-stream and Z-stream releases gets cut.
     - The `dev` mailing list
 
 ### Z-Stream
+
+Follow these steps when creating a new Z-stream release:
 
 1. Backport all relevant commits from `main` to the `release-vX.Y` branch.
     - It may also be the case you wish to update release branch first - if this approach is taken, ensure any relevant commits are subsequently backported to `main`
