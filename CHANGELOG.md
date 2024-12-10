@@ -1,3 +1,9 @@
+## v0.6.2
+
+### Fixes
+
+* Fixed a bug in our version specification of `docling` and `docling_parse` dependencies that were causing new installs of InstructLab to pull in incompatible versions of these. We also fixed a similar bug in the `mypy` dependency, but that one only impacts developers of SDG as opposed to users of InstructLab.
+
 ## v0.6.1
 
 ### Fixes
