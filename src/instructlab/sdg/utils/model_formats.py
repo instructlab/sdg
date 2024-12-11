@@ -7,7 +7,7 @@ import struct
 # Third Party
 from gguf.constants import GGUF_MAGIC
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def is_model_safetensors(model_path: pathlib.Path) -> bool:

@@ -340,7 +340,7 @@ def generate_data(
     document_output_dir = Path(output_dir) / f"documents-{date_suffix}"
 
     leaf_nodes = read_taxonomy_leaf_nodes(
-        taxonomy, taxonomy_base, yaml_rules, document_output_dir, logger=LOGGER
+        taxonomy, taxonomy_base, yaml_rules, document_output_dir
     )
     if not leaf_nodes:
         raise GenerateException("Error: No new leaf nodes found in the taxonomy.")
@@ -406,7 +406,6 @@ def generate_data(
             document_output_dir,
             model_name,
             docling_model_path=docling_model_path,
-            logger=LOGGER,
         )
 
         if not samples:
@@ -458,7 +457,7 @@ def generate_data(
         system_prompt,
     )
 
-    mixer.generate(logger=LOGGER)
+    mixer.generate()
 
     generate_duration = time.time() - generate_start
     LOGGER.info(f"Generation took {generate_duration:.2f}s")

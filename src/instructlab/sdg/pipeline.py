@@ -23,7 +23,7 @@ from .blocks import llmblock
 from .blocks.block import Block
 from .registry import BlockRegistry
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 
 # This is part of the public API.
@@ -134,16 +134,12 @@ class Pipeline:
             pipeline_yaml = os.path.join(resources.files(__package__), pipeline_yaml)
         return cls(ctx, pipeline_yaml, *_parse_pipeline_config_file(pipeline_yaml))
 
-    def generate(self, dataset, checkpoint_name=None, logger=None) -> Dataset:
+    def generate(self, dataset, checkpoint_name=None) -> Dataset:
         """
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
         checkpoint_name: unique subdir name for the checkpoint within checkpoint_dir
         """
-
-        if logger is not None:
-            global LOGGER  # pylint: disable=global-statement
-            LOGGER = logger
         # The checkpointer allows us to resume from where we left off
         # Saving the output of pipe instances along the way
         checkpoint_dir = None

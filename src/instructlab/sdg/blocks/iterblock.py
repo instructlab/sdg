@@ -11,7 +11,7 @@ from ..pipeline import _lookup_block_type
 from ..registry import BlockRegistry
 from .block import Block
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 # This is part of the public API.

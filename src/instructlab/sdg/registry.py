@@ -5,7 +5,7 @@ import logging
 # Third Party
 from jinja2 import Environment, StrictUndefined, Template
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 class BlockRegistry:

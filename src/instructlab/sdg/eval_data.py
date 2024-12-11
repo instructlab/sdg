@@ -13,7 +13,7 @@ import yaml
 # First Party
 from instructlab.sdg.pipeline import EVAL_PIPELINES_PKG, Pipeline
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def _extract_options(text: str) -> list[Any]:

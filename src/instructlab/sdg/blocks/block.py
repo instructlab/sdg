@@ -13,7 +13,7 @@ import yaml
 # Local
 from ..registry import BlockRegistry
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 # This is part of the public API.

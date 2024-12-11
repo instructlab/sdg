@@ -11,7 +11,7 @@ from datasets.data_files import EmptyDatasetError
 # First Party
 from instructlab.sdg.utils import pandas
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 class Checkpointer:

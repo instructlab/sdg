@@ -17,7 +17,7 @@ from .. import prompts as default_prompts  # pylint: disable=unused-import
 from ..registry import BlockRegistry, PromptRegistry
 from .block import Block, BlockConfigParserError
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 DEFAULT_MAX_NUM_TOKENS = 4096
 

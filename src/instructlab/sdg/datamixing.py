@@ -22,7 +22,7 @@ from instructlab.sdg.utils.pandas import dataset_from_pandas_dataframe
 #               when |knowledge| << |skills|
 MIN_UPSAMPLE_THRESHOLD = 0.03
 ALLOWED_COLS = ["id", "messages", "metadata"]
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 
 class DatasetListing(TypedDict):
@@ -739,10 +739,7 @@ class DataMixer:
                 self.num_procs,
             )
 
-    def generate(self, logger=None):
-        if logger is not None:
-            global LOGGER  # pylint: disable=global-statement
-            LOGGER = logger
+    def generate(self):
         self._gen_mixed_data(
             self.knowledge_recipe,
             self.output_file_knowledge_recipe,

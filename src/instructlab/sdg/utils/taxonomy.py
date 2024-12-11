@@ -30,7 +30,7 @@ from .chunkers import DocumentChunker
 # Initialize the pdf parser
 PDFParser = pdf_parser_v1()
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 
 def _is_taxonomy_file(fn: str) -> bool:
@@ -372,11 +372,8 @@ def read_taxonomy(
 
 
 def read_taxonomy_leaf_nodes(
-    taxonomy, taxonomy_base, yaml_rules, document_output_dir=None, logger=None
+    taxonomy, taxonomy_base, yaml_rules, document_output_dir=None
 ):
-    if logger is not None:
-        global LOGGER  # pylint: disable=global-statement
-        LOGGER = logger
     seed_instruction_data = read_taxonomy(
         taxonomy, taxonomy_base, yaml_rules, document_output_dir
     )
@@ -466,11 +463,7 @@ def leaf_node_to_samples(
     document_output_dir,
     model_name,
     docling_model_path=None,
-    logger=None,
 ):
-    if logger is not None:
-        global LOGGER  # pylint: disable=global-statement
-        LOGGER = logger
     if not leaf_node:
         return []
     if leaf_node[0].get("documents"):

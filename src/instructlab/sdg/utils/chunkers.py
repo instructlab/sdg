@@ -24,7 +24,7 @@ from tabulate import tabulate
 # First Party
 from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 _DEFAULT_CHUNK_OVERLAP = 100
 
 
