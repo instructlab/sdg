@@ -85,7 +85,7 @@ def validate_messages_dataset(dataset_file_name, expected_samples):
 
 def validate_skill_leaf_node_dataset(dataset_file_name):
     ds = load_dataset("json", data_files=dataset_file_name, split="train")
-    assert len(ds.features) == 7
+    assert len(ds.features) == 9
     features = [
         "task_description",
         "seed_context",
@@ -93,6 +93,8 @@ def validate_skill_leaf_node_dataset(dataset_file_name):
         "seed_response",
         "output",
         "id",
+        "leaf_node_path",
+        "leaf_node_type",
     ]
     for feature in features:
         assert feature in ds.features
@@ -512,7 +514,8 @@ class TestGenerateEmptyDataset(unittest.TestCase):
             )
         mocked_logger.warning.assert_called()
         assert re.search(
-            "empty sdg output: knowledge_new", mocked_logger.warning.call_args.args[0]
+            "empty sdg output: .+knowledge_new.jsonl",
+            mocked_logger.warning.call_args.args[0],
         )
 
     def teardown(self) -> None:
@@ -559,37 +562,3 @@ def test_context_init_batch_size_optional():
         batch_num_workers=32,
     )
     assert ctx.batch_size == 20
-
-
-def test_sdg_init_docling_path_config_found(testdata_path):
-    with patch.dict(os.environ):
-        os.environ["XDG_DATA_HOME"] = str(testdata_path.joinpath("mock_xdg_data_dir"))
-        ctx = _context_init(
-            None,
-            "mixtral",
-            "foo.bar",
-            1,
-            "/checkpoint/dir",
-            1,
-            batch_size=20,
-            batch_num_workers=32,
-        )
-        _, _, _, docling_model_path = _sdg_init(ctx, "full")
-        assert docling_model_path == "/mock/docling-models"
-
-
-def test_sdg_init_docling_path_config_not_found(testdata_path):
-    with patch.dict(os.environ):
-        os.environ["XDG_DATA_HOME"] = str(testdata_path.joinpath("nonexistent_dir"))
-        ctx = _context_init(
-            None,
-            "mixtral",
-            "foo.bar",
-            1,
-            "/checkpoint/dir",
-            1,
-            batch_size=20,
-            batch_num_workers=32,
-        )
-        _, _, _, docling_model_path = _sdg_init(ctx, "full")
-        assert docling_model_path is None
