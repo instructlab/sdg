@@ -5,8 +5,11 @@ Backport
 backported
 CLI
 codebase
+composable
+Composable
 config
 configs
+customizable
 Dataset
 dataset
 datasets
@@ -20,6 +23,7 @@ freeform
 ICL
 icl
 ie
+instructlab
 Jinja
 JSON
 Langchain's
@@ -38,8 +42,11 @@ Pregenerated
 qna
 quantized
 repo
+Reusability
+scalable
 sdg
 Splitter
+src
 subdirectory
 subfolder
 Tatsu
