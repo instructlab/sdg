@@ -18,14 +18,9 @@ import openai
 import yaml
 
 # First Party
-# pylint: disable=ungrouped-imports
+from instructlab.sdg.blocks.llmblock import DEFAULT_MAX_NUM_TOKENS
 from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
-from instructlab.sdg.llmblock import (
-    DEFAULT_MAX_NUM_TOKENS,
-    MODEL_FAMILY_MERLINITE,
-    MODEL_FAMILY_MIXTRAL,
-)
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
@@ -356,10 +351,7 @@ def generate_data(
 
     logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
 
-    if models.get_model_family(model_family, model_name) == "mixtral":
-        model_family = MODEL_FAMILY_MIXTRAL
-    else:
-        model_family = MODEL_FAMILY_MERLINITE
+    model_family = models.get_model_family(model_family, model_name)
 
     ctx = _context_init(
         client,
@@ -394,7 +386,7 @@ def generate_data(
             "Synthesizing new instructions. If you aren't satisfied with the generated instructions, interrupt training (Ctrl-C) and try adjusting your YAML files. Adding more examples may help."
         )
 
-    generated_data = None
+    generated_data = []
     empty_sdg_leaf_nodes = []
     for leaf_node in leaf_nodes.values():
         is_knowledge = False
@@ -429,11 +421,8 @@ def generate_data(
             empty_sdg_leaf_nodes.append(leaf_node_path)
             logger.warning("Empty dataset for qna node: %s", leaf_node_path)
             continue
-        generated_data = (
-            [new_generated_data]
-            if generated_data is None
-            else generated_data + [new_generated_data]
-        )
+        generated_data.append(new_generated_data)
+
         logger.info("Generated %d samples", len(generated_data))
         logger.debug("Generated data: %s", generated_data)
 
@@ -453,9 +442,6 @@ def generate_data(
             is_knowledge,
             use_legacy_pretraining_format,
         )
-
-    if generated_data is None:
-        generated_data = []
 
     _gen_train_data(
         generated_data,

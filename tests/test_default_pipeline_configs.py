@@ -9,13 +9,15 @@ import unittest
 from datasets import Dataset
 
 # First Party
-from instructlab.sdg.filterblock import FilterByValueBlock
-from instructlab.sdg.llmblock import ConditionalLLMBlock, LLMBlock
-from instructlab.sdg.pipeline import Pipeline, PipelineContext
-from instructlab.sdg.utilblocks import (
+from instructlab.sdg import (
     CombineColumnsBlock,
+    ConditionalLLMBlock,
     DuplicateColumnsBlock,
+    FilterByValueBlock,
     FlattenColumnsBlock,
+    LLMBlock,
+    Pipeline,
+    PipelineContext,
     RenameColumnsBlock,
     SamplePopulatorBlock,
     SelectorBlock,
@@ -35,7 +37,7 @@ def _noop_generate(self, samples):
 @patch.object(RenameColumnsBlock, "generate", _noop_generate)
 @patch.object(SamplePopulatorBlock, "generate", _noop_generate)
 @patch.object(SelectorBlock, "generate", _noop_generate)
-@patch("instructlab.sdg.llmblock.server_supports_batched", lambda c, m: True)
+@patch("instructlab.sdg.blocks.llmblock.server_supports_batched", lambda c, m: True)
 @patch.object(Pipeline, "_drop_duplicates", lambda self, dataset, cols: dataset)
 class TestDefaultPipelineConfigs(unittest.TestCase):
     def setUp(self):

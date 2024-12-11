@@ -7,10 +7,12 @@ config:
   code-block-style: false
   no-duplicate-header: false
   single-trailing-newline: false
+  no-duplicate-heading: false
 globs:
   - "**/*.md"
 ignores:
   - ".github/**"
+  - ".tox/**"
   - "venv/**"
   - ".venv/**"
   - "**/testdata/**"

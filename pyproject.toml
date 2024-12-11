@@ -97,8 +97,8 @@ exclude = [
     "^src/instructlab/sdg/generate_data\\.py$",
     "^src/instructlab/sdg/utils/taxonomy\\.py$",
     "^src/instructlab/sdg/default_flows\\.py$",
-    "^src/instructlab/sdg/llmblock\\.py$",
-    "^src/instructlab/sdg/utilblocks\\.py$",
+    "^src/instructlab/sdg/blocks/llmblock\\.py$",
+    "^src/instructlab/sdg/blocks/utilblocks\\.py$",
 ]
 # honor excludes by not following there through imports
 follow_imports = "silent"

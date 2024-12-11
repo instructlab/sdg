@@ -1,18 +1,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard
+from importlib import resources
 from unittest.mock import MagicMock, patch
+import os
 import unittest
 
 # Third Party
 from datasets import Dataset, Features, Value
 from httpx import URL
-from openai import InternalServerError, NotFoundError, OpenAI
+from openai import InternalServerError, NotFoundError
+import pytest
 
 # First Party
-from src.instructlab.sdg.llmblock import LLMBlock, server_supports_batched
+from src.instructlab.sdg import (
+    BlockConfigParserError,
+    ConditionalLLMBlock,
+    LLMBlock,
+    LLMLogProbBlock,
+    LLMMessagesBlock,
+)
+from src.instructlab.sdg.blocks.llmblock import server_supports_batched
 
 
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestLLMBlockModelPrompt(unittest.TestCase):
     def setUp(self):
         self.mock_ctx = MagicMock()
@@ -20,7 +31,7 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
         self.mock_ctx.model_id = "test_model"
         self.mock_pipe = MagicMock()
         self.config_return_value = {
-            "system": "{fruit}",
+            "system": "{{fruit}}",
             "introduction": "introduction",
             "principles": "principles",
             "examples": "examples",
@@ -31,10 +42,9 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             features=Features({"fruit": Value("string")}),
         )
 
-    @patch("src.instructlab.sdg.block.Block._load_config")
     def test_model_prompt_empty_string(self, mock_load_config):
         mock_load_config.return_value = self.config_return_value
-        # Ensure that if an empty model_prompt is not specified, no model prompt is used.
+        # Ensure that if an empty model_prompt is specified, no model prompt is used.
         block = LLMBlock(
             ctx=self.mock_ctx,
             pipe=self.mock_pipe,
@@ -50,7 +60,6 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             "no model prompt should be used when explicitly set to an empty string",
         )
 
-    @patch("src.instructlab.sdg.block.Block._load_config")
     def test_model_prompt_none(self, mock_load_config):
         mock_load_config.return_value = self.config_return_value
         # Ensure that if a custom model_prompt is not specified, it defaults to setting it to
@@ -70,8 +79,7 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             "model_prompt based on model_family should be used set to None",
         )
 
-    @patch("src.instructlab.sdg.block.Block._load_config")
-    def test_model_prompt_none(self, mock_load_config):
+    def test_model_prompt_custom(self, mock_load_config):
         mock_load_config.return_value = self.config_return_value
         # Ensure that if a custom model_prompt is specified, it is used correctly
         block = LLMBlock(
@@ -80,20 +88,88 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             block_name="test_block",
             config_path="",
             output_cols=[],
-            model_prompt="FOO {prompt} BAR",
+            model_prompt="FOO {{prompt}} BAR",
         )
         prompt = block._format_prompt(self.dataset[1])
         self.assertEqual(
             prompt,
             "FOO pear\nintroduction\nprinciples\nexamples\ngeneration BAR",
-            "model_prompt should be a non-empty string when set to None",
+            "custom model_prompt was not used when explicitly set",
         )
 
-    @patch("src.instructlab.sdg.block.Block._load_config")
+
+class TestLLMBlockWithRealConfigs(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+
+    def test_configs_with_invalid_sample(self):
+        for config_type in ["knowledge", "skills"]:
+            for config_yaml in resources.files(
+                f"instructlab.sdg.configs.{config_type}"
+            ).iterdir():
+                if config_yaml.suffix != ".yaml":
+                    continue
+                block = LLMBlock(
+                    ctx=self.mock_ctx,
+                    pipe=self.mock_pipe,
+                    block_name=config_yaml.stem,
+                    config_path=config_yaml,
+                    output_cols=[],
+                )
+                sample = {"foo": "bar"}
+                assert not block._validate(
+                    block.prompt_template, sample
+                ), f"{config_type} config {config_yaml.name} validated even though it was given a sample with none of the expected fields"
+
+    def test_simple_generate_qa_with_valid_sample(self):
+        config_yaml = os.path.join(
+            resources.files("instructlab.sdg.configs.knowledge"),
+            "simple_generate_qa.yaml",
+        )
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path=config_yaml,
+            output_cols=[],
+        )
+        sample = {
+            "domain": "domain goes here",
+            "document": "document goes here",
+            "document_outline": "document outline goes here",
+            "icl_document": "context goes here",
+            "icl_query_1": "query 1 goes here",
+            "icl_response_1": "response 1 goes here",
+            "icl_query_2": "query 2 goes here",
+            "icl_response_2": "response 2 goes here",
+            "icl_query_3": "query 3 goes here",
+            "icl_response_3": "response 3 goes here",
+        }
+        assert block._validate(block.prompt_template, sample)
+
+
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
+class TestLLMBlockOtherFunctions(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+        self.config_return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+
     def test_max_num_tokens_override(self, mock_load_config):
         mock_load_config.return_value = self.config_return_value
         self.mock_ctx.max_num_tokens = 512
-        # Ensure that if a custom model_prompt is specified, it is used correctly
+        # Ensure that if max_tokens is specified, it is used correctly
         block = LLMBlock(
             ctx=self.mock_ctx,
             pipe=self.mock_pipe,
@@ -106,26 +182,49 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
         num_tokens = block.gen_kwargs["max_tokens"]
         assert num_tokens == 512
 
+    def test_validate(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{var1}} {{var2}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+
+        assert not block._validate(block.prompt_template, {})
+        assert block._validate(block.prompt_template, {"var1": "foo", "var2": "bar"})
+
+
+class TestLLMBlockBatching(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+        self.mock_client = MagicMock()
+        self.mock_client.server_supports_batched = None
+        self.mock_client.base_url = URL("http://localhost:8000/v1")
+        self.mock_client.get = MagicMock()
+        self.mock_ctx.client = self.mock_client
+
     def test_server_supports_batched_llama_cpp(self):
         resp_text = """{"message":"Hello from InstructLab! Visit us at https://instructlab.ai"}"""
-        mock_client = MagicMock()
-        mock_client.server_supports_batched = None
-        mock_client.base_url = URL("http://localhost:8000/v1")
-        mock_client.get = MagicMock()
-        mock_client.get.return_value = MagicMock()
-        mock_client.get().text = resp_text
-        self.mock_ctx.client = mock_client
+        self.mock_client.get.return_value = MagicMock()
+        self.mock_client.get().text = resp_text
         supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
         assert not supports_batched
 
     def test_server_supports_batched_other_llama_cpp(self):
         resp_text = "another server"
-        mock_client = MagicMock()
-        mock_client.server_supports_batched = None
-        mock_client.base_url = URL("http://localhost:8000/v1")
-        mock_client.get = MagicMock()
-        mock_client.get.return_value = MagicMock()
-        mock_client.get().text = resp_text
+        self.mock_client.get.return_value = MagicMock()
+        self.mock_client.get().text = resp_text
         mock_completion = MagicMock()
         mock_completion.create = MagicMock()
         mock_completion.create.side_effect = InternalServerError(
@@ -133,17 +232,12 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
             response=MagicMock(),
             body=MagicMock(),
         )
-        mock_client.completions = mock_completion
-        self.mock_ctx.client = mock_client
+        self.mock_client.completions = mock_completion
         supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
         assert not supports_batched
 
     def test_server_supports_batched_vllm(self):
-        mock_client = MagicMock()
-        mock_client.server_supports_batched = None
-        mock_client.base_url = URL("http://localhost:8000/v1")
-        mock_client.get = MagicMock()
-        mock_client.get.side_effect = NotFoundError(
+        self.mock_client.get.side_effect = NotFoundError(
             "mock error",
             response=MagicMock(),
             body=MagicMock(),
@@ -153,7 +247,117 @@ class TestLLMBlockModelPrompt(unittest.TestCase):
         mock_completion = MagicMock()
         mock_completion.create = MagicMock()
         mock_completion.create.return_value = mock_completion_resp
-        mock_client.completions = mock_completion
-        self.mock_ctx.client = mock_client
+        self.mock_client.completions = mock_completion
         supports_batched = server_supports_batched(self.mock_ctx.client, "my-model")
         assert supports_batched
+
+
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
+class TestConditionalLLMBlock(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+
+    def test_invalid_config_paths(self, _mock_load_config):
+        with pytest.raises(BlockConfigParserError) as exc:
+            ConditionalLLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_paths=[],
+                output_cols=[],
+                selector_column_name="selector",
+            )
+        assert "at least one entry" in str(exc.value)
+
+        with pytest.raises(BlockConfigParserError) as exc:
+            ConditionalLLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_paths=[["foo"]],
+                output_cols=[],
+                selector_column_name="selector",
+            )
+        assert "config path and selector" in str(exc.value)
+
+    def test_validate(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{var1}} {{var2}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        block = ConditionalLLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_paths=[["/foo/bar", "_A_"]],
+            output_cols=[],
+            selector_column_name="selector",
+        )
+
+        assert not block._validate(block.prompt_template, {})
+        assert not block._validate(
+            block.prompt_template, {"selector": "_B_", "var1": "foo", "var2": "bar"}
+        )
+        assert block._validate(
+            block.prompt_template, {"selector": "_A_", "var1": "foo", "var2": "bar"}
+        )
+
+
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
+class TestLLMLogProbBlock(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+        self.config_return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+
+    def test_constructor_works(self, mock_load_config):
+        mock_load_config.return_value = self.config_return_value
+        block = LLMLogProbBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block is not None
+
+
+@patch("src.instructlab.sdg.blocks.block.Block._load_config")
+class TestLLMMessagesBlock(unittest.TestCase):
+    def setUp(self):
+        self.mock_ctx = MagicMock()
+        self.mock_ctx.model_family = "mixtral"
+        self.mock_ctx.model_id = "test_model"
+        self.mock_pipe = MagicMock()
+        self.config_return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+
+    def test_constructor_works(self, mock_load_config):
+        mock_load_config.return_value = self.config_return_value
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block is not None

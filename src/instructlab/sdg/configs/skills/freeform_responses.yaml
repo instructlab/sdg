@@ -13,18 +13,18 @@ principles: |
 examples: |
   To better assist you with this task, here is an example:
   [Start of Question]
-  {seed_question}
+  {{seed_question}}
   [End of Question]
 
   [Start of Response]
-  {seed_response}
+  {{seed_response}}
   [End of Response]
 
 generation: |
   Now generate a response to the following prompt. Remember to use the same style and format as the example above. 
 
   [Start of Question]
-  {question}
+  {{question}}
   [End of Question]
 
   Return the response between [Start of Response] and [End of Response] tags.
