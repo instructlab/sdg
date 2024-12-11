@@ -5,7 +5,7 @@ from datetime import datetime
 from importlib import resources
 from pathlib import Path
 from typing import Optional
-import dataclasses
+import glob
 import json
 import logging
 import os
@@ -19,7 +19,12 @@ import openai
 
 # First Party
 from instructlab.sdg.blocks.llmblock import DEFAULT_MAX_NUM_TOKENS
-from instructlab.sdg.datamixing import DataMixer, _get_question_hack, _get_response_hack
+from instructlab.sdg.datamixing import (
+    DataMixer,
+    Recipe,
+    _get_question_hack,
+    _get_response_hack,
+)
 from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_init
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
@@ -27,17 +32,14 @@ from instructlab.sdg.pipeline import (
     Pipeline,
     PipelineContext,
 )
-from instructlab.sdg.taxonomy import taxonomy_to_samples
-from instructlab.sdg.utils import GenerateException, models
+from instructlab.sdg.taxonomy import preprocess_taxonomy
+from instructlab.sdg.utils import GenerateException
 from instructlab.sdg.utils.json import jldump, jlload
+from instructlab.sdg.utils.taxonomy import _unescape
 
 logger = logging.getLogger(__name__)
 
 _SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
-
-
-def _unescape(s):
-    return bytes(s, "utf-8").decode("utf-8").strip()
 
 
 def _convert_to_messages(sample):
@@ -108,56 +110,6 @@ def _gen_train_data(
     jldump(train_data, output_file_train)
 
     jldump(messages_data, output_file_messages)
-
-
-def _knowledge_seed_example_to_test_data(seed_example, system_prompt):
-    res = []
-    for i in range(3):
-        idx = i + 1
-        user = seed_example[f"icl_query_{idx}"] + "\n" + seed_example["icl_document"]
-        res.append(
-            {
-                "system": system_prompt,
-                "user": _unescape(user),
-                "assistant": _unescape(seed_example[f"icl_response_{idx}"]),
-            }
-        )
-    return res
-
-
-def _gen_test_data(
-    seed_examples,
-    output_file_test,
-    system_prompt,
-):
-    """
-    Generate test data in the format needed by the legacy Linux training
-    in instructlab/instructlab.
-    """
-    test_data = []
-    for seed_example in seed_examples:
-        if "icl_query_1" in seed_example:
-            test_data.extend(
-                _knowledge_seed_example_to_test_data(seed_example, system_prompt)
-            )
-            continue
-
-        # skill seed example
-
-        user = seed_example["seed_question"]  # question
-
-        if seed_example["leaf_node_type"] == "grounded_skill":
-            user += "\n" + seed_example["seed_context"]  # context
-
-        test_data.append(
-            {
-                "system": system_prompt,
-                "user": _unescape(user),
-                "assistant": _unescape(seed_example["seed_response"]),  # answer
-            }
-        )
-
-    jldump(test_data, output_file_test)
 
 
 def _check_pipeline_dir(pipeline):
@@ -240,7 +192,7 @@ def _sdg_init(ctx, pipeline):
 
 
 def _mixer_init(
-    ctx,
+    num_procs,
     output_dir,
     date_suffix,
     knowledge_auxiliary_inst,
@@ -254,9 +206,224 @@ def _mixer_init(
         output_dir,
         date_suffix,
         system_prompt,
-        ctx.dataset_num_procs,
+        num_procs,
         knowledge_auxiliary_inst,
     )
+
+
+def _extract_leaf_node_path_and_type(sample):
+    leaf_node_path = sample.get("leaf_node_path", "unknown")
+    leaf_node_type = sample.get("leaf_node_type")
+    return leaf_node_path, leaf_node_type
+
+
+def generate_taxonomy(
+    client: openai.OpenAI,
+    input_dir: str,
+    output_dir: str,
+    logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
+    model_family: Optional[str] = None,
+    model_id: Optional[str] = None,
+    num_cpus: Optional[int] = None,
+    num_instructions_to_generate: Optional[int] = 30,
+    console_output=True,
+    pipeline: Optional[str] = "simple",
+    batch_size: Optional[int] = None,
+    checkpoint_dir: Optional[str] = None,
+    max_num_tokens: Optional[int] = DEFAULT_MAX_NUM_TOKENS,
+):
+    ctx = _context_init(
+        client,
+        model_family,
+        model_id,
+        num_instructions_to_generate,
+        checkpoint_dir,
+        1,  # save_freq
+        batch_size=batch_size,
+        batch_num_workers=num_cpus,
+        max_num_tokens=max_num_tokens,
+    )
+
+    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe = _sdg_init(
+        ctx, pipeline
+    )
+
+    if console_output:
+        logger.info(
+            "Synthesizing new instructions. If you aren't satisfied with the generated instructions, interrupt training (Ctrl-C) and try adjusting your YAML files. Adding more examples may help."
+        )
+
+    input_files = glob.glob(f"{input_dir}/*.jsonl")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    empty_input_files = []
+    for input_file in input_files:
+        logger.debug("Generating data from input file: %s", input_file)
+        samples = jlload(input_file)
+        if not samples:
+            raise GenerateException(
+                "Error: No samples found in input file {input_file}"
+            )
+        # For now we assume every sample in the file is the same type
+        first_sample = samples[0]
+        leaf_node_path, leaf_node_type = _extract_leaf_node_path_and_type(first_sample)
+        if leaf_node_type == "knowledge":
+            pipe = knowledge_pipe
+        elif leaf_node_type == "grounded_skill":
+            pipe = grounded_skills_pipe
+        else:
+            pipe = freeform_skills_pipe
+
+        samples_ds = Dataset.from_list(samples)
+        logger.debug("Generating from samples: %s", samples_ds)
+
+        new_generated_data = pipe.generate(samples_ds, leaf_node_path)
+        if len(new_generated_data) == 0:
+            empty_input_files.append(input_file)
+            logger.warning("Empty generated dataset for input file: %s", input_file)
+            continue
+
+        output_file = os.path.join(output_dir, os.path.basename(input_file))
+        jldump(new_generated_data, output_file)
+        logger.info("Generated %d samples", len(new_generated_data))
+        logger.debug("Generated data: %s", new_generated_data)
+
+    if len(empty_input_files) > 0:
+        logger.warning(
+            "Input sample files with empty sdg output: {}".format(
+                " ".join(empty_input_files)
+            )
+        )
+
+
+def generate_taxonomy_eval(
+    client: openai.OpenAI,
+    input_dir: str,
+    output_dir: str,
+    date_suffix: str,
+    model_family: Optional[str] = None,
+    model_id: Optional[str] = None,
+    num_cpus: Optional[int] = None,
+    num_instructions_to_generate: Optional[int] = 30,
+    batch_size: Optional[int] = None,
+    max_num_tokens: Optional[int] = DEFAULT_MAX_NUM_TOKENS,
+):
+    ctx = _context_init(
+        client,
+        model_family,
+        model_id,
+        num_instructions_to_generate,
+        None,  # disable checkpoints for eval pipeline
+        1,  # save_freq
+        batch_size=batch_size,
+        batch_num_workers=num_cpus,
+        max_num_tokens=max_num_tokens,
+    )
+    mmlu_bench_pipe = mmlubench_pipe_init(ctx)
+
+    input_files = glob.glob(f"{input_dir}/*.jsonl")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    for input_file in input_files:
+        logger.debug("Generating eval data from input file: %s", input_file)
+        samples = jlload(input_file)
+        if not samples:
+            raise GenerateException(
+                "Error: No samples found in input file {input_file}"
+            )
+        samples_ds = Dataset.from_list(samples)
+        # For now we assume every sample in the file is the same type
+        first_sample = samples[0]
+        leaf_node_path, leaf_node_type = _extract_leaf_node_path_and_type(first_sample)
+        is_knowledge = False
+        if leaf_node_type == "knowledge":
+            is_knowledge = True
+
+        if is_knowledge:
+            generate_eval_task_data(
+                mmlu_bench_pipe,
+                leaf_node_path,
+                samples_ds,
+                output_dir,
+                date_suffix,
+            )
+
+
+def postprocess_taxonomy(
+    input_dir: str,
+    output_dir: str,
+    date_suffix: str,
+    pipeline: Optional[str] = "simple",
+    num_procs: Optional[int] = PipelineContext.DEFAULT_DATASET_NUM_PROCS,
+    system_prompt: Optional[str] = _SYS_PROMPT,
+    use_legacy_pretraining_format: Optional[bool] = True,
+):
+    knowledge_pipe, _, _ = _sdg_init(None, pipeline)
+    mixer = _mixer_init(
+        num_procs,
+        output_dir,
+        date_suffix,
+        knowledge_pipe.auxiliary_inst,
+        system_prompt,
+    )
+
+    input_files = glob.glob(f"{input_dir}/*.jsonl")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    output_file_messages = f"messages_{date_suffix}.jsonl"
+    output_file_train = f"train_{date_suffix}.jsonl"
+
+    all_generated_data = []
+    for input_file in input_files:
+        logger.debug(
+            "Postprocessing generated taxonomy date in input file: %s", input_file
+        )
+        samples = jlload(input_file)
+        if not samples:
+            raise GenerateException(
+                "Error: No samples found in input file {input_file}"
+            )
+        # For now we assume every sample in the file is the same type
+        first_sample = samples[0]
+        leaf_node_path, leaf_node_type = _extract_leaf_node_path_and_type(first_sample)
+        is_knowledge = False
+        if leaf_node_type == "knowledge":
+            is_knowledge = True
+
+        samples_ds = Dataset.from_list(samples)
+        logger.debug("Postprocessing from samples: %s", samples_ds)
+        all_generated_data.append(samples_ds)
+
+        mixer.collect(
+            leaf_node_path,
+            samples_ds,
+            is_knowledge,
+            use_legacy_pretraining_format,
+        )
+
+    _gen_train_data(
+        all_generated_data,
+        os.path.join(output_dir, output_file_train),
+        os.path.join(output_dir, output_file_messages),
+        system_prompt,
+    )
+
+    mixer.write_recipes()
+
+
+def mix_datasets(
+    recipe_file: str,
+    output_file: str,
+    num_proc: Optional[int] = 8,
+):
+    recipe = Recipe(recipe_file)
+    if recipe.datasets:
+        recipe.save_mixed_dataset(output_file, num_proc)
+    else:
+        logger.info("Not mixing empty recipe file: %s", recipe_file)
 
 
 # This is part of the public API, and used by instructlab.
@@ -305,139 +472,72 @@ def generate_data(
     if batch_size is None:
         batch_size = 0
 
-    output_dir = Path(output_dir)
-    output_dir.mkdir(exist_ok=True)
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
-    preprocessed_output_dir = output_dir.joinpath(f"preprocessed_{date_suffix}")
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file_test = output_dir.joinpath(f"test_{date_suffix}.jsonl")
+    preprocessed_dir = output_dir.joinpath(f"preprocessed_{date_suffix}")
+    generated_dir = output_dir.joinpath(f"generated_{date_suffix}")
 
     # This writes samples to disk in our output_dir and returns the
     # list of files created
-    sample_files = taxonomy_to_samples(
+    preprocess_taxonomy(
         taxonomy,
-        preprocessed_output_dir,
+        output_dir=preprocessed_dir,
         chunk_word_count=chunk_word_count,
         server_ctx_size=server_ctx_size,
         taxonomy_base=taxonomy_base,
         yaml_rules=yaml_rules,
+        test_output_file=output_file_test,
+        system_prompt=system_prompt,
     )
 
-    name = Path(model_name).stem  # Just in case it is a file path
-    output_file_messages = f"messages_{name}_{date_suffix}.jsonl"
-    output_file_test = f"test_{name}_{date_suffix}.jsonl"
-    output_file_train = f"train_{name}_{date_suffix}.jsonl"
-
-    all_samples = []
-    for sample_file in sample_files:
-        all_samples.extend(jlload(sample_file))
-    _gen_test_data(
-        all_samples,
-        os.path.join(output_dir, output_file_test),
-        system_prompt,
-    )
-
-    logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
-
-    model_family = models.get_model_family(model_family, model_name)
-
-    ctx = _context_init(
+    generate_taxonomy(
         client,
-        model_family,
-        model_name,
-        num_instructions_to_generate,
-        checkpoint_dir,
-        1,  # save_freq
+        input_dir=preprocessed_dir,
+        output_dir=generated_dir,
+        logger=logger,
+        model_family=model_family,
+        model_id=model_name,
+        num_cpus=num_cpus,
+        num_instructions_to_generate=num_instructions_to_generate,
+        console_output=console_output,
+        pipeline=pipeline,
         batch_size=batch_size,
-        batch_num_workers=num_cpus,
+        checkpoint_dir=checkpoint_dir,
         max_num_tokens=max_num_tokens,
     )
 
-    knowledge_pipe, freeform_skills_pipe, grounded_skills_pipe = _sdg_init(
-        ctx, pipeline
+    generate_taxonomy_eval(
+        input_dir=preprocessed_dir,
+        output_dir=output_dir,
+        date_suffix=date_suffix,
+        client=client,
+        model_family=model_family,
+        model_id=model_name,
+        num_cpus=num_cpus,
+        num_instructions_to_generate=num_instructions_to_generate,
+        batch_size=batch_size,
+        max_num_tokens=max_num_tokens,
     )
 
-    # Make sure checkpointing is disabled (we don't want this pipeline to load checkpoints from the main pipeline)
-    mmlu_ctx = dataclasses.replace(ctx, checkpoint_dir=None)
-    mmlu_bench_pipe = mmlubench_pipe_init(mmlu_ctx)
-
-    mixer = _mixer_init(
-        ctx,
-        output_dir,
-        date_suffix,
-        knowledge_pipe.auxiliary_inst,
-        system_prompt,
+    postprocess_taxonomy(
+        input_dir=generated_dir,
+        output_dir=output_dir,
+        date_suffix=date_suffix,
+        pipeline=pipeline,
+        system_prompt=system_prompt,
+        use_legacy_pretraining_format=use_legacy_pretraining_format,
     )
 
-    if console_output:
-        logger.info(
-            "Synthesizing new instructions. If you aren't satisfied with the generated instructions, interrupt training (Ctrl-C) and try adjusting your YAML files. Adding more examples may help."
-        )
-
-    generated_data = []
-    empty_input_sample_files = []
-    for sample_file in sample_files:
-        logger.debug("Generating data from input sample file: %s", sample_file)
-        samples = jlload(sample_file)
-        if not samples:
-            raise GenerateException(
-                "Error: No samples found in input file {sample_file}"
-            )
-        # For now we assume every sample in the file is the same type
-        first_sample = samples[0]
-        leaf_node_path = first_sample["leaf_node_path"]
-        leaf_node_type = first_sample["leaf_node_type"]
-        is_knowledge = False
-        if leaf_node_type == "knowledge":
-            pipe = knowledge_pipe
-            is_knowledge = True
-        elif leaf_node_type == "grounded_skill":
-            pipe = grounded_skills_pipe
-        else:
-            pipe = freeform_skills_pipe
-
-        samples_ds = Dataset.from_list(samples)
-        logger.debug("Samples: %s", samples_ds)
-
-        new_generated_data = pipe.generate(samples_ds, leaf_node_path)
-        if len(new_generated_data) == 0:
-            empty_input_sample_files.append(sample_file)
-            logger.warning("Empty generated dataset for sample file: %s", sample_file)
-            continue
-        generated_data.append(new_generated_data)
-
-        logger.info("Generated %d samples", len(generated_data))
-        logger.debug("Generated data: %s", generated_data)
-
-        if is_knowledge:
-            # generate mmlubench data for the current leaf node
-            generate_eval_task_data(
-                mmlu_bench_pipe,
-                leaf_node_path,
-                samples,
-                output_dir,
-                date_suffix,
-            )
-
-        mixer.collect(
-            leaf_node_path,
-            new_generated_data,
-            is_knowledge,
-            use_legacy_pretraining_format,
-        )
-
-    _gen_train_data(
-        generated_data,
-        os.path.join(output_dir, output_file_train),
-        os.path.join(output_dir, output_file_messages),
-        system_prompt,
+    mix_datasets(
+        recipe_file=f"{output_dir}/skills_recipe_{date_suffix}.yaml",
+        output_file=f"{output_dir}/skills_train_msgs_{date_suffix}.jsonl",
     )
-
-    mixer.generate()
+    mix_datasets(
+        recipe_file=f"{output_dir}/knowledge_recipe_{date_suffix}.yaml",
+        output_file=f"{output_dir}/knowledge_train_msgs_{date_suffix}.jsonl",
+    )
 
     generate_duration = time.time() - generate_start
     logger.info(f"Generation took {generate_duration:.2f}s")
-    if len(empty_input_sample_files) > 0:
-        logger.warning(
-            "Input sample files with empty sdg output: {}".format(
-                " ".join(empty_input_sample_files)
-            )
-        )

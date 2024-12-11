@@ -8,7 +8,7 @@ from instructlab.sdg.taxonomy import (
     DEFAULT_CHUNK_WORD_COUNT,
     DEFAULT_SERVER_CTX_SIZE,
     DEFAULT_TAXONOMY_BASE,
-    taxonomy_to_samples,
+    preprocess_taxonomy,
 )
 from instructlab.sdg.utils.logging import setup_logger
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     setup_logger(args.log_level)
-    taxonomy_to_samples(
+    preprocess_taxonomy(
         args.taxonomy_path,
         args.output_dir,
         chunk_word_count=args.chunk_word_count,
@@ -78,5 +78,5 @@ if __name__ == "__main__":
     )
 
 """
-python -m instructlab.sdg.cli.taxonomy_to_samples --taxonomy-path /path/to/my/taxonomy --output-dir /path/to/my/output
+python -m instructlab.sdg.cli.preprocess_taxonomy --taxonomy-path /path/to/my/taxonomy --output-dir /path/to/my/output
 """

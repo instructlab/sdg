@@ -491,3 +491,7 @@ def leaf_node_to_samples(
         samples = _skill_leaf_node_to_samples(leaf_node)
     samples = _enrich_metadata(samples, leaf_node)
     return Dataset.from_list(samples)
+
+
+def _unescape(s):
+    return bytes(s, "utf-8").decode("utf-8").strip()

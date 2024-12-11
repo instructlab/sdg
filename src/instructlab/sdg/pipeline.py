@@ -16,7 +16,7 @@ import yaml
 
 # First Party
 from instructlab.sdg.checkpointing import Checkpointer
-from instructlab.sdg.utils import pandas
+from instructlab.sdg.utils import models, pandas
 
 # Local
 from .blocks import llmblock
@@ -70,6 +70,9 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     max_num_tokens: Optional[int] = llmblock.DEFAULT_MAX_NUM_TOKENS
     batch_size: int = DEFAULT_BATCH_SIZE
     batch_num_workers: Optional[int] = None
+
+    def __post_init__(self):
+        self.model_family = models.get_model_family(self.model_family, self.model_id)
 
     @property
     def batching_enabled(self) -> bool:
