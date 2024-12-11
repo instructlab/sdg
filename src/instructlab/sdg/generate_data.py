@@ -34,7 +34,7 @@ from instructlab.sdg.utils.taxonomy import (
     read_taxonomy_leaf_nodes,
 )
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 _SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
 
@@ -285,7 +285,6 @@ def _mixer_init(
 # to be removed: logger
 def generate_data(
     client: openai.OpenAI,
-    logger: logging.Logger = None,  # pylint: disable=redefined-outer-name
     system_prompt: Optional[str] = None,
     use_legacy_pretraining_format: Optional[bool] = True,
     model_family: Optional[str] = None,
@@ -318,10 +317,6 @@ def generate_data(
                   We expect three files to be present in this directory: "knowledge.yaml",
                     "freeform_skills.yaml", and "grounded_skills.yaml".
     """
-    if logger is not None:
-        global LOGGER  # pylint: disable=global-statement
-        LOGGER = logger
-
     generate_start = time.time()
 
     system_prompt = system_prompt if system_prompt is not None else _SYS_PROMPT
