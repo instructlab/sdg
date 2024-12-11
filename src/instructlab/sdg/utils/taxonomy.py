@@ -30,7 +30,7 @@ from .chunkers import DocumentChunker
 # Initialize the pdf parser
 PDFParser = pdf_parser_v1()
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 def _is_taxonomy_file(fn: str) -> bool:
@@ -41,7 +41,7 @@ def _is_taxonomy_file(fn: str) -> bool:
         return True
     if path.name.casefold() in {"qna.yml", "qna.yaml"}:
         # warning for incorrect extension or case variants
-        logger.warning(
+        LOGGER.warning(
             "Found a '%s' file: %s: taxonomy files must be named 'qna.yaml'. File will not be checked.",
             path.name,
             path,
@@ -145,17 +145,17 @@ def _get_documents(
         file_contents = []
         filepaths = []
 
-        logger.info("Processing files...")
+        LOGGER.info("Processing files...")
         for pattern in file_patterns:
             # Use glob to find files matching the pattern
             matched_files = glob.glob(
                 os.path.join(repo.working_dir, pattern), recursive=True
             )
-            logger.info(f"Pattern '{pattern}' matched {len(matched_files)} files.")
+            LOGGER.info(f"Pattern '{pattern}' matched {len(matched_files)} files.")
 
             for file_path in matched_files:
                 if os.path.isfile(file_path):
-                    logger.info(f"Processing file: {file_path}")
+                    LOGGER.info(f"Processing file: {file_path}")
                     try:
                         if file_path.lower().endswith(".md"):
                             # Process Markdown files
@@ -163,24 +163,24 @@ def _get_documents(
                                 content = file.read()
                                 file_contents.append(content)
                                 filepaths.append(Path(file_path))
-                                logger.info(
+                                LOGGER.info(
                                     f"Appended Markdown content from {file_path}"
                                 )
 
                         elif file_path.lower().endswith(".pdf"):
                             # Process PDF files using docling_parse's pdf_parser_v1
                             doc_key = f"key_{os.path.basename(file_path)}"  # Unique document key
-                            logger.info(f"Loading PDF document from {file_path}")
+                            LOGGER.info(f"Loading PDF document from {file_path}")
 
                             success = PDFParser.load_document(doc_key, file_path)
                             if not success:
-                                logger.warning(
+                                LOGGER.warning(
                                     f"Failed to load PDF document: {file_path}"
                                 )
                                 continue
 
                             num_pages = PDFParser.number_of_pages(doc_key)
-                            logger.info(f"PDF '{file_path}' has {num_pages} pages.")
+                            LOGGER.info(f"PDF '{file_path}' has {num_pages} pages.")
 
                             pdf_text = ""
 
@@ -190,7 +190,7 @@ def _get_documents(
                                         doc_key, page
                                     )
                                     if "pages" not in json_doc or not json_doc["pages"]:
-                                        logger.warning(
+                                        LOGGER.warning(
                                             f"Page {page + 1} could not be parsed in '{file_path}'"
                                         )
                                         continue
@@ -205,7 +205,7 @@ def _get_documents(
                                         if text.strip():  # Only append non-empty text
                                             pdf_text += text.strip() + "\n"
                                 except Exception as page_error:  # pylint: disable=broad-exception-caught
-                                    logger.warning(
+                                    LOGGER.warning(
                                         f"Error parsing page {page + 1} of '{file_path}': {page_error}"
                                     )
                                     continue
@@ -216,24 +216,24 @@ def _get_documents(
 
                             # Unload the document to free memory
                             PDFParser.unload_document(doc_key)
-                            logger.info(f"Unloaded PDF document: {file_path}")
+                            LOGGER.info(f"Unloaded PDF document: {file_path}")
 
                         else:
-                            logger.info(f"Skipping unsupported file type: {file_path}")
+                            LOGGER.info(f"Skipping unsupported file type: {file_path}")
                     except Exception as file_error:  # pylint: disable=broad-exception-caught
-                        logger.error(
+                        LOGGER.error(
                             f"Error processing file '{file_path}': {file_error}"
                         )
                         continue
                 else:
-                    logger.info(f"Skipping non-file path: {file_path}")
+                    LOGGER.info(f"Skipping non-file path: {file_path}")
 
         if file_contents:
             return file_contents, filepaths
         raise SystemExit("Couldn't find knowledge documents")
 
     except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
-        logger.error("Error retrieving documents: %s", str(e))
+        LOGGER.error("Error retrieving documents: %s", str(e))
         raise e
 
 
@@ -273,7 +273,7 @@ def _read_taxonomy_file(
                 source=documents,
                 document_output_dir=unique_output_dir,
             )
-            logger.debug("Content from git repo fetched")
+            LOGGER.debug("Content from git repo fetched")
 
         for seed_example in contents.get("seed_examples"):
             context = seed_example.get("context", "")
@@ -321,10 +321,10 @@ def read_taxonomy(
     if yaml_rules is not None:  # user attempted to pass custom rules file
         yaml_rules_path = Path(yaml_rules)
         if yaml_rules_path.is_file():  # file was found, use specified config
-            logger.debug("Using YAML rules from %s", yaml_rules)
+            LOGGER.debug("Using YAML rules from %s", yaml_rules)
             yamllint_config = yaml_rules_path.read_text(encoding="utf-8")
         else:
-            logger.debug("Cannot find %s. Using default rules.", yaml_rules)
+            LOGGER.debug("Cannot find %s. Using default rules.", yaml_rules)
 
     seed_instruction_data = []
     is_file = os.path.isfile(taxonomy)
@@ -333,7 +333,7 @@ def read_taxonomy(
             taxonomy, yamllint_config, document_output_dir
         )
         if warnings:
-            logger.warning(
+            LOGGER.warning(
                 f"{warnings} warnings (see above) due to taxonomy file not (fully) usable."
             )
         if errors:
@@ -348,9 +348,9 @@ def read_taxonomy(
         total_errors = 0
         total_warnings = 0
         if taxonomy_files:
-            logger.debug("Found taxonomy files:")
+            LOGGER.debug("Found taxonomy files:")
             for e in taxonomy_files:
-                logger.debug(f"* {e}")
+                LOGGER.debug(f"* {e}")
         for f in taxonomy_files:
             file_path = os.path.join(taxonomy, f)
             data, warnings, errors = _read_taxonomy_file(
@@ -361,7 +361,7 @@ def read_taxonomy(
             if data:
                 seed_instruction_data.extend(data)
         if total_warnings:
-            logger.warning(
+            LOGGER.warning(
                 f"{total_warnings} warnings (see above) due to taxonomy files that were not (fully) usable."
             )
         if total_errors:
@@ -372,8 +372,11 @@ def read_taxonomy(
 
 
 def read_taxonomy_leaf_nodes(
-    taxonomy, taxonomy_base, yaml_rules, document_output_dir=None
+    taxonomy, taxonomy_base, yaml_rules, document_output_dir=None, logger=None
 ):
+    if logger is not None:
+        global LOGGER  # pylint: disable=global-statement
+        LOGGER = logger
     seed_instruction_data = read_taxonomy(
         taxonomy, taxonomy_base, yaml_rules, document_output_dir
     )
@@ -463,7 +466,11 @@ def leaf_node_to_samples(
     document_output_dir,
     model_name,
     docling_model_path=None,
+    logger=None,
 ):
+    if logger is not None:
+        global LOGGER  # pylint: disable=global-statement
+        LOGGER = logger
     if not leaf_node:
         return []
     if leaf_node[0].get("documents"):

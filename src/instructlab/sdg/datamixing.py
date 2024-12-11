@@ -22,7 +22,7 @@ from instructlab.sdg.utils.pandas import dataset_from_pandas_dataframe
 #               when |knowledge| << |skills|
 MIN_UPSAMPLE_THRESHOLD = 0.03
 ALLOWED_COLS = ["id", "messages", "metadata"]
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 class DatasetListing(TypedDict):
@@ -40,7 +40,7 @@ def _adjust_train_sample_size(ds: Dataset, num_samples: int):
     Return a dataset with num_samples random samples selected from the
     original dataset.
     """
-    logger.info(f"Rebalancing dataset to have {num_samples} samples ...")
+    LOGGER.info(f"Rebalancing dataset to have {num_samples} samples ...")
     df = ds.to_pandas()
     df = df.sample(n=num_samples, random_state=42, replace=True)
     return pandas.dataset_from_pandas_dataframe(df)
@@ -135,10 +135,10 @@ class Recipe:
         """
         if not os.path.isabs(path):
             path = os.path.join(os.path.dirname(self.recipe_path), path)
-        logger.info(f"Loading dataset from {path} ...")
+        LOGGER.info(f"Loading dataset from {path} ...")
         dataset = load_dataset("json", data_files=path, split="train")
-        logger.info(f"Dataset columns: {dataset.column_names}")
-        logger.info(f"Dataset loaded with {len(dataset)} samples")
+        LOGGER.info(f"Dataset columns: {dataset.column_names}")
+        LOGGER.info(f"Dataset loaded with {len(dataset)} samples")
         return dataset
 
     def _load_and_sample_datasets(self, num_proc):
@@ -161,7 +161,7 @@ class Recipe:
         concatenating all datasets in this recipe
         """
         if not self.dataset_added:
-            logger.error("No dataset added to the recipe")
+            LOGGER.error("No dataset added to the recipe")
 
         mixed_ds = self._load_and_sample_datasets(num_proc)
         mixed_ds = concatenate_datasets(mixed_ds)
@@ -212,7 +212,7 @@ class Recipe:
         """
         mixed_ds = self._create_mixed_dataset(num_proc)
         mixed_ds.to_json(output_path, orient="records", lines=True)
-        logger.info(f"Mixed Dataset saved to {output_path}")
+        LOGGER.info(f"Mixed Dataset saved to {output_path}")
 
 
 def _unescape(s):
@@ -235,7 +235,7 @@ def _get_question_hack(synth_example):
 
     parts = synth_example["output"].split("?", 1)
     if len(parts) != 2:
-        logger.warning(f"Failed to split generated q&a: {synth_example['output']}")
+        LOGGER.warning(f"Failed to split generated q&a: {synth_example['output']}")
     return parts[0].strip() + "?" if len(parts) == 2 else ""
 
 
@@ -251,7 +251,7 @@ def _get_response_hack(synth_example):
 
     parts = synth_example["output"].split("?", 1)
     if len(parts) != 2:
-        logger.warning(f"Failed to split generated q&a: {synth_example['output']}")
+        LOGGER.warning(f"Failed to split generated q&a: {synth_example['output']}")
     return parts[1].strip() if len(parts) == 2 else parts[0].strip()
 
 
@@ -333,7 +333,7 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
         selected_docs = [e for e in all_context if e != answer_document]
         if len(selected_docs) > 0:
             if len(selected_docs) < num_doc_in_context:
-                logger.debug(
+                LOGGER.debug(
                     f"Number of unique documents is {len(selected_docs)} which is less than {num_doc_in_context}. Using all the documents in the expanded context."
                 )
             if random.uniform(0, 1) < p:
@@ -352,7 +352,7 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
                     else selected_docs
                 )
         else:
-            logger.warning(
+            LOGGER.warning(
                 "Only 1 unique document found. Disabling expanded context injection, which may lead to poorer knowledge retention results."
             )
             docs = [answer_document]
@@ -697,7 +697,7 @@ class DataMixer:
                 if knowledge_to_skills_ratio < MIN_UPSAMPLE_THRESHOLD:
                     sampling_size = int(self._precomputed_skills_length * 0.03)
 
-                    logger.info(
+                    LOGGER.info(
                         "\033[93mKnowledge detected to be less than %.2f%% of skills (%.2f%%), upsampling to: %d\033[0m",
                         MIN_UPSAMPLE_THRESHOLD * 100,
                         knowledge_to_skills_ratio * 100,
@@ -739,7 +739,10 @@ class DataMixer:
                 self.num_procs,
             )
 
-    def generate(self):
+    def generate(self, logger=None):
+        if logger is not None:
+            global LOGGER  # pylint: disable=global-statement
+            LOGGER = logger
         self._gen_mixed_data(
             self.knowledge_recipe,
             self.output_file_knowledge_recipe,

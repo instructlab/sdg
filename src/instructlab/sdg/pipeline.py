@@ -23,7 +23,7 @@ from .blocks import llmblock
 from .blocks.block import Block
 from .registry import BlockRegistry
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 
 # This is part of the public API.
@@ -134,13 +134,16 @@ class Pipeline:
             pipeline_yaml = os.path.join(resources.files(__package__), pipeline_yaml)
         return cls(ctx, pipeline_yaml, *_parse_pipeline_config_file(pipeline_yaml))
 
-    def generate(self, dataset, checkpoint_name=None) -> Dataset:
+    def generate(self, dataset, checkpoint_name=None, logger=None) -> Dataset:
         """
         Generate the dataset by running the pipeline steps.
         dataset: the input dataset
         checkpoint_name: unique subdir name for the checkpoint within checkpoint_dir
         """
 
+        if logger is not None:
+            global LOGGER  # pylint: disable=global-statement
+            LOGGER = logger
         # The checkpointer allows us to resume from where we left off
         # Saving the output of pipe instances along the way
         checkpoint_dir = None
@@ -153,12 +156,12 @@ class Pipeline:
 
         # If not batching, simply delegate to _generate_single
         if not self.ctx.batching_enabled:
-            logger.info("Running pipeline single-threaded")
+            LOGGER.info("Running pipeline single-threaded")
             return self._generate_single(dataset)
 
         # Otherwise, split the dataset into batches and run each batch as a
         # future in the thread pool
-        logger.info(
+        LOGGER.info(
             "Running pipeline with multi-threaded batching. Using %s workers for batches of size %s",
             self.ctx.batch_num_workers,
             self.ctx.batch_size,
@@ -197,7 +200,7 @@ class Pipeline:
                 drop_columns = block_prop.get("drop_columns", [])
                 drop_duplicates_cols = block_prop.get("drop_duplicates", False)
                 block = block_type(self.ctx, self, block_name, **block_config)
-                logger.info("Running block: %s", block_name)
+                LOGGER.info("Running block: %s", block_name)
                 # Execute the block and wrap errors with the block name/type
                 dataset = block.generate(dataset)
             except Exception as err:
@@ -284,7 +287,7 @@ def _parse_pipeline_config_file(pipeline_yaml):
             "The pipeline config file format is from a future major version."
         )
     if major <= _PIPELINE_CONFIG_PARSER_MAJOR and minor > _PIPELINE_CONFIG_PARSER_MINOR:
-        logger.warning(
+        LOGGER.warning(
             "The pipeline config file may have new features that will be ignored."
         )
 

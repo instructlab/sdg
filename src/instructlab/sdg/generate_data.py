@@ -34,7 +34,7 @@ from instructlab.sdg.utils.taxonomy import (
     read_taxonomy_leaf_nodes,
 )
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 _SYS_PROMPT = "I am a Red Hat® Instruct Model, an AI language model developed by Red Hat and IBM Research based on the granite-3.0-8b-base model. My primary role is to serve as a chat assistant."
 
@@ -90,7 +90,7 @@ def _gen_train_data(
 
     for output_dataset in machine_instruction_data:
         for synth_example in output_dataset:
-            logger.debug(synth_example)
+            LOGGER.debug(synth_example)
             user = _get_question_hack(synth_example)
             if len(synth_example.get("context", "")) > 0:
                 user += "\n" + synth_example["context"]
@@ -223,7 +223,7 @@ def _sdg_init(ctx, pipeline):
                 config = yaml.safe_load(file)
                 docling_model_path = config["models"][0]["path"]
         except (FileNotFoundError, NotADirectoryError, PermissionError) as e:
-            logger.warning(f"unable to read docling models path from config.yaml {e}")
+            LOGGER.warning(f"unable to read docling models path from config.yaml {e}")
 
     for d in data_dirs:
         pipeline_path = os.path.join(d, "pipelines", pipeline)
@@ -285,7 +285,7 @@ def _mixer_init(
 # to be removed: logger
 def generate_data(
     client: openai.OpenAI,
-    logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
+    logger: logging.Logger = None,  # pylint: disable=redefined-outer-name
     system_prompt: Optional[str] = None,
     use_legacy_pretraining_format: Optional[bool] = True,
     model_family: Optional[str] = None,
@@ -318,6 +318,10 @@ def generate_data(
                   We expect three files to be present in this directory: "knowledge.yaml",
                     "freeform_skills.yaml", and "grounded_skills.yaml".
     """
+    if logger is not None:
+        global LOGGER  # pylint: disable=global-statement
+        LOGGER = logger
+
     generate_start = time.time()
 
     system_prompt = system_prompt if system_prompt is not None else _SYS_PROMPT
@@ -336,7 +340,7 @@ def generate_data(
     document_output_dir = Path(output_dir) / f"documents-{date_suffix}"
 
     leaf_nodes = read_taxonomy_leaf_nodes(
-        taxonomy, taxonomy_base, yaml_rules, document_output_dir
+        taxonomy, taxonomy_base, yaml_rules, document_output_dir, logger=LOGGER
     )
     if not leaf_nodes:
         raise GenerateException("Error: No new leaf nodes found in the taxonomy.")
@@ -352,7 +356,7 @@ def generate_data(
         system_prompt,
     )
 
-    logger.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
+    LOGGER.debug(f"Generating to: {os.path.join(output_dir, output_file_test)}")
 
     model_family = models.get_model_family(model_family, model_name)
 
@@ -385,7 +389,7 @@ def generate_data(
     )
 
     if console_output:
-        logger.info(
+        LOGGER.info(
             "Synthesizing new instructions. If you aren't satisfied with the generated instructions, interrupt training (Ctrl-C) and try adjusting your YAML files. Adding more examples may help."
         )
 
@@ -402,6 +406,7 @@ def generate_data(
             document_output_dir,
             model_name,
             docling_model_path=docling_model_path,
+            logger=LOGGER,
         )
 
         if not samples:
@@ -417,17 +422,17 @@ def generate_data(
         else:
             pipe = freeform_skills_pipe
 
-        logger.debug("Samples: %s", samples)
+        LOGGER.debug("Samples: %s", samples)
 
         new_generated_data = pipe.generate(samples, leaf_node_path)
         if len(new_generated_data) == 0:
             empty_sdg_leaf_nodes.append(leaf_node_path)
-            logger.warning("Empty dataset for qna node: %s", leaf_node_path)
+            LOGGER.warning("Empty dataset for qna node: %s", leaf_node_path)
             continue
         generated_data.append(new_generated_data)
 
-        logger.info("Generated %d samples", len(generated_data))
-        logger.debug("Generated data: %s", generated_data)
+        LOGGER.info("Generated %d samples", len(generated_data))
+        LOGGER.debug("Generated data: %s", generated_data)
 
         if is_knowledge:
             # generate mmlubench data for the current leaf node
@@ -453,12 +458,12 @@ def generate_data(
         system_prompt,
     )
 
-    mixer.generate()
+    mixer.generate(logger=LOGGER)
 
     generate_duration = time.time() - generate_start
-    logger.info(f"Generation took {generate_duration:.2f}s")
+    LOGGER.info(f"Generation took {generate_duration:.2f}s")
     if len(empty_sdg_leaf_nodes) > 0:
-        logger.warning(
+        LOGGER.warning(
             "Leaf nodes with empty sdg output: {}".format(
                 " ".join(empty_sdg_leaf_nodes)
             )
