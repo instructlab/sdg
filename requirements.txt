@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 click>=8.1.7,<9.0.0
 datasets>=2.18.0,<3.0.0
-docling[tesserocr]>=2.4.2,<=2.8.3
+docling[tesserocr]>=2.4.2,<=2.9.0
 docling-parse>=2.0.0,<3.0.0
 GitPython>=3.1.42,<4.0.0
 gguf>=0.6.0
