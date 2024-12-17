@@ -160,7 +160,7 @@ class Recipe:
         Create the final mixed dataset by loading, sampling, and
         concatenating all datasets in this recipe
         """
-        if not self.dataset_added:
+        if not self.datasets:
             logger.error("No dataset added to the recipe")
 
         mixed_ds = self._load_and_sample_datasets(num_proc)
@@ -726,18 +726,35 @@ class DataMixer:
                 sampling_size=self.NUM_SYNTH_SKILLS,
             )
 
+    def _write_mixed_recipe(self, recipe, output_file_recipe):
+        """
+        Write the recipes created during data mixing without writing the actual
+        mixed datasets to disk.
+        """
+        full_recipe_path = os.path.join(self.output_dir, output_file_recipe)
+        recipe.save_recipe(full_recipe_path)
+
     def _gen_mixed_data(self, recipe, output_file_recipe, output_file_data):
         """
         Mix the generated leaf node data into a single dataset and write it to
         disk. The heavy lifting is delegated to the Recipe class.
         """
+        self._write_mixed_recipe(recipe, output_file_recipe)
         if recipe.dataset_added:
-            full_recipe_path = os.path.join(self.output_dir, output_file_recipe)
-            recipe.save_recipe(full_recipe_path)
             recipe.save_mixed_dataset(
                 os.path.join(self.output_dir, output_file_data),
                 self.num_procs,
             )
+
+    def write_recipes(self):
+        self._write_mixed_recipe(
+            self.knowledge_recipe,
+            self.output_file_knowledge_recipe,
+        )
+        self._write_mixed_recipe(
+            self.skills_recipe,
+            self.output_file_skills_recipe,
+        )
 
     def generate(self):
         self._gen_mixed_data(
