@@ -281,11 +281,8 @@ def _mixer_init(
 
 
 # This is part of the public API, and used by instructlab.
-# TODO - parameter removal needs to be done in sync with a CLI change.
-# to be removed: logger
 def generate_data(
     client: openai.OpenAI,
-    logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
     system_prompt: Optional[str] = None,
     use_legacy_pretraining_format: Optional[bool] = True,
     model_family: Optional[str] = None,
