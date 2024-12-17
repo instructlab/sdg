@@ -11,6 +11,7 @@ import yaml
 
 # First Party
 from instructlab.sdg.utils import taxonomy
+from instructlab.sdg.utils.taxonomy import _string_contains_html
 
 TEST_SEED_EXAMPLE = "Can you help me debug this failing unit test?"
 
@@ -85,3 +86,14 @@ class TestTaxonomy:
             ):
                 seed_example_exists = True
             assert seed_example_exists is True
+    
+    @pytest.mark.parametrize(
+        "s, contains_html",
+        [
+            ("hello, world!", False),
+            ("hello, <div>world!</div>", True),
+        ]
+    )
+    def test_string_contains_html(self, s, contains_html):
+        print(taxonomy.__dict__)
+        assert _string_contains_html(s) == contains_html

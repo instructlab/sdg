@@ -110,6 +110,18 @@ def _get_taxonomy(repo="taxonomy"):
     return taxonomy_file_paths
 
 
+def _string_contains_html(s: str) -> bool:
+    """Detect HTML tags in a string.
+    
+    We use this to catch markdown files that may contain html elements since
+    docling does not support this."""
+    # Define a regex to detect HTML tags
+    html_tag_pattern = re.compile(r"<\/?[a-zA-Z][\s\S]*?>")
+    
+    # Check for HTML tags in the content
+    return bool(html_tag_pattern.search(s))
+
+
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
@@ -161,6 +173,12 @@ def _get_documents(
                             # Process Markdown files
                             with open(file_path, "r", encoding="utf-8") as file:
                                 content = file.read()
+                                if _string_contains_html(content):
+                                    raise ValueError(f"Provided markdown file {file_path} contains"
+                                                     " HTML, which is currently unsupported. Please"
+                                                     " format your markdown documents without the"
+                                                     " use of HTML or use a different document"
+                                                     " filetype.")
                                 file_contents.append(content)
                                 filepaths.append(Path(file_path))
                                 logger.info(
