@@ -5,8 +5,8 @@ Backport
 backported
 CLI
 codebase
-composable
 Composable
+composable
 config
 configs
 customizable
@@ -29,6 +29,7 @@ JSON
 Langchain's
 LLM
 LLMBlock
+mbta
 MCQ
 Merlinite
 Mixtral
