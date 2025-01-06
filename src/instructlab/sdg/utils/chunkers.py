@@ -1,9 +1,7 @@
 # Standard
-from abc import ABC, abstractmethod
 from collections import defaultdict
-from enum import Enum
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 import json
 import logging
 import re
@@ -70,8 +68,7 @@ def resolve_ocr_options() -> OcrOptions:
 
 
 def split_docs_by_filetype(document_paths: List[Path]) -> Dict[str, List[Path]]:
-    """Split document paths into a dict of lists based on their file extension.
-    """
+    """Split document paths into a dict of lists based on their file extension."""
     document_dict = defaultdict(list)
     for path in document_paths:
         filetype = path.suffix
@@ -81,7 +78,6 @@ def split_docs_by_filetype(document_paths: List[Path]) -> Dict[str, List[Path]]:
         document_dict[filetype].append(path)
 
     return dict(document_dict)
-
 
 
 # class DocumentChunker:
@@ -226,8 +222,7 @@ def split_docs_by_filetype(document_paths: List[Path]) -> Dict[str, List[Path]]:
 #         return chunk_markdowns(self.document_contents, chunk_size)
 
 
-class DocumentChunker():  # pylint: disable=too-many-instance-attributes
-
+class DocumentChunker:  # pylint: disable=too-many-instance-attributes
     # def __new__(
     #     cls,
     #     leaf_node,
@@ -267,13 +262,12 @@ class DocumentChunker():  # pylint: disable=too-many-instance-attributes
         self.tokenizer = self.create_tokenizer(tokenizer_model_name)
 
     def _init_docling_converter(self):
-        """Initialize docling converter with filetype-specific configurations
-        """
+        """Initialize docling converter with filetype-specific configurations"""
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
         # Third Party
-        from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
         from docling.document_converter import DocumentConverter, PdfFormatOption
+        from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
 
         if self.docling_model_path is None:
             logger.info("Docling models not found on disk, downloading models...")
@@ -285,7 +279,7 @@ class DocumentChunker():  # pylint: disable=too-many-instance-attributes
             artifacts_path=self.docling_model_path,
             do_ocr=False,
         )
-        
+
         ocr_options = resolve_ocr_options()
         if ocr_options is not None:
             pipeline_options.do_ocr = True
@@ -402,7 +396,9 @@ class DocumentChunker():  # pylint: disable=too-many-instance-attributes
         # Third Party
         from transformers import AutoTokenizer
 
-        model_path = Path(model_name)  # TODO expect a path from the DocumentChunker constructor
+        model_path = Path(
+            model_name
+        )  # TODO expect a path from the DocumentChunker constructor
         error_info_message = (
             "Please run `ilab model download {download_args}` and try again"
         )
@@ -583,7 +579,9 @@ class DocumentChunker():  # pylint: disable=too-many-instance-attributes
                     )
                     book_text = self.get_table(json_book, book_element["$ref"])
                 elif book_element["prov"]:
-                    current_book_page_number = book_element["prov"][0]["page"]  # TODO export to function to handle empty ["prov"]
+                    current_book_page_number = book_element["prov"][0][
+                        "page"
+                    ]  # TODO export to function to handle empty ["prov"]
                     book_text = book_element["text"]
                 else:
                     current_book_page_number = None

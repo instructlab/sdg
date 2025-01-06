@@ -11,10 +11,7 @@ from docling.datamodel.pipeline_options import EasyOcrOptions, TesseractOcrOptio
 import pytest
 
 # First Party
-from instructlab.sdg.utils.chunkers import (
-    DocumentChunker,
-    resolve_ocr_options,
-)
+from instructlab.sdg.utils.chunkers import DocumentChunker, resolve_ocr_options
 
 # Local
 from .testdata import testdata
@@ -32,7 +29,9 @@ def tokenizer_model_name():
     return os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab")
 
 
-def test_init_document_chunker_unsupported_filetype(documents_dir, tokenizer_model_name):
+def test_init_document_chunker_unsupported_filetype(
+    documents_dir, tokenizer_model_name
+):
     """Test that the DocumentChunker factory class fails when provided an unsupported document"""
     document_paths = [documents_dir / "document.jpg"]
     with pytest.raises(ValueError):

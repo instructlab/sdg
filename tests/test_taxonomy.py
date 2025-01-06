@@ -86,13 +86,13 @@ class TestTaxonomy:
             ):
                 seed_example_exists = True
             assert seed_example_exists is True
-    
+
     @pytest.mark.parametrize(
         "s, contains_html",
         [
             ("hello, world!", False),
             ("hello, <div>world!</div>", True),
-        ]
+        ],
     )
     def test_string_contains_html(self, s, contains_html):
         print(taxonomy.__dict__)
