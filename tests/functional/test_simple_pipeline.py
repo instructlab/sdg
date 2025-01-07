@@ -34,7 +34,7 @@ def pipelines_package():
     return SIMPLE_PIPELINES_PACKAGE
 
 
-@pytest.mark.slow
+@pytest.mark.gpu
 class TestSimplePipeline(unittest.TestCase):
     @pytest.fixture(autouse=True)
     def _setup_fixtures(self, knowledge_dataset, knowledge_pipeline):

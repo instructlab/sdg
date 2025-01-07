@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+
+-r requirements-dev.txt
+
+llama-cpp-python[server]>=0.3.0,<1.0.0
