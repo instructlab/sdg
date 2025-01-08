@@ -174,12 +174,10 @@ def _get_documents(
                             with open(file_path, "r", encoding="utf-8") as file:
                                 content = file.read()
                                 if _string_contains_html(content):
-                                    raise ValueError(
-                                        f"Provided markdown file {file_path} contains"
-                                        " HTML, which is currently unsupported. Please"
-                                        " format your markdown documents without the"
-                                        " use of HTML or use a different document"
-                                        " filetype."
+                                    logging.warning(
+                                        f"Provided markdown file {file_path} contains HTML contents, which is currently unsupported as a part of markdown"
+                                        "NOTE: Continuing this might affect your data generation quality."
+                                        "To get best results please format your markdown documents without the use of HTML or use a different document filetype."
                                     )
                                 file_contents.append(content)
                                 filepaths.append(Path(file_path))
