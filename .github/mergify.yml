@@ -35,7 +35,7 @@ pull_request_rules:
         - or:
           - files~=\.py$
           - files=pyproject.toml
-          - files=^requirements.*\.txt$
+          - files~=^requirements.*\.txt$
           - files=.github/workflows/e2e-nvidia-l4-x1.yml
       - and:
         - -files~=\.py$
@@ -51,7 +51,7 @@ pull_request_rules:
         - or:
           - files~=\.py$
           - files=pyproject.toml
-          - files=^requirements.*\.txt$
+          - files~=^requirements.*\.txt$
           - files=.github/workflows/e2e-nvidia-t4-x1.yml
       - and:
         - -files~=\.py$
