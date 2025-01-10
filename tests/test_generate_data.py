@@ -21,7 +21,12 @@ import yaml
 
 # First Party
 from instructlab.sdg import LLMBlock, PipelineContext
-from instructlab.sdg.generate_data import _context_init, _sdg_init, generate_data
+from instructlab.sdg.generate_data import (
+    _context_init,
+    _sdg_init,
+    generate_data,
+    logger,
+)
 
 TEST_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 
@@ -308,19 +313,17 @@ class TestGenerateCompositionalData(unittest.TestCase):
         )
 
     def test_generate(self):
-        with patch("logging.Logger.info") as mocked_logger:
-            generate_data(
-                client=MagicMock(),
-                logger=mocked_logger,
-                model_family="merlinite",
-                model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
-                num_instructions_to_generate=10,
-                taxonomy=self.test_taxonomy.root,
-                taxonomy_base=TEST_TAXONOMY_BASE,
-                output_dir=self.tmp_path,
-                pipeline="simple",
-                system_prompt=TEST_SYS_PROMPT,
-            )
+        generate_data(
+            client=MagicMock(),
+            model_family="merlinite",
+            model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
+            num_instructions_to_generate=10,
+            taxonomy=self.test_taxonomy.root,
+            taxonomy_base=TEST_TAXONOMY_BASE,
+            output_dir=self.tmp_path,
+            pipeline="simple",
+            system_prompt=TEST_SYS_PROMPT,
+        )
 
         for name in ["test_*.jsonl", "train_*.jsonl", "messages_*.jsonl"]:
             matches = glob.glob(os.path.join(self.tmp_path, name))
@@ -391,21 +394,19 @@ class TestGenerateKnowledgeData(unittest.TestCase):
         self.expected_train_samples = generate_train_samples(test_valid_knowledge_skill)
 
     def test_generate(self):
-        with patch("logging.Logger.info") as mocked_logger:
-            generate_data(
-                client=MagicMock(),
-                logger=mocked_logger,
-                model_family="merlinite",
-                model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
-                num_instructions_to_generate=10,
-                taxonomy=self.test_taxonomy.root,
-                taxonomy_base=TEST_TAXONOMY_BASE,
-                output_dir=self.tmp_path,
-                chunk_word_count=1000,
-                server_ctx_size=4096,
-                pipeline="simple",
-                system_prompt=TEST_SYS_PROMPT,
-            )
+        generate_data(
+            client=MagicMock(),
+            model_family="merlinite",
+            model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
+            num_instructions_to_generate=10,
+            taxonomy=self.test_taxonomy.root,
+            taxonomy_base=TEST_TAXONOMY_BASE,
+            output_dir=self.tmp_path,
+            chunk_word_count=1000,
+            server_ctx_size=4096,
+            pipeline="simple",
+            system_prompt=TEST_SYS_PROMPT,
+        )
 
         for name in ["test_*.jsonl", "train_*.jsonl", "messages_*.jsonl"]:
             matches = glob.glob(os.path.join(self.tmp_path, name))
@@ -495,10 +496,9 @@ class TestGenerateEmptyDataset(unittest.TestCase):
         )
 
     def test_generate(self):
-        with patch("logging.Logger.info") as mocked_logger:
+        with patch("instructlab.sdg.generate_data.logger") as mocked_logger:
             generate_data(
                 client=MagicMock(),
-                logger=mocked_logger,
                 model_family="merlinite",
                 model_name="models/merlinite-7b-lab-Q4_K_M.gguf",
                 num_instructions_to_generate=10,
