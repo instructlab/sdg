@@ -17,6 +17,7 @@ import yaml
 # First Party
 from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
+from instructlab.sdg.throttlers import AdaptiveThrottler
 
 # Local
 from .blocks import llmblock
@@ -156,6 +157,9 @@ class Pipeline:
             logger.info("Running pipeline single-threaded")
             return self._generate_single(dataset)
 
+
+        # if self.ctx.batch_num_workers is None, calculate default number of workers, same as outlined here: https://docs.python.org/3.11/library/concurrent.futures.html
+        self.ctx.batch_num_workers = min(32, os.cpu_count() + 4)
         # Otherwise, split the dataset into batches and run each batch as a
         # future in the thread pool
         logger.info(
@@ -165,18 +169,44 @@ class Pipeline:
         )
         input_splits = self._split_dataset(dataset)
         output_splits = []
-        with ThreadPoolExecutor(max_workers=self.ctx.batch_num_workers) as executor:
-            futures = [
-                executor.submit(self._generate_single, input_split)
-                for input_split in input_splits
-            ]
 
-            # Collect the results of each batch as they finish. This needs to
-            # wait for them all, so the order of waiting doesn't matter
-            for future in futures:
-                ds = future.result()
-                output_splits.append(ds)
-                checkpointer.checkpoint(ds)
+
+        throttler = AdaptiveThrottler(
+            min_workers=1,
+            max_workers=self.ctx.batch_num_workers, # Upper limit from config
+            initial_workers=self.ctx.batch_num_workers//2, # Start at 50% of max
+        )
+            
+        if not input_splits:
+            logger.warning("Input splits are empty. Returning empty dataset.")
+            return concatenate_datasets([])            
+        
+        while input_splits:
+            # Get the current number of workers from the throttler
+            current_workers = throttler.get_workers()
+            # Take a slice of input splits to process concurrently
+            input_splits_batch = input_splits[:current_workers]
+            input_splits = input_splits[current_workers:]
+
+            with ThreadPoolExecutor(max_workers=current_workers) as executor:
+                # Submit tasks for each batch
+                futures = [
+                    executor.submit(self._generate_single, input_split)
+                    for input_split in input_splits_batch
+                ]
+
+                # Collect the results of each batch as they finish. This needs to
+                # wait for them all, so the order of waiting doesn't matter
+                for future in futures:
+                    try:
+                        ds = future.result() # Block until the task is complete
+                        output_splits.append(ds) # Store the successful result
+                        checkpointer.checkpoint(ds) # Save progress
+                        throttler.adjust_workers(success=True) # Increase workers on success
+                    except Exception as err:
+                        logger.error("Error in pipeline batch generation: %s", err)
+                        throttler.adjust_workers(success=False)
+        
         checkpointer.done()
         if pre_generated_data:
             output_splits.append(pre_generated_data)
