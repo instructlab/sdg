@@ -1,3 +1,9 @@
+## v0.6.3
+
+### Fixes
+
+* The max version constraint of PyTorch in our requirements file was raised so that we don't prevent SDG users from using it PyTorch 2.5.
+
 ## v0.6.2
 
 ### Fixes
