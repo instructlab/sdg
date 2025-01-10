@@ -8,10 +8,12 @@ from typing import Dict, Iterable, List, Optional
 import logging
 import math
 import os.path
+import requests
 
 # Third Party
 from datasets import Dataset, concatenate_datasets
 from openai import OpenAI
+from openai import OpenAIError
 import yaml
 
 # First Party
@@ -203,9 +205,22 @@ class Pipeline:
                         output_splits.append(ds) # Store the successful result
                         checkpointer.checkpoint(ds) # Save progress
                         throttler.adjust_workers(success=True) # Increase workers on success
-                    except Exception as err:
-                        logger.error("Error in pipeline batch generation: %s", err)
-                        throttler.adjust_workers(success=False)
+                    
+                    except PipelineBlockError as err:
+                        root_exception = err.exception  # Access the underlying exception
+
+                        if isinstance(root_exception, (requests.exceptions.RequestException, TimeoutError, OpenAIError)):
+                            # Retryable errors
+                            logger.warning("Retryable error in pipeline batch generation: %s", root_exception)
+                            throttler.adjust_workers(success=False)
+                        else:
+                            # Non-retryable errors
+                            logger.error("Non Retryable error in pipeline batch generation: %s", err)
+                            throttler.adjust_workers(success=False)
+                    except Exception as generic_err:
+                        logger.error("Unexpected error in batch generation: %s", generic_err)
+                        throttler.adjust_workers(success=False)  # Adjust workers for unexpected errors
+
         
         checkpointer.done()
         if pre_generated_data:
