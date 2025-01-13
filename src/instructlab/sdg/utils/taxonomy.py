@@ -436,7 +436,6 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
 
 def _knowledge_leaf_node_to_samples(
     leaf_node,
-    taxonomy_path,  # pylint: disable=unused-argument
     server_ctx_size,
     chunk_word_count,
     document_output_dir,
@@ -475,7 +474,6 @@ def _skill_leaf_node_to_samples(leaf_node):
 
 def leaf_node_to_samples(
     leaf_node,
-    taxonomy_path,
     server_ctx_size,
     chunk_word_count,
     document_output_dir,
@@ -486,8 +484,7 @@ def leaf_node_to_samples(
         return []
     if leaf_node[0].get("documents"):
         return _knowledge_leaf_node_to_samples(
-            leaf_node,
-            taxonomy_path,
+            leaf_node,  # pylint: disable=duplicate-code
             server_ctx_size,
             chunk_word_count,
             document_output_dir,

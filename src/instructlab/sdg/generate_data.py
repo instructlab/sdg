@@ -395,8 +395,7 @@ def generate_data(
         is_knowledge = False
         leaf_node_path = leaf_node[0]["taxonomy_path"].replace("->", "_")
         samples = leaf_node_to_samples(
-            leaf_node,
-            taxonomy,
+            leaf_node,  # pylint: disable=duplicate-code
             server_ctx_size,
             chunk_word_count,
             document_output_dir,
