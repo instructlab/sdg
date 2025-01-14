@@ -178,11 +178,11 @@ class Pipeline:
             max_workers=self.ctx.batch_num_workers, # Upper limit from config
             initial_workers=self.ctx.batch_num_workers//2, # Start at 50% of max
         )
-            
+
         if not input_splits:
             logger.warning("Input splits are empty. Returning empty dataset.")
-            return concatenate_datasets([])            
-        
+            return concatenate_datasets([])
+
         while input_splits:
             # Get the current number of workers from the throttler
             current_workers = throttler.get_workers()
@@ -205,7 +205,7 @@ class Pipeline:
                         output_splits.append(ds) # Store the successful result
                         checkpointer.checkpoint(ds) # Save progress
                         throttler.adjust_workers(success=True) # Increase workers on success
-                    
+
                     except PipelineBlockError as err:
                         root_exception = err.exception  # Access the underlying exception
 
@@ -217,11 +217,8 @@ class Pipeline:
                             # Non-retryable errors
                             logger.error("Non Retryable error in pipeline batch generation: %s", err)
                             throttler.adjust_workers(success=False)
-                    except Exception as generic_err:
-                        logger.error("Unexpected error in batch generation: %s", generic_err)
-                        throttler.adjust_workers(success=False)  # Adjust workers for unexpected errors
 
-        
+
         checkpointer.done()
         if pre_generated_data:
             output_splits.append(pre_generated_data)
