@@ -81,17 +81,6 @@ def split_docs_by_filetype(document_paths: List[Path]) -> Dict[str, List[Path]]:
 
 
 class DocumentChunker:  # pylint: disable=too-many-instance-attributes
-    # def __new__(
-    #     cls,
-    #     leaf_node,
-    #     taxonomy_path,
-    #     output_dir: Path,
-    #     server_ctx_size=4096,
-    #     chunk_word_count=1024,
-    #     tokenizer_model_name: Optional[str] = None,
-    #     docling_model_path: Optional[str] = None,
-    # ):
-
     def __init__(
         self,
         document_paths: List[Path],
