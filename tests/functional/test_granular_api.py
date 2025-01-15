@@ -4,10 +4,13 @@
 from datetime import datetime
 from unittest.mock import MagicMock
 import glob
+import os
 import pathlib
+import unittest
 
 # Third Party
 import git
+import pytest
 
 # First Party
 from instructlab.sdg import BlockRegistry
@@ -20,6 +23,7 @@ from instructlab.sdg.generate_data import (
 
 # Local
 from ..mockllmblock import MockLLMBlock
+from ..taxonomy import load_test_skills
 
 
 def _clone_instructlab_taxonomy(taxonomy_dir):
@@ -29,75 +33,99 @@ def _clone_instructlab_taxonomy(taxonomy_dir):
     repo.git.checkout(taxonomy_commit)
 
 
-def test_granular_api_end_to_end(testdata_path: pathlib.Path, tmp_path: pathlib.Path):
-    # Registry our mock block so we can reference it in pipelines
-    BlockRegistry.register("MockLLMBlock")(MockLLMBlock)
+class TestGranularAPI(unittest.TestCase):
+    @pytest.fixture(autouse=True)
+    def _init_taxonomy(self, taxonomy_dir, testdata_path, tmp_path):
+        self.test_taxonomy = taxonomy_dir
+        self.testdata_path = testdata_path
+        self.tmp_path = tmp_path
 
-    # Clone a taxonomy and edit 1 file in it
-    taxonomy_dir = tmp_path.joinpath("taxonomy")
-    _clone_instructlab_taxonomy(taxonomy_dir)
-    changed_qna_yaml = taxonomy_dir.joinpath(
-        "knowledge", "science", "animals", "birds", "black_capped_chickadee", "qna.yaml"
-    )
-    with open(changed_qna_yaml, "a", encoding="utf-8") as file:
-        file.write("")
-
-    pipeline_dir = testdata_path.joinpath("mock_pipelines")
-    date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
-
-    preprocessed_dir = tmp_path.joinpath("preprocessed")
-    teacher_model_path = testdata_path.joinpath("models/instructlab/granite-7b-lab")
-    preprocess_taxonomy(
-        taxonomy_dir=taxonomy_dir,
-        output_dir=preprocessed_dir,
-        teacher_model_path=teacher_model_path,
-    )
-    chickadee_docs = glob.glob(
-        str(
-            preprocessed_dir.joinpath(
-                "documents", "knowledge_science_*", "chickadee.md"
-            )
+    def setUp(self):
+        test_valid_knowledge_skill_file = self.testdata_path.joinpath(
+            "test_valid_knowledge_skill.yaml"
         )
-    )
-    assert chickadee_docs
-    chickadee_samples_path = preprocessed_dir.joinpath(
-        "knowledge_science_animals_birds_black_capped_chickadee.jsonl"
-    )
-    assert chickadee_samples_path.is_file()
+        untracked_knowledge_file = os.path.join("knowledge", "new", "qna.yaml")
+        test_valid_knowledge_skill = load_test_skills(test_valid_knowledge_skill_file)
+        self.test_taxonomy.create_untracked(
+            untracked_knowledge_file, test_valid_knowledge_skill
+        )
 
-    client = MagicMock()
-    client.server_supports_batched = False
-    generated_dir = tmp_path.joinpath("generated")
-    generate_taxonomy(
-        client=client,
-        input_dir=preprocessed_dir,
-        output_dir=generated_dir,
-        pipeline=pipeline_dir,
-    )
-    generated_chickadee_samples_path = generated_dir.joinpath(
-        "knowledge_science_animals_birds_black_capped_chickadee.jsonl"
-    )
-    assert generated_chickadee_samples_path.is_file()
+    def file_list(self):
+        return glob.glob(str(self.tmp_path.joinpath("**/*")), recursive=True)
 
-    postprocessed_dir = tmp_path.joinpath("postprocessed")
-    postprocess_taxonomy(
-        input_dir=generated_dir,
-        output_dir=postprocessed_dir,
-        date_suffix=date_suffix,
-        pipeline=pipeline_dir,
-    )
-    knowledge_recipe_file = postprocessed_dir.joinpath(
-        f"knowledge_recipe_{date_suffix}.yaml"
-    )
-    assert knowledge_recipe_file.is_file()
-    skills_recipe_file = postprocessed_dir.joinpath(f"skills_recipe_{date_suffix}.yaml")
-    assert skills_recipe_file.is_file()
+    def test_granular_api_end_to_end(self):
+        # Registry our mock block so we can reference it in pipelines
+        BlockRegistry.register("MockLLMBlock")(MockLLMBlock)
 
-    mixed_skills_output_file = (
-        f"{postprocessed_dir}/skills_train_msgs_{date_suffix}.jsonl"
-    )
-    mix_datasets(
-        recipe_file=f"{postprocessed_dir}/skills_recipe_{date_suffix}.yaml",
-        output_file=mixed_skills_output_file,
-    )
-    assert pathlib.Path(mixed_skills_output_file).is_file()
+        # Clone a taxonomy and edit 1 file in it
+        taxonomy_dir = self.tmp_path
+
+        pipeline_dir = self.testdata_path.joinpath("mock_pipelines")
+        date_suffix = (
+            datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
+        )
+
+        preprocessed_dir = self.tmp_path.joinpath("preprocessed")
+        teacher_model_path = self.testdata_path.joinpath(
+            "models/instructlab/granite-7b-lab"
+        )
+        preprocess_taxonomy(
+            taxonomy_dir=taxonomy_dir,
+            output_dir=preprocessed_dir,
+            teacher_model_path=teacher_model_path,
+        )
+        docs = glob.glob(
+            str(preprocessed_dir.joinpath("documents", "knowledge_new_*", "phoenix.md"))
+        )
+        assert docs, f"Expected docs not found in {self.file_list()}"
+        samples_path = preprocessed_dir.joinpath("knowledge_new.jsonl")
+        assert (
+            samples_path.is_file()
+        ), f"Expected samples file not found in {self.file_list()}"
+
+        client = MagicMock()
+        client.server_supports_batched = False
+        generated_dir = self.tmp_path.joinpath("generated")
+        generate_taxonomy(
+            client=client,
+            input_dir=preprocessed_dir,
+            output_dir=generated_dir,
+            pipeline=pipeline_dir,
+            num_cpus=1,  # Test is faster running on a single CPU vs forking
+            batch_size=0,  # Disable batch for tiny dataset and fastest test
+        )
+        generated_samples_path = generated_dir.joinpath("knowledge_new.jsonl")
+        assert (
+            generated_samples_path.is_file()
+        ), f"Generated samples not found in {self.file_list()}"
+
+        postprocessed_dir = self.tmp_path.joinpath("postprocessed")
+        postprocess_taxonomy(
+            input_dir=generated_dir,
+            output_dir=postprocessed_dir,
+            date_suffix=date_suffix,
+            pipeline=pipeline_dir,
+        )
+        knowledge_recipe_file = postprocessed_dir.joinpath(
+            f"knowledge_recipe_{date_suffix}.yaml"
+        )
+        assert (
+            knowledge_recipe_file.is_file()
+        ), f"Generated knowledge recipe file not found in {self.file_list()}"
+        skills_recipe_file = postprocessed_dir.joinpath(
+            f"skills_recipe_{date_suffix}.yaml"
+        )
+        assert (
+            skills_recipe_file.is_file()
+        ), f"Generated skills recipe file not found in {self.file_list()}"
+
+        mixed_skills_output_file = (
+            f"{postprocessed_dir}/skills_train_msgs_{date_suffix}.jsonl"
+        )
+        mix_datasets(
+            recipe_file=f"{postprocessed_dir}/skills_recipe_{date_suffix}.yaml",
+            output_file=mixed_skills_output_file,
+        )
+        assert pathlib.Path(
+            mixed_skills_output_file
+        ).is_file(), f"Generated mixed output not found in {self.file_list()}"

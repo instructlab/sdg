@@ -2,7 +2,7 @@
 
 # Standard
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 import shutil
 
 # Third Party
@@ -68,3 +68,8 @@ class MockTaxonomy:
 
     def __exit__(self, *args):
         self.teardown()
+
+
+def load_test_skills(skills_file_path) -> Union[Dict[str, Any], None]:
+    with open(skills_file_path, "r", encoding="utf-8") as skills_file:
+        return yaml.safe_load(skills_file)

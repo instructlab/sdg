@@ -28,6 +28,9 @@ from instructlab.sdg.generate_data import (
     generate_data,
 )
 
+# Local
+from .taxonomy import load_test_skills
+
 TEST_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 
 TEST_TAXONOMY_BASE = "main"
@@ -230,11 +233,6 @@ def generate_train_samples(yaml_contents):
                     }
                 )
     return train_samples
-
-
-def load_test_skills(skills_file_path) -> Union[Dict[str, Any], None]:
-    with open(skills_file_path, "r", encoding="utf-8") as skills_file:
-        return yaml.safe_load(skills_file)
 
 
 def _noop_llmblock_generate(self, samples):
