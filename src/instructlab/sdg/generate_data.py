@@ -123,9 +123,9 @@ def _gen_train_data(
     jldump(messages_data, output_file_messages)
 
 
-def _knowledge_seed_example_to_test_data(seed_example, system_prompt):
+def _knowledge_seed_example_to_test_data(seed_example, system_prompt, num_iterations=3):
     res = []
-    for i in range(3):
+    for i in range(num_iterations):
         idx = i + 1
         user = seed_example[f"icl_query_{idx}"] + "\n" + seed_example["icl_document"]
         test_sample = {

@@ -46,9 +46,11 @@ def test_granular_api_end_to_end(testdata_path: pathlib.Path, tmp_path: pathlib.
     date_suffix = datetime.now().replace(microsecond=0).isoformat().replace(":", "_")
 
     preprocessed_dir = tmp_path.joinpath("preprocessed")
+    teacher_model_path = testdata_path.joinpath("models/instructlab/granite-7b-lab")
     preprocess_taxonomy(
         taxonomy_dir=taxonomy_dir,
         output_dir=preprocessed_dir,
+        teacher_model_path=teacher_model_path,
     )
     chickadee_docs = glob.glob(
         str(
