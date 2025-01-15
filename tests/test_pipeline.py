@@ -101,6 +101,63 @@ def test_pipeline_batching_order_correct(sample_dataset, threaded_ctx):
         res = Pipeline(threaded_ctx, "", pipe_cfg).generate(sample_dataset)
     assert res.to_list() == [{"foo": i * 2} for i in range(10)]
 
+def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
+    """
+    Test that batching occurs after every block in the pipeline.
+    """
+    
+    class MockBlockType:
+        def __init__(self, ctx, *args, **kwargs):
+            self.ctx = ctx  # Store the context in the block
+            self.call_count = 0
+            self.dataset_size_before = None
+
+        def generate(self, dataset):
+            self.call_count += 1
+            if self.dataset_size_before is not None:
+                # Assert that after the fix, the dataset size should be <= batch_size for all blocks
+                assert len(dataset) <= self.ctx.batch_size, (
+                    f"Dataset size {len(dataset)} exceeds batch size {self.ctx.batch_size} "
+                    "after batching fix is applied"
+                )
+            
+            self.dataset_size_before = len(dataset)
+            # Simulate explosion of dataset size in Block 1
+            if self.call_count == 1:
+                dataset = dataset.flatten()  # This simulates a block that increases dataset size
+            return dataset.map(lambda r: {"bar": r["foo"] * 2})
+
+    # Simulate a scenario where batching is applied before entering the pipeline and after each block
+    block_one = MockBlockType(threaded_ctx)
+    block_two = MockBlockType(threaded_ctx)
+
+    pipe_cfg = [
+        {
+            "name": "block-one",
+            "type": "block_one",
+            "config": {},
+        },
+        {
+            "name": "block-two",
+            "type": "block_two",
+            "config": {},
+        },
+    ]
+
+    with block_types({"block_one": lambda *args, **kwargs: block_one,
+                      "block_two": lambda *args, **kwargs: block_two}):
+        # Run the pipeline and ensure the dataset is correctly batched after each block
+        res = Pipeline(threaded_ctx, "", pipe_cfg).generate(sample_dataset)
+
+    # Ensure both blocks were called for each batch
+    assert block_one.call_count > 0, "Block one was not called"
+    assert block_two.call_count > 0, "Block two was not called"
+
+    # Ensure that the final dataset respects the batch size and transformations
+    assert res.column_names == ["foo", "bar"], "Output dataset is missing expected columns"
+    assert res.to_list() == [
+        {"foo": i, "bar": i * 2} for i in range(len(sample_dataset))
+    ], "Final dataset transformation did not apply as expected"
 
 ## Pipeline Error Handling ##
 
