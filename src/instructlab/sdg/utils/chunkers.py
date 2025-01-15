@@ -85,7 +85,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         self,
         document_paths: List[Path],
         output_dir: Path,
-        tokenizer_model_name: str,
+        tokenizer_model_name: str | Path,
         docling_model_path: Optional[Path] = None,
         server_ctx_size: int = 4096,
         chunk_word_count: int = 1024,
@@ -228,7 +228,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         return fused_texts
 
     @staticmethod
-    def create_tokenizer(model_name: str):
+    def create_tokenizer(model_path: str | Path):
         """
         Create a tokenizer instance from a pre-trained model or a local directory.
 
@@ -243,9 +243,8 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         # Third Party
         from transformers import AutoTokenizer
 
-        model_path = Path(
-            model_name
-        )  # TODO expect a path from the DocumentChunker constructor
+        if not isinstance(model_path, Path):
+            model_path = Path(model_path)
         error_info_message = (
             "Please run `ilab model download {download_args}` and try again"
         )
