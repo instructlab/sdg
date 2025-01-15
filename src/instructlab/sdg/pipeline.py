@@ -187,7 +187,6 @@ class Pipeline:
     def _generate_single(self, dataset) -> Dataset:
         """Generate a single dataset by running the pipeline steps."""
         for block_prop in self.chained_blocks:
-            # Initialize arguments for error handling to None
             block, block_name, block_type = None, None, None
             try:
                 # Parse and instantiate the block
@@ -198,8 +197,51 @@ class Pipeline:
                 drop_duplicates_cols = block_prop.get("drop_duplicates", False)
                 block = block_type(self.ctx, self, block_name, **block_config)
                 logger.info("Running block: %s", block_name)
-                # Execute the block and wrap errors with the block name/type
-                dataset = block.generate(dataset)
+
+                # Check if batching is enabled
+                if self.ctx.batch_size is None or not self.ctx.batching_enabled:
+                    logger.info("Batching disabled; processing block '%s' single-threaded.", block_name)
+                    dataset = block.generate(dataset)
+                else:
+                    # Split the dataset into batches
+                    input_splits = self._split_dataset(dataset)
+                    output_splits = []
+                    with ThreadPoolExecutor(max_workers=self.ctx.batch_num_workers) as executor:
+                        futures = [
+                            executor.submit(block.generate, input_split)
+                            for input_split in input_splits
+                        ]
+
+                        # Collect the results of each batch
+                        for future in futures:
+                            try:
+                                ds = future.result()
+                                output_splits.append(ds)
+                            except Exception as err:
+                                logger.error("Error in block %s: %s", block_name, err)
+                                raise PipelineBlockError(
+                                    exception=err,
+                                    block=block,
+                                    block_name=block_name,
+                                    block_type=block_type,
+                                ) from err
+
+                    # Combine the processed splits back into a single dataset
+                    dataset = concatenate_datasets(output_splits)
+
+                # If the dataset is empty after processing, terminate early
+                if len(dataset) == 0:
+                    return dataset
+
+                # Remove unnecessary columns if specified
+                drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
+                if drop_columns_in_ds:
+                    dataset = dataset.remove_columns(drop_columns_in_ds)
+
+                # Drop duplicates if specified
+                if drop_duplicates_cols:
+                    dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
+
             except Exception as err:
                 raise PipelineBlockError(
                     exception=err,
@@ -207,17 +249,6 @@ class Pipeline:
                     block_name=block_name,
                     block_type=block_type,
                 ) from err
-
-            # If at any point we end up with an empty data set, the pipeline has failed
-            if len(dataset) == 0:
-                return dataset
-
-            drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
-            if drop_columns:
-                dataset = dataset.remove_columns(drop_columns_in_ds)
-
-            if drop_duplicates_cols:
-                dataset = self._drop_duplicates(dataset, cols=drop_duplicates_cols)
 
         return dataset
 
