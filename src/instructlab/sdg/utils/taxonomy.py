@@ -110,6 +110,18 @@ def _get_taxonomy(repo="taxonomy"):
     return taxonomy_file_paths
 
 
+def _string_contains_html(s: str) -> bool:
+    """Detect HTML tags in a string.
+
+    We use this to catch markdown files that may contain html elements since
+    docling does not support this."""
+    # Define a regex to detect HTML tags
+    html_tag_pattern = re.compile(r"<\/?[a-zA-Z][\s\S]*?>")
+
+    # Check for HTML tags in the content
+    return bool(html_tag_pattern.search(s))
+
+
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
@@ -161,6 +173,12 @@ def _get_documents(
                             # Process Markdown files
                             with open(file_path, "r", encoding="utf-8") as file:
                                 content = file.read()
+                                if _string_contains_html(content):
+                                    logging.warning(
+                                        f"Provided markdown file {file_path} contains HTML contents, which is currently unsupported as a part of markdown"
+                                        "NOTE: Continuing this might affect your data generation quality."
+                                        "To get best results please format your markdown documents without the use of HTML or use a different document filetype."
+                                    )
                                 file_contents.append(content)
                                 filepaths.append(Path(file_path))
                                 logger.info(
@@ -418,20 +436,19 @@ def map_chunks_to_icls(chunks: List, leaf_node: Dict) -> Dataset:
 
 def _knowledge_leaf_node_to_samples(
     leaf_node,
-    taxonomy_path,
     server_ctx_size,
     chunk_word_count,
     document_output_dir,
     model_name,
     docling_model_path=None,
 ):
+    document_paths = leaf_node[0]["filepaths"]
     chunker = DocumentChunker(
-        leaf_node=leaf_node,
-        taxonomy_path=taxonomy_path,
+        document_paths=document_paths,
         output_dir=document_output_dir,
+        tokenizer_model_name=model_name,
         server_ctx_size=server_ctx_size,
         chunk_word_count=chunk_word_count,
-        tokenizer_model_name=model_name,
         docling_model_path=docling_model_path,
     )
     chunks = chunker.chunk_documents()
@@ -457,7 +474,6 @@ def _skill_leaf_node_to_samples(leaf_node):
 
 def leaf_node_to_samples(
     leaf_node,
-    taxonomy_path,
     server_ctx_size,
     chunk_word_count,
     document_output_dir,
@@ -468,8 +484,7 @@ def leaf_node_to_samples(
         return []
     if leaf_node[0].get("documents"):
         return _knowledge_leaf_node_to_samples(
-            leaf_node,
-            taxonomy_path,
+            leaf_node,  # pylint: disable=duplicate-code
             server_ctx_size,
             chunk_word_count,
             document_output_dir,
