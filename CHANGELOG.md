@@ -22,6 +22,8 @@ Any users that were specifying custom pipeline configs (instead of using the def
 
 ### Fixes
 
+* The PyTorch dependency is removed, because SDG doesn't directly use PyTorch. The test suite still depends on `instructlab` core, which depends on PyTorch.
+
 ## v0.6.3
 
 ### Fixes
