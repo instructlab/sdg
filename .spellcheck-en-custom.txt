@@ -3,10 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 Backport
 backported
+backporting
+CHANGELOG
 CLI
 codebase
-composable
 Composable
+composable
 config
 configs
 customizable
@@ -30,6 +32,7 @@ Langchain's
 LLM
 LLMBlock
 MCQ
+md
 Merlinite
 Mixtral
 MMLU
