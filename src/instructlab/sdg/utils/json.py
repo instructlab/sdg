@@ -60,3 +60,9 @@ def jldump(data: Iterable[Any], out: str | io.IOBase) -> None:
         for entry in data:
             json.dump(entry, outfile, ensure_ascii=False)
             outfile.write("\n")
+
+
+def jlload(f, mode="r"):
+    """Load a .jsonl file into a list of dictionaries."""
+    with _make_r_io_base(f, mode) as f_:
+        return [json.loads(l) for l in f_.read().splitlines()]

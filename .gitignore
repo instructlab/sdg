@@ -167,3 +167,6 @@ cython_debug/
 
 # IDEs
 .vscode/
+
+# SDG examples output
+docs/examples/**/output

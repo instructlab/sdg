@@ -21,7 +21,15 @@ import yaml
 
 # First Party
 from instructlab.sdg import LLMBlock, PipelineContext
-from instructlab.sdg.generate_data import _context_init, _sdg_init, generate_data
+from instructlab.sdg.generate_data import (
+    _context_init,
+    _locate_docling_models,
+    _sdg_init,
+    generate_data,
+)
+
+# Local
+from .taxonomy import load_test_skills
 
 TEST_SYS_PROMPT = "I am, Red Hat® Instruct Model based on Granite 7B, an AI language model developed by Red Hat and IBM Research, based on the Granite-7b-base language model. My primary function is to be a chat assistant."
 
@@ -85,7 +93,7 @@ def validate_messages_dataset(dataset_file_name, expected_samples):
 
 def validate_skill_leaf_node_dataset(dataset_file_name):
     ds = load_dataset("json", data_files=dataset_file_name, split="train")
-    assert len(ds.features) == 7
+    assert len(ds.features) == 9
     features = [
         "task_description",
         "seed_context",
@@ -93,6 +101,8 @@ def validate_skill_leaf_node_dataset(dataset_file_name):
         "seed_response",
         "output",
         "id",
+        "leaf_node_path",
+        "leaf_node_type",
     ]
     for feature in features:
         assert feature in ds.features
@@ -223,11 +233,6 @@ def generate_train_samples(yaml_contents):
                     }
                 )
     return train_samples
-
-
-def load_test_skills(skills_file_path) -> Union[Dict[str, Any], None]:
-    with open(skills_file_path, "r", encoding="utf-8") as skills_file:
-        return yaml.safe_load(skills_file)
 
 
 def _noop_llmblock_generate(self, samples):
@@ -518,7 +523,8 @@ class TestGenerateEmptyDataset(unittest.TestCase):
             )
         mocked_logger.warning.assert_called()
         assert re.search(
-            "empty sdg output: knowledge_new", mocked_logger.warning.call_args.args[0]
+            "empty sdg output: .+knowledge_new.jsonl",
+            mocked_logger.warning.call_args.args[0],
         )
 
     def teardown(self) -> None:
@@ -567,35 +573,15 @@ def test_context_init_batch_size_optional():
     assert ctx.batch_size == 20
 
 
-def test_sdg_init_docling_path_config_found(testdata_path):
+def test_locate_docling_models_config_found(testdata_path):
     with patch.dict(os.environ):
         os.environ["XDG_DATA_HOME"] = str(testdata_path.joinpath("mock_xdg_data_dir"))
-        ctx = _context_init(
-            None,
-            "mixtral",
-            "foo.bar",
-            1,
-            "/checkpoint/dir",
-            1,
-            batch_size=20,
-            batch_num_workers=32,
-        )
-        _, _, _, docling_model_path = _sdg_init(ctx, "full")
+        docling_model_path = _locate_docling_models()
         assert docling_model_path == "/mock/docling-models"
 
 
-def test_sdg_init_docling_path_config_not_found(testdata_path):
+def test_locate_docling_models_config_not_found(testdata_path):
     with patch.dict(os.environ):
         os.environ["XDG_DATA_HOME"] = str(testdata_path.joinpath("nonexistent_dir"))
-        ctx = _context_init(
-            None,
-            "mixtral",
-            "foo.bar",
-            1,
-            "/checkpoint/dir",
-            1,
-            batch_size=20,
-            batch_num_workers=32,
-        )
-        _, _, _, docling_model_path = _sdg_init(ctx, "full")
+        docling_model_path = _locate_docling_models()
         assert docling_model_path is None

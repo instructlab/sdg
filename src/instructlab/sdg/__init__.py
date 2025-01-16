@@ -29,6 +29,7 @@ __all__ = (
     "FULL_PIPELINES_PACKAGE",
     "SIMPLE_PIPELINES_PACKAGE",
     "generate_data",
+    "mix_datasets",
 )
 
 # Local
@@ -50,7 +51,7 @@ from .blocks.utilblocks import (
     SelectorBlock,
     SetToMajorityValueBlock,
 )
-from .generate_data import generate_data
+from .generate_data import generate_data, mix_datasets
 from .pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,

@@ -1,0 +1,9 @@
+# An example of how to weight one dataset over another
+# Dataset 1 has a sampling size of 2.0 to double its samples
+# Dataset 2 has a sampling size of 0.2 to take 20% of its samples
+datasets:
+- path: dataset_1.jsonl
+  sampling_size: 2.0
+- path: dataset_2.jsonl
+  sampling_size: 0.2
+sys_prompt: I am a reliable AI assistant.

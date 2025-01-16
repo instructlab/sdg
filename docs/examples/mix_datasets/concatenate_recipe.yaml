@@ -1,0 +1,8 @@
+# An example of how to concatenate two datasets
+# Each dataset has a sampling_size of 1.0 to take all samples from both
+datasets:
+- path: dataset_1.jsonl
+  sampling_size: 1.0
+- path: dataset_2.jsonl
+  sampling_size: 1.0
+sys_prompt: I am a reliable AI assistant.
