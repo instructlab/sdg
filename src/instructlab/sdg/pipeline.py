@@ -205,27 +205,10 @@ class Pipeline:
                 else:
                     # Split the dataset into batches
                     input_splits = self._split_dataset(dataset)
-                    output_splits = []
-                    with ThreadPoolExecutor(max_workers=self.ctx.batch_num_workers) as executor:
-                        futures = [
-                            executor.submit(block.generate, input_split)
-                            for input_split in input_splits
-                        ]
-
-                        # Collect the results of each batch
-                        for future in futures:
-                            try:
-                                ds = future.result()
-                                output_splits.append(ds)
-                            except Exception as err:
-                                logger.error("Error in block %s: %s", block_name, err)
-                                raise PipelineBlockError(
-                                    exception=err,
-                                    block=block,
-                                    block_name=block_name,
-                                    block_type=block_type,
-                                ) from err
-
+                    # Process each batch in sequence
+                    output_splits = [
+                        block.generate(input_split) for input_split in input_splits
+                    ]
                     # Combine the processed splits back into a single dataset
                     dataset = concatenate_datasets(output_splits)
 
