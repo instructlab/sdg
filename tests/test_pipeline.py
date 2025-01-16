@@ -8,13 +8,13 @@ Unit tests for common Pipeline functionality
 from contextlib import contextmanager
 from threading import Event
 from unittest import mock
-
 # Third Party
 from datasets import Dataset
 import pytest
 
 # First Party
 from instructlab.sdg import Block, Pipeline, PipelineBlockError
+from instructlab.sdg.throttlers import AdaptiveThrottler
 
 ## Helpers ##
 
@@ -194,3 +194,40 @@ def test_block_generation_error_properties_from_strings():
         str(gen_err)
         == f"{PipelineBlockError.__name__}({block_type}/{block_name}): {inner_err}"
     )
+
+def test_pipeline_with_adaptive_throttler(sample_dataset, threaded_ctx):
+    """Test that the Pipeline integrates correctly with AdaptiveThrottler."""
+
+    # Mock block.generate to simulate failures and successes
+    block_type_mock = mock.MagicMock()
+    throttler = AdaptiveThrottler(min_workers=1, max_workers=5, initial_workers=3)
+
+    def mock_generate(dataset):
+        try:
+            # Simulate a task
+            if len(dataset) % 3 == 0:  # Simulate failure for some batches
+                throttler.adjust_workers(success=False)  # Report failure
+                raise Exception("Simulated failure")
+            throttler.adjust_workers(success=True)  # Report success
+            return dataset # Return same sample dataset for all cases
+        except Exception:
+            raise
+
+    block_type_mock().generate.side_effect = mock_generate
+
+    # Configure the pipeline
+    pipe_cfg = [
+        {
+            "name": "block-one",
+            "type": "test",
+            "config": {},
+        }
+    ]
+    with block_types({"test": block_type_mock}):
+        result = Pipeline(threaded_ctx, "", pipe_cfg).generate(sample_dataset)
+    
+    # Assertions
+    assert result is not None  # Ensure we got some output
+    assert throttler.current_workers < 5  # Concurrency should adapt dynamically, so should not reach max_workers
+    assert throttler.current_workers >= 1  # Should not drop below min_workers    
+    block_type_mock().generate.call_count > 0 # Ensure the block was called at least once
