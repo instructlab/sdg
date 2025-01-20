@@ -336,28 +336,73 @@ class TestLLMLogProbBlock(unittest.TestCase):
         assert block is not None
 
 
-@patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestLLMMessagesBlock(unittest.TestCase):
     def setUp(self):
         self.mock_ctx = MagicMock()
         self.mock_ctx.model_family = "mixtral"
         self.mock_ctx.model_id = "test_model"
         self.mock_pipe = MagicMock()
-        self.config_return_value = {
-            "system": "{{fruit}}",
-            "introduction": "introduction",
-            "principles": "principles",
-            "examples": "examples",
-            "generation": "generation",
-        }
+        self.mock_client = MagicMock()
+        self.mock_ctx.client = self.mock_client
 
-    def test_constructor_works(self, mock_load_config):
-        mock_load_config.return_value = self.config_return_value
+    def test_constructor_works(self):
         block = LLMMessagesBlock(
             ctx=self.mock_ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
-            config_path="",
-            output_cols=[],
+            input_col="messages",
+            output_col="output",
         )
         assert block is not None
+
+    def test_temperature_validation(self):
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            input_col="messages",
+            output_col="output",
+            gen_kwargs={"n": 5, "temperature": 0},
+        )
+        assert block.gen_kwargs["temperature"] != 0
+
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            input_col="messages",
+            output_col="output",
+            gen_kwargs={"n": 1, "temperature": 0},
+        )
+        assert block.gen_kwargs["temperature"] == 0
+
+    def test_calls_chat_completion_api(self):
+        # Mock the OpenAI client so we don't actually hit a server here
+        mock_choice = MagicMock()
+        mock_choice.message = MagicMock()
+        mock_choice.message.content = "generated response"
+        mock_completion_resp = MagicMock()
+        mock_completion_resp.choices = [mock_choice]
+        mock_completion = MagicMock()
+        mock_completion.create = MagicMock()
+        mock_completion.create.return_value = mock_completion_resp
+        mock_chat = MagicMock()
+        mock_chat.completions = mock_completion
+        self.mock_client.chat = mock_chat
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            input_col="messages",
+            output_col="output",
+            gen_kwargs={"n": 1, "temperature": 0},
+        )
+        samples = Dataset.from_dict(
+            {"messages": ["my message"]},
+            features=Features({"messages": Value("string")}),
+        )
+        output = block.generate(samples)
+        assert len(output) == 1
+        assert "output" in output.column_names
+        mock_completion.create.assert_called()
+        assert mock_completion.create.call_args.kwargs["messages"] == "my message"
