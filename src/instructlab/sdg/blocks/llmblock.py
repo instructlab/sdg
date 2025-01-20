@@ -326,11 +326,11 @@ class ConditionalLLMBlock(LLMBlock):
         if isinstance(self.prompt_template, dict):
             return (
                 self.prompt_template[sample[self.selector_column_name]]
-                .render(sample)
+                .format(**sample)
                 .strip()
             )
 
-        return self.prompt_template.render(sample).strip()
+        return self.prompt_template.format(**sample).strip()
 
     def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):
