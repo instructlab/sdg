@@ -1,0 +1,9 @@
+version: "1.0"
+blocks:
+  - name: iterate_block_example
+    type: IterBlock
+    config:
+      num_iters: 5
+      block_type: DuplicateColumnsBlock
+      columns_map:
+        foo: baz
