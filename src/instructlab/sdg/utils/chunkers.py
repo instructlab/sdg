@@ -155,7 +155,9 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         docling_json_paths = list(docling_artifacts_path.glob("*.json"))
         chunks = []
         for json_fp in docling_json_paths:
-            chunks.extend(self._process_parsed_docling_json(json_fp))
+            with json_fp.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+                chunks.extend(self._process_parsed_docling_json(data))
 
         return chunks
 
@@ -522,11 +524,11 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
 
                 # Export Deep Search document JSON format:
                 with (docling_artifacts_path / f"{doc_filename}.json").open("w") as fp:
-                    fp.write(json.dumps(doc.legacy_document.export_to_dict()))
+                    fp.write(json.dumps(doc.document.export_to_dict()))
 
                 # Export Markdown format:
                 with (docling_artifacts_path / f"{doc_filename}.md").open("w") as fp:
-                    fp.write(doc.legacy_document.export_to_markdown())
+                    fp.write(doc.document.export_to_markdown())
             else:
                 logger.info(f"Document {doc.input.file} failed to convert.")
                 failure_count += 1
