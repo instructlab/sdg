@@ -101,6 +101,7 @@ def test_pipeline_batching_order_correct(sample_dataset, threaded_ctx):
         res = Pipeline(threaded_ctx, "", pipe_cfg).generate(sample_dataset)
     assert res.to_list() == [{"foo": i * 2} for i in range(10)]
 
+
 def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
     """Test that batching occurs after each block in the pipeline."""
 
@@ -110,15 +111,15 @@ def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
 
         def generate(self, dataset):
             # Assert that the dataset entering Block 1 is properly batched
-            assert len(dataset) <= self.ctx.batch_size, (
-                f"Dataset size {len(dataset)} entering block 1 exceeds batch size {self.ctx.batch_size}"
-            )
+            assert (
+                len(dataset) <= self.ctx.batch_size
+            ), f"Dataset size {len(dataset)} entering block 1 exceeds batch size {self.ctx.batch_size}"
             # Simulate dataset explosion in Block 1
 
             exploded_data = []
             for _ in range(10):  # Repeat each entry 10 times
                 exploded_data.extend(dataset)
-            
+
             # Create a new Dataset from the exploded data
             output = Dataset.from_list(exploded_data)
 
@@ -130,9 +131,9 @@ def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
 
         def generate(self, dataset):
             # Assert that the dataset entering Block 2 is properly batched (this will fail if batching is not done after each block)
-            assert len(dataset) <= self.ctx.batch_size, (
-                f"Dataset size {len(dataset)} entering block 2 exceeds batch size {self.ctx.batch_size}"
-            )
+            assert (
+                len(dataset) <= self.ctx.batch_size
+            ), f"Dataset size {len(dataset)} entering block 2 exceeds batch size {self.ctx.batch_size}"
             return dataset
 
     # Define the pipeline configuration with two blocks
@@ -155,11 +156,16 @@ def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
         result = Pipeline(threaded_ctx, "", pipe_cfg).generate(sample_dataset)
     # Assertions for the final output dataset:
     # 1. Check the final dataset length is the expected value
-    expected_len = len(sample_dataset) * 10  # Since Block 1 multiplies the dataset by 10
-    assert len(result) == expected_len, f"Expected dataset length {expected_len}, but got {len(result)}"
+    expected_len = (
+        len(sample_dataset) * 10
+    )  # Since Block 1 multiplies the dataset by 10
+    assert (
+        len(result) == expected_len
+    ), f"Expected dataset length {expected_len}, but got {len(result)}"
 
     # 2. Check the dataset features: Ensure the feature structure is consistent with the input
-    assert 'foo' in result[0], "Feature 'foo' not found in the final dataset"
+    assert "foo" in result[0], "Feature 'foo' not found in the final dataset"
+
 
 ## Pipeline Error Handling ##
 

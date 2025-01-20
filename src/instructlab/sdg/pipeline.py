@@ -200,7 +200,10 @@ class Pipeline:
 
                 # Check if batching is enabled
                 if self.ctx.batch_size is None or not self.ctx.batching_enabled:
-                    logger.info("Batching disabled; processing block '%s' single-threaded.", block_name)
+                    logger.info(
+                        "Batching disabled; processing block '%s' single-threaded.",
+                        block_name,
+                    )
                     dataset = block.generate(dataset)
                 else:
                     # Split the dataset into batches
@@ -217,7 +220,9 @@ class Pipeline:
                     return dataset
 
                 # Remove unnecessary columns if specified
-                drop_columns_in_ds = [e for e in drop_columns if e in dataset.column_names]
+                drop_columns_in_ds = [
+                    e for e in drop_columns if e in dataset.column_names
+                ]
                 if drop_columns_in_ds:
                     dataset = dataset.remove_columns(drop_columns_in_ds)
 
