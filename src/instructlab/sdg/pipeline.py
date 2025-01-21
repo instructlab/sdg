@@ -199,7 +199,7 @@ class Pipeline:
                 logger.info("Running block: %s", block_name)
 
                 # Check if batching is enabled
-                if self.ctx.batch_size is None or not self.ctx.batching_enabled:
+                if not self.ctx.batching_enabled:
                     logger.info(
                         "Batching disabled; processing block '%s' single-threaded.",
                         block_name,
