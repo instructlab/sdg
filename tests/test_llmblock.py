@@ -9,8 +9,8 @@ import unittest
 # Third Party
 from datasets import Dataset, Features, Value
 from httpx import URL
+from jinja2 import StrictUndefined, Template, UndefinedError
 from openai import InternalServerError, NotFoundError
-from jinja2 import Template, StrictUndefined, UndefinedError
 import pytest
 
 # First Party
@@ -121,9 +121,9 @@ class TestLLMBlockWithRealConfigs(unittest.TestCase):
                     output_cols=[],
                 )
                 sample = {"foo": "bar"}
-                assert not block._validate(block.prompt_template, sample), (
-                    f"{config_type} config {config_yaml.name} validated even though it was given a sample with none of the expected fields"
-                )
+                assert not block._validate(
+                    block.prompt_template, sample
+                ), f"{config_type} config {config_yaml.name} validated even though it was given a sample with none of the expected fields"
 
     def test_simple_generate_qa_with_valid_sample(self):
         config_yaml = os.path.join(
