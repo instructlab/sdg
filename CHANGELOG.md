@@ -1,4 +1,4 @@
-## Unreleased 0.7.x
+## v0.7.0
 
 ### Features
 
@@ -9,6 +9,18 @@ Advanced users are now able to supply custom Pipeline `Block` implementations by
 See the `tests/testdata/custom_block.py` and `tests/testdata/custom_block_pipeline.yaml` files in this repository for an example of how to create custom blocks and use them from your own pipeline config yamls.
 
 See the `tests/testdata/custom_prompt.py` file in this repository for an example how to register custom chat templates used when formatting prompts.
+
+### New Blocks - IterBlock and LLMMessagesBlock
+
+We have two new Block types available for pipelines in this release - `IterBlock` and `LLMMessagesBlock`. `IterBlock` allows you to execute another `Block` multiple times, based on a configured number of iterations. `LLMMessagesBlock` is like `LLMBlock` but uses the newer chat/completions API of OpenAI-compatible servers instead of the legacy completions API.
+
+### Consolidated PDF and Markdown ingestion and chunking implementations
+
+Instead of sending PDF input documents through Docling and using something custom for Markdown, we now send both types of documents through Docling and have consolidated the chunking implementation across both document types. This may result in different chunks being generated for markdown content compared to previous releases.
+
+### Added a new `instructlab.sdg.mix_datasets` Python API
+
+We've added a new Python API for advanced users that need to re-mix our generated outputs, for example to weight one taxonomy leaf node over others in the output or to have more than our default of 30 skill samples per leaf node in the final mixed output. See the example at `docs/examples/mix_datasets/` for some example Python code and Recipe yaml files to accomplish this.
 
 ### Breaking Changes
 
@@ -23,6 +35,7 @@ Any users that were specifying custom pipeline configs (instead of using the def
 ### Fixes
 
 * The PyTorch dependency is removed, because SDG doesn't directly use PyTorch. The test suite still depends on `instructlab` core, which depends on PyTorch.
+* The `batch_size` parameter is now respected every time we call an inference server from an `LLMBlock`. Previously, we were only batching the initial input but not accounting for some Blocks that may emit more output samples than input samples, meaning we would exceed our configured `batch_size` when actually making batching inference calls to vLLM, causing more memory to be consumed than expected as well as leading to scenarios where we were overloading inference servers in unexpected ways due to sending in batches with hundreds of completion requests instead of the configured size, which defaults to `8` on most hardware profiles.
 
 ## v0.6.3
 

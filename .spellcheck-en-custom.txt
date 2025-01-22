@@ -26,6 +26,7 @@ ICL
 icl
 ie
 instructlab
+IterBlock
 Jinja
 JSON
 Langchain's
