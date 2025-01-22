@@ -27,8 +27,7 @@ TEST_NUM_PROCS = 4
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 TEST_RECIPE_PATH = os.path.join(TEST_DATA_DIR, "relative_path_recipe.yaml")
 TEST_SAMPLES_ABS_PATH = os.path.join(TEST_DATA_DIR, "datasets/samples.jsonl")
-TEST_PRETRAINING_PATH = os.path.join(TEST_DATA_DIR, "datasets/pretraining.jsonl")
-TEST_PRECOMPUTED_PATH = os.path.join(TEST_DATA_DIR, "datasets/precomputed.jsonl")
+TEST_KNOWLEDGE_PATH = os.path.join(TEST_DATA_DIR, "datasets/knowledge.jsonl")
 TEST_KNOWLEDGE_SKILLS_PATH = os.path.join(
     TEST_DATA_DIR, "datasets/knowledge_skills.jsonl"
 )
@@ -51,20 +50,12 @@ def _noop_sample(dataset, _sampling_size, _num_procs):
     return dataset
 
 
-def load_generated_dataset():
-    return load_dataset("json", data_files=TEST_SAMPLES_ABS_PATH, split="train")
-
-
-def load_pretraining_dataset():
-    return load_dataset("json", data_files=TEST_PRETRAINING_PATH, split="train")
+def load_knowledge_dataset():
+    return load_dataset("json", data_files=TEST_KNOWLEDGE_PATH, split="train")
 
 
 def load_knowledge_skills_ds():
     return load_dataset("json", data_files=TEST_KNOWLEDGE_SKILLS_PATH, split="train")
-
-
-def load_precomputed_ds():
-    return load_dataset("json", data_files=TEST_PRECOMPUTED_PATH, split="train")
 
 
 def load_auxiliary_dataset():
@@ -256,162 +247,64 @@ def test_add_extra_contexts_to_samples_with_six_samples_distractor_path():
         assert sample_content.count("Document:\ncontext") == num_doc_in_context
 
 
-def test_phase07_and_phase10_creation():
-    """
-    Test Phase 0.7 and Phase 1.0 dataset creation functions.
-
-    Phase 0.7 should include both generated, auxiliary, and pretraining datasets.
-    Phase 1.0 should include the content of Phase 0.7, along with generated and auxiliary datasets.
-    """
-    generated_dataset = load_generated_dataset()
-    auxiliary_dataset = load_auxiliary_dataset()
-    pretraining_dataset = load_pretraining_dataset()
-    knowledge_skills_ds = load_knowledge_skills_ds()
-    precomputed_ds = load_precomputed_ds()
-
-    # Concatenate generated and pretraining datasets to simulate the input for phase creation
-    combined_generated_and_pretraining = concatenate_datasets(
-        [generated_dataset, pretraining_dataset]
-    )
-
-    # Test Phase 0.7 dataset creation
-    phase07_ds = _create_phase07_ds(
-        generated_dataset=combined_generated_and_pretraining,
-        auxiliary_inst=auxiliary_inst,
-        use_legacy_pretraining_format=False,
-    )
-
-    # Check if Phase 0.7 contains generated, auxiliary, and pretraining datasets
-    assert len(phase07_ds) == len(auxiliary_dataset) + len(
-        pretraining_dataset
-    ), "Phase 0.7 should contain generated, auxiliary, and pretraining datasets."
-
-    # Verify that the content from all datasets is present in Phase 0.7
-    auxiliary_ids = {item["id"] for item in auxiliary_dataset}
-    pretraining_ids = {item["id"] for item in pretraining_dataset}
-    phase07_ids = {item["id"] for item in phase07_ds}
-
-    assert auxiliary_ids.issubset(
-        phase07_ids
-    ), "Phase 0.7 should include all auxiliary dataset entries."
-    assert pretraining_ids.issubset(
-        phase07_ids
-    ), "Phase 0.7 should include all pretraining dataset entries."
-
-    # Test Phase 1.0 dataset creation, which should include Phase 0.7, raft, and additional pretraining
-    phase10_ds = _create_phase10_ds(
-        generated_dataset=generated_dataset,
-        auxiliary_inst=auxiliary_inst,
-        use_legacy_pretraining_format=False,
-    )
-
-    pre_computed_ds_size = len(precomputed_ds)
-    # Check if Phase 1.0 includes generated, auxiliary, pretraining, and content from Phase 0.7
-    assert (
-        len(phase10_ds)
-        == len(phase10_ds) + len(knowledge_skills_ds) - pre_computed_ds_size
-    ), "Phase 1.0 should contain generated, auxiliary, and pretraining datasets, including Phase 0.7 content."
-
-    # Verify that Phase 0.7 content is included in Phase 1.0
-    phase10_ids = {item["id"] for item in phase10_ds}
-    assert phase07_ids.issubset(
-        phase10_ids
-    ), "Phase 1.0 should include all entries from Phase 0.7."
-
-    print("All tests for Phase 0.7 and Phase 1.0 dataset creation passed.")
-
-
-def test_phase07_creation():
+@patch("instructlab.sdg.datamixing._create_auxiliary_dataset")
+def test_phase07_creation(mock_auxiliary_dataset):
     """
     Test Phase 0.7 dataset creation.
 
-    Phase 0.7 should include generated, auxiliary, and pretraining datasets.
+    Phase 0.7 should include knowledge and auxiliary datasets.
     """
-    generated_dataset = load_generated_dataset()
+    knowledge_dataset = load_knowledge_dataset()
     auxiliary_dataset = load_auxiliary_dataset()
-    pretraining_dataset = load_pretraining_dataset()
-
-    # Concatenate generated and pretraining datasets to simulate the input for phase creation
-    combined_generated_and_pretraining = concatenate_datasets(
-        [generated_dataset, pretraining_dataset]
-    )
+    mock_auxiliary_dataset.return_value = auxiliary_dataset
 
     # Create Phase 0.7 dataset
     phase07_ds = _create_phase07_ds(
-        generated_dataset=combined_generated_and_pretraining,
+        generated_dataset=knowledge_dataset,
         auxiliary_inst=auxiliary_inst,
         use_legacy_pretraining_format=False,
     )
 
-    # Check if Phase 0.7 contains generated, auxiliary, and pretraining datasets
-    expected_phase07_size = (
-        len(generated_dataset) + len(auxiliary_dataset) + len(pretraining_dataset)
-    )
+    # Check if Phase 0.7 contains knowledge and auxiliary datasets
+    expected_phase07_size = len(knowledge_dataset) + len(auxiliary_dataset)
     assert (
         len(phase07_ds) == expected_phase07_size
-    ), "Phase 0.7 should contain generated, auxiliary, and pretraining datasets."
+    ), "Phase 0.7 should contain knowledge and auxiliary datasets."
 
     # Verify that the content from all datasets is present in Phase 0.7
-    generated_ids = {item["id"] for item in generated_dataset}
     auxiliary_ids = {item["id"] for item in auxiliary_dataset}
-    pretraining_ids = {item["id"] for item in pretraining_dataset}
     phase07_ids = {item["id"] for item in phase07_ds}
 
-    assert generated_ids.issubset(
-        phase07_ids
-    ), "Phase 0.7 should include all generated dataset entries."
     assert auxiliary_ids.issubset(
         phase07_ids
     ), "Phase 0.7 should include all auxiliary dataset entries."
-    assert pretraining_ids.issubset(
-        phase07_ids
-    ), "Phase 0.7 should include all pretraining dataset entries."
 
 
-def test_phase10_creation():
+@patch("instructlab.sdg.datamixing._create_auxiliary_dataset")
+def test_phase10_creation(mock_auxiliary_dataset):
     """
     Test Phase 1.0 dataset creation.
 
-    Phase 1.0 should include the content of Phase 0.7, along with generated, auxiliary, knowledge_skills, and precomputed datasets.
+    Phase 1.0 should include the content of Phase 0.7, along with auxiliary and knowledge_skills datasets.
     """
-    generated_dataset = load_generated_dataset()
+    knowledge_dataset = load_knowledge_dataset()
     auxiliary_dataset = load_auxiliary_dataset()
     knowledge_skills_ds = load_knowledge_skills_ds()
-    precomputed_ds = load_precomputed_ds()
-
-    # Create Phase 0.7 dataset as part of Phase 1.0 creation
-    phase07_ds = _create_phase07_ds(
-        generated_dataset=concatenate_datasets(
-            [generated_dataset, load_pretraining_dataset()]
-        ),
-        auxiliary_inst=auxiliary_inst,
-        use_legacy_pretraining_format=False,
-    )
+    mock_auxiliary_dataset.return_value = auxiliary_dataset
 
     # Create Phase 1.0 dataset
     phase10_ds = _create_phase10_ds(
-        generated_dataset=generated_dataset,
+        generated_dataset=knowledge_skills_ds,
         auxiliary_inst=auxiliary_inst,
         use_legacy_pretraining_format=False,
     )
 
     # Expected size calculation for Phase 1.0
     phase10_expected_size = (
-        len(phase07_ds)
-        + len(knowledge_skills_ds)
-        + len(auxiliary_dataset)
-        + len(generated_dataset)
-        - len(precomputed_ds)
+        len(knowledge_dataset) + len(knowledge_skills_ds) + len(auxiliary_dataset)
     )
 
-    # Check if Phase 1.0 includes generated, auxiliary, knowledge_skills, and Phase 0.7 content
+    # Check if Phase 1.0 includes knowledge, auxiliary, and knowledge_skills content
     assert (
         len(phase10_ds) == phase10_expected_size
     ), "Phase 1.0 should contain the expected number of entries, including Phase 0.7 content."
-
-    # Verify that Phase 0.7 content is included in Phase 1.0
-    phase07_ids = {item["id"] for item in phase07_ds}
-    phase10_ids = {item["id"] for item in phase10_ds}
-    assert phase07_ids.issubset(
-        phase10_ids
-    ), "Phase 1.0 should include all entries from Phase 0.7."
