@@ -323,14 +323,15 @@ class ConditionalLLMBlock(LLMBlock):
                 )
 
     def _format_prompt(self, sample: Dict) -> str:
+        # If prompt_template is a dict, use the selector column to select the correct template
         if isinstance(self.prompt_template, dict):
             return (
                 self.prompt_template[sample[self.selector_column_name]]
-                .format(**sample)
+                .render(sample)
                 .strip()
             )
-
-        return self.prompt_template.format(**sample).strip()
+        # Otherwise, use the sample to render the prompt without any selection
+        return self.prompt_template.render(sample).strip()
 
     def _validate(self, prompt_template: str, input_dict: Dict[str, Any]) -> bool:
         if isinstance(prompt_template, dict):

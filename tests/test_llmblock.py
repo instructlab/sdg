@@ -9,6 +9,7 @@ import unittest
 # Third Party
 from datasets import Dataset, Features, Value
 from httpx import URL
+from jinja2 import StrictUndefined, Template, UndefinedError
 from openai import InternalServerError, NotFoundError
 import pytest
 
@@ -307,6 +308,80 @@ class TestConditionalLLMBlock(unittest.TestCase):
         assert block._validate(
             block.prompt_template, {"selector": "_A_", "var1": "foo", "var2": "bar"}
         )
+
+    def test_format_prompt_with_jinja_templates(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{var1}} {{var2}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        # Create an instance of the block
+        block = ConditionalLLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_paths=[["/foo/bar", "_A_"]],
+            output_cols=[],
+            selector_column_name="selector",
+        )
+
+        # Mock prompt_template as a Jinja template
+        block.prompt_template = {
+            "case1": Template("Hello, {{ name }}!", undefined=StrictUndefined),
+            "case2": Template("Goodbye, {{ name }}.", undefined=StrictUndefined),
+        }
+
+        # Sample input
+        sample1 = {"selector": "case1", "name": "Alice"}
+        sample2 = {"selector": "case2", "name": "Bob"}
+
+        # Test case 1
+        result1 = block._format_prompt(sample1)
+        self.assertEqual(result1, "Hello, Alice!")
+
+        # Test case 2
+        result2 = block._format_prompt(sample2)
+        self.assertEqual(result2, "Goodbye, Bob.")
+
+        # Verify error with missing keys in sample
+        with self.assertRaises(UndefinedError):
+            block._format_prompt({"selector": "case1"})  # 'name' is missing
+
+    def test_format_prompt_without_selector(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{var1}} {{var2}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        # Create an instance of the block
+        block = ConditionalLLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_paths=[["/foo/bar", "_A_"]],
+            output_cols=[],
+            selector_column_name=None,  # No selector
+        )
+
+        # Mock prompt_template as a Jinja template
+        block.prompt_template = Template(
+            "Welcome, {{ user }}!", undefined=StrictUndefined
+        )
+
+        # Sample input
+        sample = {"user": "Connor"}
+
+        # Test
+        result = block._format_prompt(sample)
+        self.assertEqual(result, "Welcome, Connor!")
+
+        # Verify error with missing keys in sample
+        with self.assertRaises(UndefinedError):
+            block._format_prompt({})  # 'user' is missing
 
 
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
