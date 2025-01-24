@@ -74,7 +74,6 @@ jobs:
       - name: Checkout instructlab/sdg
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          repository: "instructlab/sdg"
           path: "sdg"
           # https://github.com/actions/checkout/issues/249
           fetch-depth: 0
@@ -129,15 +128,17 @@ jobs:
         if: steps.check_pr.outputs.is_pr == 'true'
         working-directory: ./sdg
         run: |
-          gh pr checkout ${{ steps.check_pr.outputs.pr_or_branch }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          git fetch origin pull/${{ steps.check_pr.outputs.pr_or_branch }}/merge:pr-merge-${{ steps.check_pr.outputs.pr_or_branch }}
+          git checkout pr-merge-${{ steps.check_pr.outputs.pr_or_branch }}
+          git log -1 --format="%H %s"
 
       - name: Checkout branch
         if: steps.check_pr.outputs.is_pr == 'false'
         working-directory: ./sdg
         run: |
           git checkout ${{ steps.check_pr.outputs.pr_or_branch }}
+          git log -1 --format="%H %s"
+
 
       - name: Install ilab
         working-directory: ./instructlab
