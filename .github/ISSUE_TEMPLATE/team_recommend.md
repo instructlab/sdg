@@ -13,8 +13,7 @@ assignees: ''
 <!-- The GitHub username of the Organization Member you are nominating -->
 
 **Which team are you nominating for this member for?**
-<!-- For SDG, the only available team is SDG Maintainers. If you'd like to nominate for a different team, please refer to the contributor roles documentation linked above. -->
-
+<!-- SDG Triagers or SDG Maintainers, see the above document for more details -->
 
 **Make your case here: Why should the nominated member be on the proposed team?**
 <!-- Feel free to write a brief testimonial here, try to include as many Pull Requests, Issues, etc. as possible
