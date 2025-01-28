@@ -54,7 +54,7 @@ Examples of these files used in CI are found [here](https://github.com/instructl
     * [e2e-qna-freeform-siblings-skill](https://github.com/instructlab/instructlab/blob/main/scripts/test-data/compositional_skills/freeform/e2e-qna-freeform-siblings-skill.yaml)
   * Grounded
     * [e2e-qna-grounded-employee-skill](https://github.com/instructlab/instructlab/blob/main/scripts/test-data/compositional_skills/grounded/e2e-qna-grounded-employee-skill.yaml)
-    * [e2e-qna-grounded-punctuation-skill](https://github.com/instructlab/instructlab/blob/main/scripts/test-data/compositional_skills/grounded/e2e-qna-grounded-punctuation.yaml)
+    * [e2e-qna-grounded-punctuation-skill](https://github.com/instructlab/instructlab/blob/main/scripts/test-data/compositional_skills/grounded/e2e-qna-grounded-punctuation-skill.yaml)
 * Knowledge
   * [e2e-qna-knowledge-mbta](https://github.com/instructlab/instructlab/blob/main/scripts/test-data/knowledge/e2e-qna-knowledge-mbta.yaml)
   * [e2e-qna-knowledge-phoenix](https://github.com/instructlab/instructlab/blob/main/scripts/test-data/knowledge/e2e-qna-knowledge-phoenix.yaml)
