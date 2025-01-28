@@ -10,10 +10,16 @@ from unittest.mock import patch
 import os
 
 # Third Party
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets, load_dataset
 
 # First Party
-from instructlab.sdg.datamixing import DataMixer, Recipe, _add_extra_contexts_to_samples
+from instructlab.sdg.datamixing import (
+    DataMixer,
+    Recipe,
+    _add_extra_contexts_to_samples,
+    _create_phase07_ds,
+    _create_phase10_ds,
+)
 
 # We mock out the actual things that use num_procs anyway, but just
 # for a consistent value in the tests...
@@ -21,6 +27,19 @@ TEST_NUM_PROCS = 4
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
 TEST_RECIPE_PATH = os.path.join(TEST_DATA_DIR, "relative_path_recipe.yaml")
 TEST_SAMPLES_ABS_PATH = os.path.join(TEST_DATA_DIR, "datasets/samples.jsonl")
+TEST_KNOWLEDGE_PATH = os.path.join(TEST_DATA_DIR, "datasets/knowledge.jsonl")
+TEST_KNOWLEDGE_SKILLS_PATH = os.path.join(
+    TEST_DATA_DIR, "datasets/knowledge_skills.jsonl"
+)
+TEST_AUXILIARY_PATH = os.path.join(TEST_DATA_DIR, "datasets/auxiliary.jsonl")
+
+
+auxiliary_inst = {
+    "spellcheck": [
+        "Correct any spelling errors in the document and output the corrected version.",
+        "Rewrite the document to remove any spelling errors.",
+    ]
+}
 
 
 def _empty_recipe(self):
@@ -29,6 +48,18 @@ def _empty_recipe(self):
 
 def _noop_sample(dataset, _sampling_size, _num_procs):
     return dataset
+
+
+def load_knowledge_dataset():
+    return load_dataset("json", data_files=TEST_KNOWLEDGE_PATH, split="train")
+
+
+def load_knowledge_skills_ds():
+    return load_dataset("json", data_files=TEST_KNOWLEDGE_SKILLS_PATH, split="train")
+
+
+def load_auxiliary_dataset():
+    return load_dataset("json", data_files=TEST_AUXILIARY_PATH, split="train")
 
 
 def _fake_context(msg_id):
@@ -214,3 +245,66 @@ def test_add_extra_contexts_to_samples_with_six_samples_distractor_path():
         assert f"context context{i+1}" not in sample_content
         # ensure we have the expected number of contexts
         assert sample_content.count("Document:\ncontext") == num_doc_in_context
+
+
+@patch("instructlab.sdg.datamixing._create_auxiliary_dataset")
+def test_phase07_creation(mock_auxiliary_dataset):
+    """
+    Test Phase 0.7 dataset creation.
+
+    Phase 0.7 should include knowledge and auxiliary datasets.
+    """
+    knowledge_dataset = load_knowledge_dataset()
+    auxiliary_dataset = load_auxiliary_dataset()
+    mock_auxiliary_dataset.return_value = auxiliary_dataset
+
+    # Create Phase 0.7 dataset
+    phase07_ds = _create_phase07_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+
+    # Check if Phase 0.7 contains knowledge and auxiliary datasets
+    expected_phase07_size = len(knowledge_dataset) + len(auxiliary_dataset)
+    assert (
+        len(phase07_ds) == expected_phase07_size
+    ), "Phase 0.7 should contain knowledge and auxiliary datasets."
+
+    # Verify that the content from all datasets is present in Phase 0.7
+    auxiliary_ids = {item["id"] for item in auxiliary_dataset}
+    phase07_ids = {item["id"] for item in phase07_ds}
+
+    assert auxiliary_ids.issubset(
+        phase07_ids
+    ), "Phase 0.7 should include all auxiliary dataset entries."
+
+
+@patch("instructlab.sdg.datamixing._create_auxiliary_dataset")
+def test_phase10_creation(mock_auxiliary_dataset):
+    """
+    Test Phase 1.0 dataset creation.
+
+    Phase 1.0 should include the content of Phase 0.7, along with auxiliary and knowledge_skills datasets.
+    """
+    knowledge_dataset = load_knowledge_dataset()
+    auxiliary_dataset = load_auxiliary_dataset()
+    knowledge_skills_ds = load_knowledge_skills_ds()
+    mock_auxiliary_dataset.return_value = auxiliary_dataset
+
+    # Create Phase 1.0 dataset
+    phase10_ds = _create_phase10_ds(
+        generated_dataset=knowledge_skills_ds,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+
+    # Expected size calculation for Phase 1.0
+    phase10_expected_size = (
+        len(knowledge_dataset) + len(knowledge_skills_ds) + len(auxiliary_dataset)
+    )
+
+    # Check if Phase 1.0 includes knowledge, auxiliary, and knowledge_skills content
+    assert (
+        len(phase10_ds) == phase10_expected_size
+    ), "Phase 1.0 should contain the expected number of entries, including Phase 0.7 content."
