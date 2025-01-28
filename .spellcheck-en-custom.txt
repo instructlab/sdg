@@ -32,6 +32,7 @@ JSON
 Langchain's
 LLM
 LLMBlock
+mbta
 MCQ
 md
 Merlinite
