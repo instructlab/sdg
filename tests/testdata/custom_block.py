@@ -16,7 +16,7 @@ class EchoBlock(Block):
         return samples
 
 
-pipeline_context = PipelineContext(None, "mixtral", "my_model", 5)
+pipeline_context = PipelineContext(None)
 pipeline_yaml = pathlib.Path(__file__).parent.joinpath("custom_block_pipeline.yaml")
 pipeline = Pipeline.from_file(pipeline_context, pipeline_yaml)
 input_ds = Dataset.from_list(
