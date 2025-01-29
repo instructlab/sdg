@@ -348,6 +348,20 @@
                     "type": "string"
                   }
                 }
+              },
+              {
+                "type": "object",
+                "description": "IterBlock",
+                "required": ["num_iters", "block_type"],
+                "additionalProperties": true,
+                "properties": {
+                  "num_iters": {
+                    "type": "number"
+                  },
+                  "block_type": {
+                    "type": "string"
+                  }
+                }
               }
             ]
           }
