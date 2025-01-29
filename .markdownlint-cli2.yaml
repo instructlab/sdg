@@ -16,3 +16,4 @@ ignores:
   - "venv/**"
   - ".venv/**"
   - "**/testdata/**"
+  - ".github/ISSUE_TEMPLATE/**"
