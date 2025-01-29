@@ -24,23 +24,23 @@ For example: let’s say the total size of the knowledge markdown files in the k
 
 Note that this is just an estimation technique: the exact number is non-deterministic since the results are ultimately evaluated against a judge model and results that do not pass a score metric are dropped from the overall set.
 
-## How many seed_examples can Instructlab process in a knowledge leaf node
+## How many seed_examples can InstructLab process in a knowledge leaf node
 
-There is no known limit to the number of seed example entries for a knowledge leaf node. There must be a minimum of 5 seed examples. These parameters can be seen in the taxonomy schema repo:  <https://github.com/instructlab/schema/blob/main/src/instructlab/schema/v3/knowledge.json>
+There is no known limit to the number of seed example entries for a knowledge leaf node. There must be a minimum of 5 seed examples. These parameters can be seen in the taxonomy [knowledge schema](https://github.com/instructlab/schema/blob/main/src/instructlab/schema/v3/knowledge.json).
 
 ## How many qna pairs can be listed for a given seed_example in a knowledge leaf node
 
-**Exactly** 3 QNA pairs must be listed for a given seed_example. If more is specified they will be ignored and not processed by the appropriate prompt. This can be seen by looking at the prompt files in SDG: <https://github.com/instructlab/sdg/blob/v0.6.2/src/instructlab/sdg/configs/knowledge/simple_generate_qa.yaml#L21-L28>
+**Exactly** 3 QNA pairs must be listed for a given seed_example. If more is specified they will be ignored and not processed by the appropriate prompt. This can be seen by looking at the [prompt files in SDG](/src/instructlab/sdg/configs/knowledge/simple_generate_qa.yaml#L21-L28).
 
 ## How long can a given seed_example be for a knowledge leaf node?
 
 Cumulatively: the context, and all qna pairs must be able to fit in the context window of the teacher model being used along with the total document chunk processed with the context. For full scale SDG workloads using the Mixtral-8x7B-Instruct-v0.1 the context window is 32768 tokens. The document chunk size is  approximately 1000 words. Therefore: with an average of 1.3 tokens per word: you can estimate that the cumulative size of the context and qna pairs must be under  (32768 - (1.3 * 1000)) / 1.3 = 24206 words. Note that additional words outside the seed example are put in the prompt as well so you cannot go up to the 24206 word mark. It is recommended to leave a minimum of 1000 additional words for the associated prompt: meaning you should target cumulatively the entire seed example to have a maximum of 23000 words.
 
-## How many seed_examples can Instructlab process in a skills leaf node?
+## How many seed_examples can InstructLab process in a skills leaf node?
 
-There is no known limit to the number of seed example entries for a knowledge leaf node. There must be a minimum of 5 seed examples. These parameters can be seen in the taxonomy schema repo:  <https://github.com/instructlab/schema/blob/main/src/instructlab/schema/v3/compositional_skills.json#L31>
+There is no known limit to the number of seed example entries for a knowledge leaf node. There must be a minimum of 5 seed examples. These parameters can be seen in the taxonomy [skills schema](https://github.com/instructlab/schema/blob/main/src/instructlab/schema/v3/compositional_skills.json#L31>).
 
-## How long can a given seed_example be for a knowledge leaf node?
+## How long can a given seed_example be for a skill leaf node?
 
 Cumulatively: the context, and associated qna pair must be able to fit in the context window of the teacher model being used. For full scale SDG workloads using the Mixtral-8x7B-Instruct-v0.1 the context window is 32768 tokens. Therefore: with an average of 1.3 tokens per word: you can estimate that the cumulative size of the context and qna pairs must be under: 32768 / 1.3 = 25206 words. Note that additional words outside the seed example are put in the prompt as well so you cannot go up to the 25206 word mark. It is recommended to leave a minimum of 1000 additional words for the associated prompt: meaning you should target cumulatively the entire seed example to have a maximum of 24000 words.
 
