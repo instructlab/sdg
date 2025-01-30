@@ -16,7 +16,7 @@ import yaml
 
 # First Party
 from instructlab.sdg.checkpointing import Checkpointer
-from instructlab.sdg.utils import models, pandas
+from instructlab.sdg.utils import pandas
 
 # Local
 from .blocks import llmblock
@@ -61,18 +61,15 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     DEFAULT_DATASET_NUM_PROCS = 8
 
     client: OpenAI
-    model_family: str
-    model_id: str
-    num_instructions_to_generate: int
+    model_family: Optional[str] = None
+    model_id: Optional[str] = None
+    num_instructions_to_generate: Optional[int] = None
     dataset_num_procs: Optional[int] = DEFAULT_DATASET_NUM_PROCS
     checkpoint_dir: Optional[str] = None
     save_freq: Optional[int] = 1
     max_num_tokens: Optional[int] = llmblock.DEFAULT_MAX_NUM_TOKENS
     batch_size: int = DEFAULT_BATCH_SIZE
     batch_num_workers: Optional[int] = None
-
-    def __post_init__(self):
-        self.model_family = models.get_model_family(self.model_family, self.model_id)
 
     @property
     def batching_enabled(self) -> bool:

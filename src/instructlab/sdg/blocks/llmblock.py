@@ -15,6 +15,7 @@ import openai
 # Import prompts to register default chat templates
 from .. import prompts as default_prompts  # pylint: disable=unused-import
 from ..registry import BlockRegistry, PromptRegistry
+from ..utils import models
 from .block import Block, BlockConfigParserError
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,33 @@ def template_from_struct_and_config(struct, config):
     return PromptRegistry.template_from_string(struct.format(**filtered_config))
 
 
+def _resolve_model_id(model_id, ctx_model_id, block):
+    # If a model id was passed in the PipelineContext, use that
+    if ctx_model_id:
+        return ctx_model_id
+
+    # If we have no model id at all, raise an error
+    if not model_id:
+        raise BlockConfigParserError(
+            f"{type(block).__name__} {block.block_name} requires a model_id but none was specified in the block config nor passed via the PipelineContext"
+        )
+
+    # Otherwise fallback to the model_id specified in the block config
+    return model_id
+
+
+def _resolve_model_family(model_family, ctx_model_family):
+    # If a model family was passed in the PipelineContext, use that
+    if ctx_model_family:
+        return ctx_model_family
+
+    # Otherwise fallback to the model_family specified in the block config
+    # This could be None, but that's ok for model_family because when the
+    # actual prompt gets selected it falls back to merlinite if nothing
+    # else was given.
+    return model_family
+
+
 # This is part of the public API.
 @BlockRegistry.register("LLMBlock")
 # pylint: disable=dangerous-default-value
@@ -74,6 +102,8 @@ class LLMBlock(Block):
         block_name,
         config_path,
         output_cols,
+        model_id=None,
+        model_family=None,
         model_prompt=None,
         gen_kwargs={},
         parser_kwargs={},
@@ -86,6 +116,11 @@ class LLMBlock(Block):
         )
         self.prompt_template = template_from_struct_and_config(
             self.prompt_struct, self.block_config
+        )
+        self.model_id = _resolve_model_id(model_id, self.ctx.model_id, self)
+        self.model_family = models.get_model_family(
+            _resolve_model_family(model_family, self.ctx.model_family),
+            self.model_id,
         )
         self.model_prompt = model_prompt
         self.output_cols = output_cols
@@ -104,14 +139,14 @@ class LLMBlock(Block):
         self.gen_kwargs = self._gen_kwargs(
             max_num_token_override,
             gen_kwargs,
-            model=self.ctx.model_id,
+            model=self.model_id,
             temperature=0,
             max_tokens=DEFAULT_MAX_NUM_TOKENS,
         )
         # Whether the LLM server supports a list of input prompts
         # and supports the n parameter to generate n outputs per input
         self.server_supports_batched = server_supports_batched(
-            self.ctx.client, self.ctx.model_id
+            self.ctx.client, self.model_id
         )
 
     def _parse(self, generated_string) -> dict:
@@ -160,7 +195,7 @@ class LLMBlock(Block):
 
         model_prompt = None
         if self.model_prompt is None:
-            model_prompt = PromptRegistry.get_template(self.ctx.model_family)
+            model_prompt = PromptRegistry.get_template(self.model_family)
         elif self.model_prompt:
             model_prompt = PromptRegistry.template_from_string(self.model_prompt)
         else:
@@ -183,6 +218,10 @@ class LLMBlock(Block):
             and isinstance(gen_kwargs["n"], str)
             and gen_kwargs["n"] == "scaled"
         ):
+            if not self.ctx.num_instructions_to_generate:
+                raise BlockConfigParserError(
+                    f"""LLMBlock {self.block_name} has a gen_kwargs["n"] value of "scaled" but num_instructions_to_generate was not set in the PipelineContext"""
+                )
             gen_kwargs["n"] = self.ctx.num_instructions_to_generate
         if "temperature" in gen_kwargs:
             gen_kwargs["temperature"] = float(gen_kwargs["temperature"])
@@ -285,6 +324,8 @@ class ConditionalLLMBlock(LLMBlock):
         config_paths,
         output_cols,
         selector_column_name,
+        model_id=None,
+        model_family=None,
         model_prompt=None,
         gen_kwargs={},
         parser_kwargs={},
@@ -305,6 +346,8 @@ class ConditionalLLMBlock(LLMBlock):
             block_name,
             config_paths[0][0],
             output_cols,
+            model_id=model_id,
+            model_family=model_family,
             model_prompt=model_prompt,
             gen_kwargs=gen_kwargs,
             parser_kwargs=parser_kwargs,
@@ -360,6 +403,8 @@ class LLMLogProbBlock(LLMBlock):
         block_name,
         config_path,
         output_cols,
+        model_id=None,
+        model_family=None,
         model_prompt=None,
         gen_kwargs={},
         parser_kwargs={},
@@ -371,6 +416,8 @@ class LLMLogProbBlock(LLMBlock):
             block_name,
             config_path,
             output_cols,
+            model_id=model_id,
+            model_family=model_family,
             model_prompt=model_prompt,
             gen_kwargs=gen_kwargs,
             parser_kwargs=parser_kwargs,
@@ -466,14 +513,16 @@ class LLMMessagesBlock(Block):
         block_name,
         input_col,
         output_col,
+        model_id=None,
         gen_kwargs={},
     ) -> None:
         super().__init__(ctx, pipe, block_name)
+        self.model_id = _resolve_model_id(model_id, self.ctx.model_id, self)
         self.input_col = input_col
         self.output_col = output_col
         self.gen_kwargs = self._gen_kwargs(
             gen_kwargs,
-            model=self.ctx.model_id,
+            model=self.model_id,
             temperature=0,
             max_tokens=DEFAULT_MAX_NUM_TOKENS,
         )

@@ -14,7 +14,7 @@ from datasets import Dataset
 import pytest
 
 # First Party
-from instructlab.sdg import Block, Pipeline, PipelineBlockError
+from instructlab.sdg import Block, Pipeline, PipelineBlockError, PipelineContext
 
 ## Helpers ##
 
@@ -259,3 +259,90 @@ def test_block_generation_error_properties_from_strings():
         str(gen_err)
         == f"{PipelineBlockError.__name__}({block_type}/{block_name}): {inner_err}"
     )
+
+
+def test_pipeline_context_backwards_compat():
+    """
+    Test backwards compatibility of PipelineContext signatures
+    where client, model_family, model_id, num_instructions_to_generate
+    used to be required before SDG 0.8.x but since then are not.
+    """
+    client = mock.MagicMock()
+    model_family = "granite"
+    model_id = "bar"
+    num_instructions_to_generate = 200
+    save_freq = 5
+
+    # <= SDG 0.7.x - only passing old required positional params
+    ctx = PipelineContext(client, model_family, model_id, num_instructions_to_generate)
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id == model_id
+    assert ctx.num_instructions_to_generate == num_instructions_to_generate
+
+    # <= SDG 0.7.x - old required positional params with kwargs
+    ctx = PipelineContext(
+        client,
+        model_family,
+        model_id,
+        num_instructions_to_generate,
+        save_freq=save_freq,
+    )
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id == model_id
+    assert ctx.num_instructions_to_generate == num_instructions_to_generate
+    assert ctx.save_freq == save_freq
+
+    # <= SDG 0.7.x - passing all params as kwargs
+    ctx = PipelineContext(
+        client=client,
+        model_family=model_family,
+        model_id=model_id,
+        num_instructions_to_generate=num_instructions_to_generate,
+        save_freq=save_freq,
+    )
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id == model_id
+    assert ctx.num_instructions_to_generate == num_instructions_to_generate
+    assert ctx.save_freq == save_freq
+
+    # SDG 0.8.x - num_instructions_to_generate no longer required
+    ctx = PipelineContext(client, model_family, model_id)
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id == model_id
+    assert ctx.num_instructions_to_generate is None
+
+    # SDG 0.8.x - num_instructions_to_generate no longer required with kwargs
+    ctx = PipelineContext(client, model_family, model_id, save_freq=save_freq)
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id == model_id
+    assert ctx.num_instructions_to_generate is None
+    assert ctx.save_freq == save_freq
+
+    # SDG 0.8.x - model_id no longer required
+    ctx = PipelineContext(client, model_family)
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id is None
+
+    # SDG 0.8.x - model_id no longer required with kwargs
+    ctx = PipelineContext(client, model_family, save_freq=save_freq)
+    assert ctx.client == client
+    assert ctx.model_family == model_family
+    assert ctx.model_id is None
+    assert ctx.save_freq == save_freq
+
+    # SDG 0.8.x - model_family no longer required
+    ctx = PipelineContext(client)
+    assert ctx.client == client
+    assert ctx.model_family is None
+
+    # SDG 0.8.x - model_family no longer required with kwargs
+    ctx = PipelineContext(client, save_freq=save_freq)
+    assert ctx.client == client
+    assert ctx.model_family is None
+    assert ctx.save_freq == save_freq

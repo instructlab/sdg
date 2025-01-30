@@ -1,0 +1,34 @@
+version: "1.0"
+blocks:
+  - name: model_one
+    type: LLMBlock
+    config:
+      model_family: mixtral
+      model_id: Mixtral-8x7B-Instruct-v0.1
+      config_path: model_one_config.yaml
+      output_cols:
+        - column_one
+      gen_kwargs:
+        max_tokens: 2048
+
+  - name: model_two
+    type: LLMBlock
+    config:
+      model_family: granite
+      model_id: granite-7b-lab
+      config_path: model_two_config.yaml
+      output_cols:
+        - column_two
+      gen_kwargs:
+        max_tokens: 512
+
+  - name: model_three
+    type: LLMBlock
+    config:
+      model_id: granite-7b-lab
+      model_prompt: <s> [INST] {prompt} [/INST]
+      config_path: model_three_config.yaml
+      output_cols:
+        - column_three
+      gen_kwargs:
+        max_tokens: 5
