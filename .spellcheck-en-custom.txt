@@ -44,6 +44,7 @@ Pre
 pre
 precomputed
 Pregenerated
+py
 qna
 quantized
 repo
