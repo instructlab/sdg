@@ -376,18 +376,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def get_default_num_gpus() -> int:
+    """Get the default number of GPUs based on available CUDA devices.
+    
+    Raises:
+        RuntimeError: If no CUDA devices are available.
+    """
+    if not torch.cuda.is_available():
+        raise RuntimeError("No CUDA devices detected. This functionality requires at least one GPU.")
+    return torch.cuda.device_count()
+
+
 @dataclass
 class ProcessingConfig:
     """
     Configuration for subset selection with basic and advanced parameters.
 
     Basic Parameters:
-        input_files: List of input files to process
+        input_files: List of input files to process (required)
+        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages (required)
         output_dir: Directory to save output files (default: "output")
         batch_size: Size of batches for processing (default: 100000)
-        num_folds: Number of folds for subset selection (default: 1)
-        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
-                     (default: [1000, 5000, 10000])
+        num_folds: Number of folds for subset selection (default: 50)
         combine_files: Whether to combine input files before processing (default: False)
 
     Advanced Parameters:
@@ -426,7 +436,10 @@ class ProcessingConfig:
         metadata={"advanced": True},
     )
     template_name: str = field(default="conversation", metadata={"advanced": True})
-    num_gpus: int = field(default=8, metadata={"advanced": True})
+    num_gpus: int = field(
+        default_factory=get_default_num_gpus,
+        metadata={"advanced": True}
+    )
     seed: int = field(default=42, metadata={"advanced": True})
     max_retries: int = field(default=3, metadata={"advanced": True})
     retry_delay: int = field(default=30, metadata={"advanced": True})
@@ -1133,7 +1146,9 @@ def process_folds_with_gpu(args):
 
 
 def subset_datasets(
-    input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs
+    input_files: List[str],
+    subset_sizes: List[Union[int, float]],
+    **kwargs
 ) -> None:
     """
     Create subsets of datasets using facility location for diverse subset selection.
@@ -1165,10 +1180,23 @@ def subset_datasets(
         "input_files": input_files,
         "subset_sizes": subset_sizes,
     }
-
+    
+    # Get system's available GPU count
+    available_gpus = get_default_num_gpus()
+    
     # Update with any provided optional parameters
     config_params.update(kwargs)
-
+    
+    # Ensure num_gpus doesn't exceed available GPUs
+    if "num_gpus" in config_params:
+        requested_gpus = config_params["num_gpus"]
+        if requested_gpus > available_gpus:
+            logger.warning(
+                f"Requested {requested_gpus} GPUs but only {available_gpus} available. "
+                f"Falling back to using {available_gpus} GPUs."
+            )
+            config_params["num_gpus"] = available_gpus
+    
     # Create configuration
     config = ProcessingConfig(**config_params)
 
