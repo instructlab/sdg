@@ -1,6 +1,6 @@
 import logging
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datasets import load_dataset, concatenate_datasets
 from torch.nn import functional as F
 from torch.utils.data import Dataset
@@ -379,26 +379,99 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ProcessingConfig:
     """
-    Enhanced configuration for data processing.
+    Configuration for subset selection with basic and advanced parameters.
+    
+    Basic Parameters:
+        input_files: List of input files to process
+        output_dir: Directory to save output files (default: "output")
+        batch_size: Size of batches for processing (default: 100000)
+        num_folds: Number of folds for subset selection (default: 1)
+        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
+                     (default: [1000, 5000, 10000])
+        combine_files: Whether to combine input files before processing (default: False)
+    
+    Advanced Parameters:
+        instruction: Instruction for the encoder
+        query_description: Description for queries
+        templates: Dictionary of templates for formatting text
+        template_name: Name of template to use
+        num_gpus: Number of GPUs to use
+        seed: Random seed
+        max_retries: Maximum number of retries for failed operations
+        retry_delay: Delay between retries in seconds
+        encoder_type: Type of encoder to use
+        encoder_model: Specific model to use for encoding
     """
-
-    instruction: str
-    query_description: str
-    templates: Dict[str, str]
-    batch_size: int = 100000
-    num_folds: int = 1
-    subset_sizes: List[Union[int, float]] = (
-        None  # Can be percentages or absolute numbers
-    )
-    num_gpus: int = 8
-    seed: int = 42
-    max_retries: int = 3
-    retry_delay: int = 30
+    # Basic parameters
+    input_files: List[str] #required
+    subset_sizes: List[Union[int, float]] #required
     output_dir: str = "output"
-    template_name: str = "conversation"
-    combine_files: bool = False  # New parameter to control file combination , if True, combine all input files before selectig a subset from combined file, otherwise select a subset from each file separately
-    encoder_type: str = "bge"  # Encoder Family
-    encoder_model: str = "BAAI/bge-m3"  # Encoder Model
+    batch_size: int = 100000
+    num_folds: int = 50
+    combine_files: bool = False
+
+    # Advanced parameters
+    instruction: str = field(
+        default="Generate embeddings that capture the core meaning of user-assistant conversations, ensuring the embeddings can be clustered based on semantic similarity for subset selection.",
+        metadata={"advanced": True}
+    )
+    query_description: str = field(
+        default="Conversation",
+        metadata={"advanced": True}
+    )
+    templates: Dict[str, str] = field(
+        default_factory=lambda: {
+            "default": "{{ text }}",
+            "conversation": "{% for msg in messages %}{{ msg.role }}: {{ msg.content }}\n{% endfor %}",
+            "qa": "Question: {{ question }}\nAnswer: {{ answer }}"
+        },
+        metadata={"advanced": True}
+    )
+    template_name: str = field(
+        default="conversation",
+        metadata={"advanced": True}
+    )
+    num_gpus: int = field(
+        default=8,
+        metadata={"advanced": True}
+    )
+    seed: int = field(
+        default=42,
+        metadata={"advanced": True}
+    )
+    max_retries: int = field(
+        default=3,
+        metadata={"advanced": True}
+    )
+    retry_delay: int = field(
+        default=30,
+        metadata={"advanced": True}
+    )
+    #TODO: change to arctic-snowflake model once it's ready
+    encoder_type: str = field(
+        default="bge",
+        metadata={"advanced": True}
+    )
+    encoder_model: str = field(
+        default="BAAI/bge-m3",
+        metadata={"advanced": True}
+    )
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if not self.input_files:
+            raise ValueError("input_files cannot be empty")
+        
+        if not isinstance(self.subset_sizes, list):
+            raise ValueError("subset_sizes must be a list")
+        
+        for size in self.subset_sizes:
+            if not isinstance(size, (int, float)):
+                raise ValueError("subset_sizes must contain only integers or floats")
+            if isinstance(size, float) and not (0 < size <= 100):
+                raise ValueError("Percentage values in subset_sizes must be between 0 and 100")
+            if isinstance(size, int) and size <= 0:
+                raise ValueError("Absolute values in subset_sizes must be positive")
 
 
 def retry_on_exception(func):
@@ -1080,91 +1153,64 @@ def process_folds_with_gpu(args):
         raise
 
 
-def process_dataset(
+def subset_datasets(
     input_files: List[str],
-    output_dir: str,
-    instruction: str,
-    query_description: str,
-    templates: Dict[str, str],
-    batch_size: int = 100000,
-    num_folds: int = 1,
-    subset_sizes: List[Union[int, float]] = None,
-    num_gpus: int = 8,
-    seed: int = 42,
-    max_retries: int = 3,
-    retry_delay: int = 30,
-    template_name: str = "conversation",
-    combine_files: bool = False,
-    encoder_type: str = "bge",
-    encoder_model: str = "BAAI/bge-m3",
-):
+    subset_sizes: List[Union[int, float]],
+    **kwargs
+) -> None:
     """
-    Main entry point for dataset processing and subset selection.
-
-    Args:
+    Create subsets of datasets using facility location for diverse subset selection.
+    
+    Required Parameters:
         input_files: List of input files to process
-        output_dir: Directory to save output files
+        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
+    
+    Optional Basic Parameters (via **kwargs):
+        output_dir: Directory to save output files (default: "output")
+        batch_size: Size of batches for processing (default: 100000)
+        num_folds: Number of folds for subset selection (default: 50)
+        combine_files: Whether to combine input files before processing (default: False)
+    
+    Advanced Parameters (via **kwargs):
         instruction: Instruction for the encoder
         query_description: Description for queries
         templates: Dictionary of templates for formatting text
-        batch_size: Size of batches for processing
-        num_folds: Number of folds for subset selection
-        subset_sizes: List of subset sizes (float for percentages, int for absolute numbers)
+        template_name: Name of template to use
         num_gpus: Number of GPUs to use
         seed: Random seed
         max_retries: Maximum number of retries for failed operations
         retry_delay: Delay between retries in seconds
-        template_name: Name of template to use
-        combine_files: Whether to combine input files before processing
-        encoder_type: Type of encoder to use ('bge', 'openai', etc.)
+        encoder_type: Type of encoder to use
         encoder_model: Specific model to use for encoding
     """
-    # Set multiprocessing start method to 'spawn' for CUDA compatibility
+    # Create config with required parameters
+    config_params = {
+        "input_files": input_files,
+        "subset_sizes": subset_sizes,
+    }
+    
+    # Update with any provided optional parameters
+    config_params.update(kwargs)
+    
+    # Create configuration
+    config = ProcessingConfig(**config_params)
+    
     try:
-        set_start_method("spawn")
-    except RuntimeError:
-        # Method is already set, ignore the error
-        pass
-
-    try:
-        # Create ProcessingConfig instance
-        config = ProcessingConfig(
-            instruction=instruction,
-            query_description=query_description,
-            templates=templates,
-            batch_size=batch_size,
-            num_folds=num_folds,
-            subset_sizes=subset_sizes,
-            num_gpus=min(num_gpus, torch.cuda.device_count()),
-            seed=seed,
-            max_retries=max_retries,
-            retry_delay=retry_delay,
-            output_dir=output_dir,
-            template_name=template_name,
-            combine_files=combine_files,
-            encoder_type=encoder_type,
-            encoder_model=encoder_model,
-        )
+        # Set multiprocessing start method to 'spawn' for CUDA compatibility
+        try:
+            set_start_method("spawn")
+        except RuntimeError:
+            # Method is already set, ignore the error
+            pass
 
         logger.info(f"Processing configuration: {config}")
 
         # Initialize data processor based on encoder type
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(config.output_dir, exist_ok=True)
 
-        if encoder_type == "bge":
+        if config.encoder_type == "bge":
             processor = DataProcessor(config, UnifiedBGEEncoder)
-        elif encoder_type == "openai":
-            processor = DataProcessor(config, OpenAIEncoder)
-        elif encoder_type == "sfr_mistral":
-            processor = DataProcessor(config, SFRMistralEncoder)
-        elif encoder_type == "nvembed":
-            processor = DataProcessor(config, NVEmbedEncoder)
-        elif encoder_type == "qwen2":
-            processor = DataProcessor(config, Qwen2EmbedEncoder)
-        else:
-            raise ValueError(f"Unknown encoder type: {encoder_type}")
-
-        processor.process_files(input_files, output_dir)
+        processor.process_files(input_files, config.output_dir)
 
     except Exception as e:
         logger.error(f"Processing failed: {str(e)}")
