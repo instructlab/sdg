@@ -380,7 +380,7 @@ logger = logging.getLogger(__name__)
 class ProcessingConfig:
     """
     Configuration for subset selection with basic and advanced parameters.
-    
+
     Basic Parameters:
         input_files: List of input files to process
         output_dir: Directory to save output files (default: "output")
@@ -389,7 +389,7 @@ class ProcessingConfig:
         subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
                      (default: [1000, 5000, 10000])
         combine_files: Whether to combine input files before processing (default: False)
-    
+
     Advanced Parameters:
         instruction: Instruction for the encoder
         query_description: Description for queries
@@ -402,9 +402,10 @@ class ProcessingConfig:
         encoder_type: Type of encoder to use
         encoder_model: Specific model to use for encoding
     """
+
     # Basic parameters
-    input_files: List[str] #required
-    subset_sizes: List[Union[int, float]] #required
+    input_files: List[str]  # required
+    subset_sizes: List[Union[int, float]]  # required
     output_dir: str = "output"
     batch_size: int = 100000
     num_folds: int = 50
@@ -413,63 +414,41 @@ class ProcessingConfig:
     # Advanced parameters
     instruction: str = field(
         default="Generate embeddings that capture the core meaning of user-assistant conversations, ensuring the embeddings can be clustered based on semantic similarity for subset selection.",
-        metadata={"advanced": True}
+        metadata={"advanced": True},
     )
-    query_description: str = field(
-        default="Conversation",
-        metadata={"advanced": True}
-    )
+    query_description: str = field(default="Conversation", metadata={"advanced": True})
     templates: Dict[str, str] = field(
         default_factory=lambda: {
             "default": "{{ text }}",
             "conversation": "{% for msg in messages %}{{ msg.role }}: {{ msg.content }}\n{% endfor %}",
-            "qa": "Question: {{ question }}\nAnswer: {{ answer }}"
+            "qa": "Question: {{ question }}\nAnswer: {{ answer }}",
         },
-        metadata={"advanced": True}
+        metadata={"advanced": True},
     )
-    template_name: str = field(
-        default="conversation",
-        metadata={"advanced": True}
-    )
-    num_gpus: int = field(
-        default=8,
-        metadata={"advanced": True}
-    )
-    seed: int = field(
-        default=42,
-        metadata={"advanced": True}
-    )
-    max_retries: int = field(
-        default=3,
-        metadata={"advanced": True}
-    )
-    retry_delay: int = field(
-        default=30,
-        metadata={"advanced": True}
-    )
-    #TODO: change to arctic-snowflake model once it's ready
-    encoder_type: str = field(
-        default="bge",
-        metadata={"advanced": True}
-    )
-    encoder_model: str = field(
-        default="BAAI/bge-m3",
-        metadata={"advanced": True}
-    )
+    template_name: str = field(default="conversation", metadata={"advanced": True})
+    num_gpus: int = field(default=8, metadata={"advanced": True})
+    seed: int = field(default=42, metadata={"advanced": True})
+    max_retries: int = field(default=3, metadata={"advanced": True})
+    retry_delay: int = field(default=30, metadata={"advanced": True})
+    # TODO: change to arctic-snowflake model once it's ready
+    encoder_type: str = field(default="bge", metadata={"advanced": True})
+    encoder_model: str = field(default="BAAI/bge-m3", metadata={"advanced": True})
 
     def __post_init__(self):
         """Validate configuration after initialization."""
         if not self.input_files:
             raise ValueError("input_files cannot be empty")
-        
+
         if not isinstance(self.subset_sizes, list):
             raise ValueError("subset_sizes must be a list")
-        
+
         for size in self.subset_sizes:
             if not isinstance(size, (int, float)):
                 raise ValueError("subset_sizes must contain only integers or floats")
             if isinstance(size, float) and not (0 < size <= 100):
-                raise ValueError("Percentage values in subset_sizes must be between 0 and 100")
+                raise ValueError(
+                    "Percentage values in subset_sizes must be between 0 and 100"
+                )
             if isinstance(size, int) and size <= 0:
                 raise ValueError("Absolute values in subset_sizes must be positive")
 
@@ -1154,23 +1133,21 @@ def process_folds_with_gpu(args):
 
 
 def subset_datasets(
-    input_files: List[str],
-    subset_sizes: List[Union[int, float]],
-    **kwargs
+    input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs
 ) -> None:
     """
     Create subsets of datasets using facility location for diverse subset selection.
-    
+
     Required Parameters:
         input_files: List of input files to process
         subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
-    
+
     Optional Basic Parameters (via **kwargs):
         output_dir: Directory to save output files (default: "output")
         batch_size: Size of batches for processing (default: 100000)
         num_folds: Number of folds for subset selection (default: 50)
         combine_files: Whether to combine input files before processing (default: False)
-    
+
     Advanced Parameters (via **kwargs):
         instruction: Instruction for the encoder
         query_description: Description for queries
@@ -1188,13 +1165,13 @@ def subset_datasets(
         "input_files": input_files,
         "subset_sizes": subset_sizes,
     }
-    
+
     # Update with any provided optional parameters
     config_params.update(kwargs)
-    
+
     # Create configuration
     config = ProcessingConfig(**config_params)
-    
+
     try:
         # Set multiprocessing start method to 'spawn' for CUDA compatibility
         try:
