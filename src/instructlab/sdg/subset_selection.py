@@ -2,10 +2,9 @@
 from dataclasses import dataclass, field
 from functools import wraps
 from multiprocessing import Pool, set_start_method
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, TypedDict, TypeVar, Union
 import gc
 import glob
-import json
 import logging
 import math
 import os
@@ -16,360 +15,19 @@ import time
 from datasets import concatenate_datasets, load_dataset
 from jinja2 import BaseLoader, Environment
 from submodlib import FacilityLocationFunction
-from torch.nn import functional as F
-from torch.utils.data import Dataset
 from tqdm import tqdm
-from transformers import AutoModel, AutoTokenizer
 import h5py
 import numpy as np
 import torch
 
+# Local
+from .encoders import UnifiedBGEEncoder
+from .utils.subset_selection_utils import compute_pairwise_dense, get_default_num_gpus
+
 __DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-
-# Model-specific configurations
-MODEL_CONFIGS = {
-    "BAAI/bge-base-en": {
-        "pooling_method": "cls",
-        "normalize_embeddings": True,
-        "max_length": 512,
-        "default_instruction": "Represent this sentence for searching relevant passages:",
-        "batch_size": 256,
-    },
-    "BAAI/bge-base-en-v1.5": {
-        "pooling_method": "cls",
-        "normalize_embeddings": True,
-        "max_length": 512,
-        "default_instruction": "Represent this sentence for searching relevant passages:",
-        "batch_size": 256,
-    },
-    "BAAI/bge-large-en": {
-        "pooling_method": "cls",
-        "normalize_embeddings": True,
-        "max_length": 512,
-        "default_instruction": "Represent this sentence for searching relevant passages:",
-        "batch_size": 256,
-    },
-    "BAAI/bge-large-en-v1.5": {
-        "pooling_method": "cls",
-        "normalize_embeddings": True,
-        "max_length": 512,
-        "default_instruction": "Represent this sentence for searching relevant passages:",
-        "batch_size": 256,
-    },
-    "BAAI/bge-m3": {
-        "pooling_method": "cls",
-        "normalize_embeddings": True,
-        "max_length": 4096,
-        "default_instruction": "Use the following sentences to search for relevant passages:",
-        "batch_size": 32,
-    },
-    "BAAI/bge-multilingual-gemma2": {
-        "pooling_method": "last_token",
-        "normalize_embeddings": True,
-        "max_length": 4096,
-        "default_instruction": "Represent this for searching:",
-        "batch_size": 20,
-    },
-}
-
-
-class UnifiedBGEEncoder:
-    def __init__(
-        self,
-        model_name: str = "BAAI/bge-m3",
-        device: Optional[torch.device] = None,
-        use_fp16: bool = True,
-        use_default_instruction: bool = True,
-    ):
-        """
-        Unified encoder supporting all BGE model variants with model-specific configurations.
-
-        Args:
-            model_name: Model identifier from supported BGE variants
-            device: Computation device
-            batch_size: Base batch size (will be adjusted for multi-GPU)
-            use_fp16: Whether to use half-precision
-            use_default_instruction: Whether to use the model's default instruction
-        """
-        if model_name not in MODEL_CONFIGS:
-            raise ValueError(
-                f"Model {model_name} not supported. Supported models: {list(MODEL_CONFIGS.keys())}"
-            )
-
-        # Load model configuration
-        self.config = MODEL_CONFIGS[model_name]
-        self.model_name = model_name
-        self.use_default_instruction = use_default_instruction
-
-        # Initialize device and basic parameters
-        self.device = device or torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
-
-        # Set up GPU configuration
-        self.num_gpus = torch.cuda.device_count()
-        batch_size = self.config["batch_size"]
-        self.batch_size = (
-            batch_size * self.num_gpus if self.num_gpus > 0 else batch_size
-        )
-
-        # Suppress tokenizer warnings
-        os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-        # Load model and tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name)
-
-        # Model configuration
-        self.model.eval()
-        if use_fp16:
-            self.model = self.model.half()
-        self.model = self.model.to(self.device)
-
-        # Multi-GPU setup
-        if self.num_gpus > 1:
-            print(f"Using {self.num_gpus} GPUs")
-            self.model = torch.nn.DataParallel(self.model)
-
-    def _pool_embeddings(
-        self, hidden_states: torch.Tensor, attention_mask: torch.Tensor
-    ) -> torch.Tensor:
-        """Model-specific pooling method"""
-        if self.config["pooling_method"] == "cls":
-            return hidden_states[:, 0]
-        elif self.config["pooling_method"] == "mean":
-            s = torch.sum(hidden_states * attention_mask.unsqueeze(-1).float(), dim=1)
-            d = attention_mask.sum(axis=1, keepdim=True).float()
-            return s / d
-        elif self.config["pooling_method"] == "last_token":
-            left_padding = attention_mask[:, -1].sum() == attention_mask.shape[0]
-            if left_padding:
-                return hidden_states[:, -1]
-            sequence_lengths = attention_mask.sum(dim=1) - 1
-            batch_size = hidden_states.shape[0]
-            return hidden_states[
-                torch.arange(batch_size, device=hidden_states.device), sequence_lengths
-            ]
-
-    def _prepare_inputs(
-        self,
-        texts: Union[str, List[str]],
-        instruction: str = "",
-        query_description: str = "",
-    ) -> List[str]:
-        """Prepare inputs with model-specific formatting"""
-        if isinstance(texts, str):
-            texts = [texts]
-
-        # Use model's default instruction if enabled and no custom instruction provided
-        if (
-            not instruction
-            and self.use_default_instruction
-            and self.config["default_instruction"]
-        ):
-            instruction = self.config["default_instruction"]
-
-        if instruction:
-            if "bge-multilingual" in self.model_name.lower():
-                texts = [
-                    f"<instruct>{instruction}\n{query_description}{text}"
-                    for text in texts
-                ]
-            elif "bge-m3" not in self.model_name.lower():
-                texts = [f"{instruction} {text}" for text in texts]
-        return texts
-
-    @torch.no_grad()
-    def encode(
-        self,
-        inputs: Union[str, List[str]],
-        instruction: str = "",
-        query_description: str = "",
-        show_progress: bool = True,
-        return_tensors: bool = True,
-    ) -> Union[torch.Tensor, np.ndarray]:
-        """
-        Encode texts into embeddings.
-
-        Args:
-            inputs: Input text or list of texts
-            instruction: Optional instruction (overrides default if provided)
-            query_description: Optional query description (used for specialized instructions)
-            show_progress: Whether to show progress bar
-            return_tensors: Whether to return pytorch tensors (True) or numpy arrays (False)
-        """
-        # Input preparation
-        input_was_string = isinstance(inputs, str)
-        inputs = self._prepare_inputs(inputs, instruction, query_description)
-
-        # Tokenization
-        encodings = self.tokenizer(
-            inputs,
-            max_length=self.config["max_length"],
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-            pad_to_multiple_of=8,
-        ).to(self.device)
-
-        # Batch processing
-        embeddings_list = []
-        for i in tqdm(
-            range(0, len(inputs), self.batch_size),
-            disable=not show_progress or len(inputs) < 256,
-        ):
-            # Prepare batch
-            batch = {k: v[i : i + self.batch_size] for k, v in encodings.items()}
-
-            # Model forward pass
-            outputs = self.model(**batch)
-            hidden_states = outputs.last_hidden_state
-
-            # Pool embeddings
-            embeddings = self._pool_embeddings(hidden_states, batch["attention_mask"])
-
-            # Normalize if configured
-            if self.config["normalize_embeddings"]:
-                embeddings = F.normalize(embeddings, p=2, dim=1)
-
-            embeddings_list.append(embeddings.cpu())
-
-            # Clean up GPU memory
-            del outputs, hidden_states, embeddings, batch
-            torch.cuda.empty_cache()
-
-        # Combine embeddings
-        embeddings = torch.cat(embeddings_list, dim=0)
-
-        # Handle single input case
-        if input_was_string:
-            embeddings = embeddings[0]
-
-        # Return appropriate format
-        if return_tensors:
-            return embeddings
-        return embeddings.numpy()
-
-    def encode_queries(
-        self, queries: Union[str, List[str]], instruction: str = "", **kwargs
-    ) -> Union[torch.Tensor, np.ndarray]:
-        """Specialized method for encoding queries"""
-        return self.encode(queries, instruction=instruction, **kwargs)
-
-    def encode_corpus(
-        self, corpus: Union[str, List[str]], instruction: str = "", **kwargs
-    ) -> Union[torch.Tensor, np.ndarray]:
-        """Specialized method for encoding corpus documents"""
-        return self.encode(corpus, instruction=instruction, **kwargs)
-
-    def embed_dataset(
-        self,
-        dataset: Dataset,
-        column_name: str = "text",
-        instruction: str = "",
-        query_description: str = "",
-    ) -> Dataset:
-        """Embed an entire dataset column"""
-        texts = dataset[column_name]
-        embeddings = self.encode(
-            texts,
-            instruction=instruction,
-            query_description=query_description,
-            return_tensors=False,
-        )
-        return dataset.add_column("embedding", embeddings.tolist())
-
-
-def compute_pairwise_dense(
-    tensor1,
-    tensor2=None,
-    batch_size=10000,
-    metric="cosine",
-    device=__DEVICE,
-    scaling=None,
-    kw=0.1,
-):
-    """
-    Compute pairwise metric in batches between two sets of vectors.
-
-    Args:
-        tensor1 (Tensor): Data points for the first set (n_samples1, n_features).
-        tensor2 (Tensor, optional): Data points for the second set (n_samples2, n_features).
-                                    Defaults to None, which means tensor1 will be used for self-comparison.
-        batch_size (int): Size of each batch for computation.
-        metric (str): Metric to compute. Options are 'cosine', 'dot', and 'euclidean'.
-        device (str): Device to perform computation ('cuda' or 'cpu').
-        scaling (str, optional): Scaling method to apply on the results. Options are 'min-max' or 'additive'.
-        kw (float, optional): Kernel width for rbf metric.
-    Returns:
-        Tensor: Pairwise computed metric as a tensor.
-
-    Note:
-    The function performs computations in batches to manage GPU memory usage efficiently.
-    similarity measure returned is in cpu memory to save GPU memory.
-    If 'tensor2' is None, the function computes the metric for 'tensor1' against itself.
-    """
-
-    assert batch_size > 0, "Batch size must be positive."
-
-    if tensor2 is None:
-        tensor2 = tensor1
-
-    tensor1, tensor2 = tensor1.to(device), tensor2.to(device)
-
-    n_samples1, n_samples2 = tensor1.size(0), tensor2.size(0)
-
-    # Initialize a results matrix in the CPU memory to save GPU memory
-    results = torch.zeros(n_samples1, n_samples2, device="cpu")
-
-    # Normalizing tensors if metric is cosine for cosine similarity computation
-    if metric == "cosine":
-        tensor1, tensor2 = (
-            F.normalize(tensor1, p=2, dim=1),
-            F.normalize(tensor2, p=2, dim=1),
-        )
-
-    # Function to calculate the metric
-    def calculate_metric(a, b, metric, kw):
-        if metric in ["cosine", "dot"]:
-            return torch.mm(a, b.T)
-        elif metric == "euclidean":
-            distances = torch.cdist(a, b, p=2)
-            similarities = 1 / (1 + distances**2)
-            return similarities
-        elif metric == "rbf":
-            distance = torch.cdist(a, b)
-            squared_distance = distance**2
-            avg_dist = torch.mean(squared_distance)
-            torch.div(squared_distance, kw * avg_dist, out=squared_distance)
-            torch.exp(-squared_distance, out=squared_distance)
-            return squared_distance
-        else:
-            raise ValueError(f"Unknown metric: {metric}")
-
-    # Process in batches
-    for i in range(0, n_samples1, batch_size):
-        end_i = min(i + batch_size, n_samples1)
-        rows = tensor1[i:end_i]
-
-        for j in range(0, n_samples2, batch_size):
-            end_j = min(j + batch_size, n_samples2)
-            cols = tensor2[j:end_j]
-
-            batch_results = calculate_metric(rows, cols, metric, kw).cpu()
-            results[i:end_i, j:end_j] = batch_results
-
-    # Apply scaling if specified
-    if scaling == "min-max":
-        min_val, max_val = results.min(), results.max()
-        if max_val != min_val:
-            results = (results - min_val) / (max_val - min_val)
-    elif scaling == "additive":
-        results = (results + 1) / 2
-
-    return results
-
+# Type variables
+T = TypeVar("T")
 
 # Configure logging
 logging.basicConfig(
@@ -378,59 +36,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_default_num_gpus() -> int:
-    """Get the default number of GPUs based on available CUDA devices.
-
-    Raises:
-        RuntimeError: If no CUDA devices are available.
-    """
-    if not torch.cuda.is_available():
-        raise RuntimeError(
-            "No CUDA devices detected. This functionality requires at least one GPU."
-        )
-    return torch.cuda.device_count()
-
-
 @dataclass
-class ProcessingConfig:
-    """
-    Configuration for subset selection with basic and advanced parameters.
+class BasicConfig:
+    """Basic configuration parameters."""
 
-    Basic Parameters:
-        input_files: List of input files to process (required)
-        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages (required)
-        output_dir: Directory to save output files (default: "output")
-        batch_size: Size of batches for processing (default: 100000)
-        num_folds: Number of folds for subset selection (default: 50)
-        combine_files: Whether to combine input files before processing (default: False)
-
-    Advanced Parameters:
-        instruction: Instruction for the encoder
-        query_description: Description for queries
-        templates: Dictionary of templates for formatting text
-        template_name: Name of template to use
-        num_gpus: Number of GPUs to use
-        seed: Random seed
-        max_retries: Maximum number of retries for failed operations
-        retry_delay: Delay between retries in seconds
-        encoder_type: Type of encoder to use
-        encoder_model: Specific model to use for encoding
-    """
-
-    # Basic parameters
-    input_files: List[str]  # required
-    subset_sizes: List[Union[int, float]]  # required
     output_dir: str = "output"
     batch_size: int = 100000
     num_folds: int = 50
     combine_files: bool = False
 
-    # Advanced parameters
+
+@dataclass
+class EncoderConfig:
+    """Encoder-specific configuration parameters."""
+
     instruction: str = field(
         default="Generate embeddings that capture the core meaning of user-assistant conversations, ensuring the embeddings can be clustered based on semantic similarity for subset selection.",
         metadata={"advanced": True},
     )
     query_description: str = field(default="Conversation", metadata={"advanced": True})
+    encoder_type: str = field(default="bge", metadata={"advanced": True})
+    encoder_model: str = field(default="BAAI/bge-m3", metadata={"advanced": True})
+
+
+@dataclass
+class TemplateConfig:
+    """Template-related configuration parameters."""
+
+    template_name: str = field(default="conversation", metadata={"advanced": True})
     templates: Dict[str, str] = field(
         default_factory=lambda: {
             "default": "{{ text }}",
@@ -439,16 +72,45 @@ class ProcessingConfig:
         },
         metadata={"advanced": True},
     )
-    template_name: str = field(default="conversation", metadata={"advanced": True})
+
+
+@dataclass
+class SystemConfig:
+    """System-related configuration parameters."""
+
     num_gpus: int = field(
         default_factory=get_default_num_gpus, metadata={"advanced": True}
     )
     seed: int = field(default=42, metadata={"advanced": True})
     max_retries: int = field(default=3, metadata={"advanced": True})
     retry_delay: int = field(default=30, metadata={"advanced": True})
-    # TODO: change to arctic-snowflake model once it's ready
-    encoder_type: str = field(default="bge", metadata={"advanced": True})
-    encoder_model: str = field(default="BAAI/bge-m3", metadata={"advanced": True})
+
+
+@dataclass
+class ProcessingConfig:
+    """
+    Configuration for subset selection with basic and advanced parameters.
+
+    Required Parameters:
+        input_files: List of input files to process
+        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
+
+    Configuration Groups:
+        basic: Basic processing parameters
+        encoder: Encoder-specific parameters
+        template: Template-related parameters
+        system: System-related parameters
+    """
+
+    # Required parameters
+    input_files: List[str]
+    subset_sizes: List[Union[int, float]]
+
+    # Configuration groups
+    basic: BasicConfig = field(default_factory=BasicConfig)
+    encoder: EncoderConfig = field(default_factory=EncoderConfig)
+    template: TemplateConfig = field(default_factory=TemplateConfig)
+    system: SystemConfig = field(default_factory=SystemConfig)
 
     def __post_init__(self):
         """Validate configuration after initialization."""
@@ -461,7 +123,7 @@ class ProcessingConfig:
         for size in self.subset_sizes:
             if not isinstance(size, (int, float)):
                 raise ValueError("subset_sizes must contain only integers or floats")
-            if isinstance(size, float) and not (0 < size <= 100):
+            if isinstance(size, float) and not 0 < size <= 100:
                 raise ValueError(
                     "Percentage values in subset_sizes must be between 0 and 100"
                 )
@@ -477,17 +139,38 @@ def retry_on_exception(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         last_exception = None
-        for attempt in range(self.config.max_retries):
+        for attempt in range(self.config.system.max_retries):
             try:
                 return func(self, *args, **kwargs)
-            except Exception as e:
+            except torch.cuda.OutOfMemoryError as e:
+                # Happens when GPU runs out of memory during batch processing
                 last_exception = e
-                logger.error(f"Attempt {attempt + 1} failed with error: {str(e)}")
-                if attempt < self.config.max_retries - 1:
-                    logger.info(f"Retrying in {self.config.retry_delay} seconds...")
-                    time.sleep(self.config.retry_delay)
-                    gc.collect()
-                    torch.cuda.empty_cache()
+                logger.error(f"GPU out of memory on attempt {attempt + 1}: {str(e)}")
+            except RuntimeError as e:
+                # Common PyTorch errors (including some OOM errors and model issues)
+                last_exception = e
+                logger.error(
+                    f"PyTorch runtime error on attempt {attempt + 1}: {str(e)}"
+                )
+            except ValueError as e:
+                # From tokenizer or input validation
+                last_exception = e
+                logger.error(f"Value error on attempt {attempt + 1}: {str(e)}")
+            except TypeError as e:
+                # From incorrect input types or model parameter mismatches
+                last_exception = e
+                logger.error(f"Type error on attempt {attempt + 1}: {str(e)}")
+            except IndexError as e:
+                # Possible during tensor operations or batch processing
+                last_exception = e
+                logger.error(f"Index error on attempt {attempt + 1}: {str(e)}")
+
+            if attempt < self.config.system.max_retries - 1:
+                logger.info(f"Retrying in {self.config.system.retry_delay} seconds...")
+                time.sleep(self.config.system.retry_delay)
+                gc.collect()
+                torch.cuda.empty_cache()
+
         raise last_exception
 
     return wrapper
@@ -507,18 +190,18 @@ class DataProcessor:
             encoder_cls: The encoder class to use for generating embeddings.
         """
         self.config = config
-        self.encoder = encoder_cls(model_name=config.encoder_model)
+        self.encoder = encoder_cls(model_name=config.encoder.encoder_model)
         self.env = Environment(loader=BaseLoader())
         self.templates = {
-            k: self.env.from_string(v) for k, v in config.templates.items()
+            k: self.env.from_string(v) for k, v in config.template.templates.items()
         }
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Set random seeds
-        np.random.seed(config.seed)
-        torch.manual_seed(config.seed)
+        np.random.seed(config.system.seed)
+        torch.manual_seed(config.system.seed)
         if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(config.seed)
+            torch.cuda.manual_seed_all(config.system.seed)
 
     def format_text(self, example: Dict[str, Any], format_type: str) -> str:
         """
@@ -557,7 +240,7 @@ class DataProcessor:
             )
             datasets.append(dataset)
 
-        if self.config.combine_files:
+        if self.config.basic.combine_files:
             logger.info("Combining datasets...")
             return concatenate_datasets(datasets)
 
@@ -616,7 +299,7 @@ class DataProcessor:
             return -1, None
 
         # Sort batch files by batch number
-        batch_files.sort(key=lambda x: self.extract_batch_number(x))
+        batch_files.sort(key=self.extract_batch_number)
         max_batch_file = batch_files[-1]
         max_batch_number = self.extract_batch_number(max_batch_file)
 
@@ -624,22 +307,16 @@ class DataProcessor:
         return max_batch_number, max_batch_file
 
     @retry_on_exception
-    def process_batch(self, batch_texts: List[str], output_file: str) -> int:
+    def process_batch(self, batch_texts: List[str], output_file: str) -> Optional[int]:
         """
         Processes a batch of texts by generating embeddings and saving them to a file.
-
-        Args:
-            batch_texts (List[str]): The list of texts in the batch.
-            output_file (str): The path to the output file where embeddings will be saved.
-
-        Returns:
-            int: The dimension of the embeddings generated.
+        Returns the embedding dimension or None if no embeddings were generated.
         """
         embeddings = (
             self.encoder.encode(
                 inputs=batch_texts,
-                instruction=self.config.instruction,
-                query_description=self.config.query_description,
+                instruction=self.config.encoder.instruction,
+                query_description=self.config.encoder.query_description,
             )
             .cpu()
             .numpy()
@@ -649,12 +326,11 @@ class DataProcessor:
             logger.warning(
                 f"No embeddings generated for batch, skipping file {output_file}"
             )
-            return None  # Return None if there are no embeddings
+            return None
 
-        embedding_dim = embeddings.shape[1]
+        embedding_dim = int(embeddings.shape[1])  # Cast to int
         logger.info(f"Embedding dimension for batch: {embedding_dim}")
 
-        # Write embeddings to HDF5 file
         with h5py.File(output_file, "w") as h5f:
             h5f.create_dataset(
                 "embeddings", data=embeddings, dtype="float32", chunks=True
@@ -689,8 +365,12 @@ class DataProcessor:
         # Initialize total_processed based on last batch
         if last_batch >= 0:
             # For the last batch, we need to check the number of samples processed
-            embedding_size, _ = self.get_embedding_size_dim_from_file(last_batch_file)
-            total_processed = last_batch * self.config.batch_size + embedding_size
+            embedding_size, _ = self.get_embedding_size_dim_from_file(
+                str(last_batch_file)
+            )
+            total_processed = (
+                last_batch * int(self.config.basic.batch_size) + embedding_size
+            )
         else:
             total_processed = 0
 
@@ -709,12 +389,14 @@ class DataProcessor:
             if i < total_processed:
                 continue  # Skip already processed samples
 
-            text = self.format_text(example, format_type=self.config.template_name)
+            text = self.format_text(
+                example, format_type=self.config.template.template_name
+            )
             if i < 5:
                 logger.info(f"Example {i + 1}: {text}")
             batch_texts.append(text)
 
-            if len(batch_texts) == self.config.batch_size:
+            if len(batch_texts) == self.config.basic.batch_size:
                 # Process batch
                 batch_file = os.path.join(output_dir, f"batch_{batch_number}.h5")
                 self.process_batch(batch_texts, batch_file)
@@ -754,18 +436,11 @@ class DataProcessor:
         match = re.search(r"batch_(\d+)\.h5$", basename)
         if match:
             return int(match.group(1))
-        else:
-            raise ValueError(f"Filename {filename} does not match expected pattern.")
+        raise ValueError(f"Filename {filename} does not match expected pattern.")
 
     def get_embedding_size_dim_from_file(self, batch_file: str) -> Tuple[int, int]:
         """
         Reads the batch file to determine the embedding size (number of embeddings) and dimension.
-
-        Args:
-            batch_file (str): The path to the batch file.
-
-        Returns:
-            Tuple[int, int]: A tuple containing the number of embeddings and the embedding dimension.
         """
         with h5py.File(batch_file, "r") as h5f:
             if "embeddings" not in h5f:
@@ -773,8 +448,8 @@ class DataProcessor:
                     f"The file {batch_file} does not contain 'embeddings' dataset."
                 )
             embeddings = h5f["embeddings"]
-            embedding_size = embeddings.shape[0]  # Get the number of embeddings
-            embedding_dim = embeddings.shape[1]  # Get the embedding dimension
+            embedding_size = int(embeddings.shape[0])  # Cast to int
+            embedding_dim = int(embeddings.shape[1])  # Cast to int
             logger.info(f"Embedding dimension from {batch_file}: {embedding_dim}")
         return embedding_size, embedding_dim
 
@@ -795,7 +470,7 @@ class DataProcessor:
             return
 
         # Sort batch files by batch number
-        batch_files.sort(key=lambda x: self.extract_batch_number(x))
+        batch_files.sort(key=self.extract_batch_number)
 
         # Retrieve embedding_dim from the first batch file
         _, embedding_dim = self.get_embedding_size_dim_from_file(batch_files[0])
@@ -853,23 +528,23 @@ class DataProcessor:
         indices = np.arange(len(embeddings))
         np.random.shuffle(indices)
 
-        fold_size = len(embeddings) // self.config.num_folds
-        remainder = len(embeddings) % self.config.num_folds
+        fold_size = len(embeddings) // self.config.basic.num_folds
+        remainder = len(embeddings) % self.config.basic.num_folds
 
         folds = []
         start_idx = 0
-        for i in range(self.config.num_folds):
+        for i in range(self.config.basic.num_folds):
             extra = 1 if i < remainder else 0
             end_idx = start_idx + fold_size + extra
             folds.append(indices[start_idx:end_idx])
             start_idx = end_idx
 
         gpu_assignments = []
-        folds_per_gpu = self.config.num_folds // self.config.num_gpus
-        extra_folds = self.config.num_folds % self.config.num_gpus
+        folds_per_gpu = self.config.basic.num_folds // self.config.system.num_gpus
+        extra_folds = self.config.basic.num_folds % self.config.system.num_gpus
 
         start_fold = 0
-        for gpu_id in range(self.config.num_gpus):
+        for gpu_id in range(self.config.system.num_gpus):
             num_folds_this_gpu = folds_per_gpu + (1 if gpu_id < extra_folds else 0)
             end_fold = start_fold + num_folds_this_gpu
             gpu_folds_info = [
@@ -887,14 +562,18 @@ class DataProcessor:
             )
             start_fold = end_fold
 
-        with Pool(processes=self.config.num_gpus) as pool:
+        with Pool(processes=self.config.system.num_gpus) as pool:
             gpu_results = pool.map(process_folds_with_gpu, gpu_assignments)
 
         all_results = []
         for gpu_result in gpu_results:
             all_results.extend(gpu_result)
 
-        combined_subsets = {
+        class SubsetData(TypedDict):
+            indices: List[int]
+            gains: List[float]
+
+        combined_subsets: Dict[Union[int, float], SubsetData] = {
             size: {"indices": [], "gains": []} for size in self.config.subset_sizes
         }
 
@@ -922,8 +601,8 @@ class DataProcessor:
 
             subset_name = self.get_subset_name(size_spec, actual_size)
             metadata_file = os.path.join(
-                self.config.output_dir,
-                f"{base_name}_fl_{self.config.num_folds}_partitions_{subset_name}_metadata.npz",
+                self.config.basic.output_dir,
+                f"{base_name}_fl_{self.config.basic.num_folds}_partitions_{subset_name}_metadata.npz",
             )
 
             np.savez(metadata_file, indices=sorted_indices, gains=sorted_gains)
@@ -957,7 +636,7 @@ class DataProcessor:
             output_dir (str): Output directory for results
         """
         try:
-            if self.config.combine_files:
+            if self.config.basic.combine_files:
                 # Process combined datasets
                 logger.info("Processing combined datasets...")
                 dataset = self.load_and_combine_datasets(input_files)
@@ -1149,57 +828,47 @@ def process_folds_with_gpu(args):
 
 
 def subset_datasets(
-    input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs
+    input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs: Any
 ) -> None:
-    """
-    Create subsets of datasets using facility location for diverse subset selection.
-
-    Required Parameters:
-        input_files: List of input files to process
-        subset_sizes: List of subset sizes - integers for absolute counts or floats for percentages
-
-    Optional Basic Parameters (via **kwargs):
-        output_dir: Directory to save output files (default: "output")
-        batch_size: Size of batches for processing (default: 100000)
-        num_folds: Number of folds for subset selection (default: 50)
-        combine_files: Whether to combine input files before processing (default: False)
-
-    Advanced Parameters (via **kwargs):
-        instruction: Instruction for the encoder
-        query_description: Description for queries
-        templates: Dictionary of templates for formatting text
-        template_name: Name of template to use
-        num_gpus: Number of GPUs to use
-        seed: Random seed
-        max_retries: Maximum number of retries for failed operations
-        retry_delay: Delay between retries in seconds
-        encoder_type: Type of encoder to use
-        encoder_model: Specific model to use for encoding
-    """
-    # Create config with required parameters
-    config_params = {
-        "input_files": input_files,
-        "subset_sizes": subset_sizes,
-    }
+    """Create subsets of datasets using facility location for diverse subset selection."""
 
     # Get system's available GPU count
     available_gpus = get_default_num_gpus()
 
-    # Update with any provided optional parameters
-    config_params.update(kwargs)
+    # Create configuration groups
+    basic_config = BasicConfig()
+    encoder_config = EncoderConfig()
+    template_config = TemplateConfig()
+    system_config = SystemConfig()
+
+    # Update configuration groups from kwargs
+    for key, value in kwargs.items():
+        if hasattr(basic_config, key):
+            setattr(basic_config, key, value)
+        elif hasattr(encoder_config, key):
+            setattr(encoder_config, key, value)
+        elif hasattr(template_config, key):
+            setattr(template_config, key, value)
+        elif hasattr(system_config, key):
+            setattr(system_config, key, value)
 
     # Ensure num_gpus doesn't exceed available GPUs
-    if "num_gpus" in config_params:
-        requested_gpus = config_params["num_gpus"]
-        if requested_gpus > available_gpus:
-            logger.warning(
-                f"Requested {requested_gpus} GPUs but only {available_gpus} available. "
-                f"Falling back to using {available_gpus} GPUs."
-            )
-            config_params["num_gpus"] = available_gpus
+    if system_config.num_gpus > available_gpus:
+        logger.warning(
+            f"Requested {system_config.num_gpus} GPUs but only {available_gpus} available. "
+            f"Falling back to using {available_gpus} GPUs."
+        )
+        system_config.num_gpus = available_gpus
 
     # Create configuration
-    config = ProcessingConfig(**config_params)
+    config = ProcessingConfig(
+        input_files=input_files,
+        subset_sizes=subset_sizes,
+        basic=basic_config,
+        encoder=encoder_config,
+        template=template_config,
+        system=system_config,
+    )
 
     try:
         # Set multiprocessing start method to 'spawn' for CUDA compatibility
@@ -1212,11 +881,14 @@ def subset_datasets(
         logger.info(f"Processing configuration: {config}")
 
         # Initialize data processor based on encoder type
-        os.makedirs(config.output_dir, exist_ok=True)
+        os.makedirs(config.basic.output_dir, exist_ok=True)
 
-        if config.encoder_type == "bge":
+        if config.encoder.encoder_type == "bge":
             processor = DataProcessor(config, UnifiedBGEEncoder)
-        processor.process_files(input_files, config.output_dir)
+        else:
+            raise ValueError(f"Unsupported encoder type: {config.encoder.encoder_type}")
+
+        processor.process_files(input_files, config.basic.output_dir)
 
     except Exception as e:
         logger.error(f"Processing failed: {str(e)}")
