@@ -1,26 +1,28 @@
-import logging
-import numpy as np
+# Standard
 from dataclasses import dataclass, field
-from datasets import load_dataset, concatenate_datasets
-from torch.nn import functional as F
-from torch.utils.data import Dataset
-from transformers import AutoModel, AutoTokenizer
-from typing import Any, Dict, List, Optional, Tuple, Union
-import torch
-from tqdm import tqdm
-from submodlib import FacilityLocationFunction
-from multiprocessing import Pool, set_start_method
-from jinja2 import Environment, BaseLoader
-import json
-import re
 from functools import wraps
-import os
-import time
+from multiprocessing import Pool, set_start_method
+from typing import Any, Dict, List, Optional, Tuple, Union
 import gc
 import glob
-import h5py
+import json
+import logging
 import math
+import os
+import re
+import time
 
+# Third Party
+from datasets import concatenate_datasets, load_dataset
+from jinja2 import BaseLoader, Environment
+from submodlib import FacilityLocationFunction
+from torch.nn import functional as F
+from torch.utils.data import Dataset
+from tqdm import tqdm
+from transformers import AutoModel, AutoTokenizer
+import h5py
+import numpy as np
+import torch
 
 __DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -378,12 +380,14 @@ logger = logging.getLogger(__name__)
 
 def get_default_num_gpus() -> int:
     """Get the default number of GPUs based on available CUDA devices.
-    
+
     Raises:
         RuntimeError: If no CUDA devices are available.
     """
     if not torch.cuda.is_available():
-        raise RuntimeError("No CUDA devices detected. This functionality requires at least one GPU.")
+        raise RuntimeError(
+            "No CUDA devices detected. This functionality requires at least one GPU."
+        )
     return torch.cuda.device_count()
 
 
@@ -437,8 +441,7 @@ class ProcessingConfig:
     )
     template_name: str = field(default="conversation", metadata={"advanced": True})
     num_gpus: int = field(
-        default_factory=get_default_num_gpus,
-        metadata={"advanced": True}
+        default_factory=get_default_num_gpus, metadata={"advanced": True}
     )
     seed: int = field(default=42, metadata={"advanced": True})
     max_retries: int = field(default=3, metadata={"advanced": True})
@@ -1146,9 +1149,7 @@ def process_folds_with_gpu(args):
 
 
 def subset_datasets(
-    input_files: List[str],
-    subset_sizes: List[Union[int, float]],
-    **kwargs
+    input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs
 ) -> None:
     """
     Create subsets of datasets using facility location for diverse subset selection.
@@ -1180,13 +1181,13 @@ def subset_datasets(
         "input_files": input_files,
         "subset_sizes": subset_sizes,
     }
-    
+
     # Get system's available GPU count
     available_gpus = get_default_num_gpus()
-    
+
     # Update with any provided optional parameters
     config_params.update(kwargs)
-    
+
     # Ensure num_gpus doesn't exceed available GPUs
     if "num_gpus" in config_params:
         requested_gpus = config_params["num_gpus"]
@@ -1196,7 +1197,7 @@ def subset_datasets(
                 f"Falling back to using {available_gpus} GPUs."
             )
             config_params["num_gpus"] = available_gpus
-    
+
     # Create configuration
     config = ProcessingConfig(**config_params)
 
