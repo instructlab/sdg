@@ -91,6 +91,7 @@ class TestGranularAPI(unittest.TestCase):
             input_dir=preprocessed_dir,
             output_dir=generated_dir,
             pipeline=pipeline_dir,
+            model_id="mock",
             num_cpus=1,  # Test is faster running on a single CPU vs forking
             batch_size=0,  # Disable batch for tiny dataset and fastest test
         )

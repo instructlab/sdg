@@ -22,6 +22,7 @@ from src.instructlab.sdg import (
     LLMMessagesBlock,
 )
 from src.instructlab.sdg.blocks.llmblock import server_supports_batched
+from src.instructlab.sdg.utils import models
 
 
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
@@ -201,6 +202,162 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
 
         assert not block._validate(block.prompt_template, {})
         assert block._validate(block.prompt_template, {"var1": "foo", "var2": "bar"})
+
+    def test_n_scaled_with_num_instructions(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        # save state for future tests
+        old_num_instructions = self.mock_ctx.num_instructions_to_generate
+
+        self.mock_ctx.num_instructions_to_generate = None
+        with pytest.raises(BlockConfigParserError) as exc:
+            block = LLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_path="",
+                output_cols=[],
+                gen_kwargs={"n": "scaled"},
+            )
+        assert "num_instructions_to_generate was not set" in str(exc.value)
+
+        self.mock_ctx.num_instructions_to_generate = 5
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            gen_kwargs={"n": "scaled"},
+        )
+        assert block
+
+        # restore state for future tests
+        self.mock_ctx.num_instructions_to_generate = old_num_instructions
+
+    def test_resolve_model_id(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        # save state for future tests
+        old_model_id = self.mock_ctx.model_id
+
+        # Raise an error when no model_id on block or PipelineContext
+        self.mock_ctx.model_id = None
+        with pytest.raises(BlockConfigParserError) as exc:
+            block = LLMBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_path="",
+                output_cols=[],
+            )
+        assert "requires a model_id but none" in str(exc.value)
+
+        # model_id on block is default
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            model_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        )
+        assert block.model_id == "mistralai/Mixtral-8x7B-Instruct-v0.1"
+
+        # model_id on PipelineContext gets used
+        self.mock_ctx.model_id = "test_model"
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block.model_id == "test_model"
+
+        # model_id on PipelineContext overrides
+        self.mock_ctx.model_id = "test_model"
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            model_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        )
+        assert block.model_id == "test_model"
+
+        # restore state for future tests
+        self.mock_ctx.model_id = old_model_id
+
+    def test_resolve_model_family(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        # save state for future tests
+        old_model_family = self.mock_ctx.model_family
+
+        # Uses a default model_family when none specified
+        self.mock_ctx.model_family = None
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block.model_family == models.DEFAULT_MODEL_FAMILY
+
+        # model_family on block is used by defalt
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            model_family="granite",
+        )
+        assert block.model_family == "granite"
+
+        # model_family on PipelineContext gets used
+        self.mock_ctx.model_family = "mixtral"
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block.model_family == "mixtral"
+
+        # model_family on PipelineContext overrides
+        self.mock_ctx.model_family = "mixtral"
+        block = LLMBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            model_family="granite",
+        )
+        assert block.model_family == "mixtral"
+
+        # restore state for future tests
+        self.mock_ctx.model_family = old_model_family
 
 
 class TestLLMBlockBatching(unittest.TestCase):
@@ -481,3 +638,56 @@ class TestLLMMessagesBlock(unittest.TestCase):
         assert "output" in output.column_names
         mock_completion.create.assert_called()
         assert mock_completion.create.call_args.kwargs["messages"] == "my message"
+
+    def test_resolve_model_id(self):
+        # save state for future tests
+        old_model_id = self.mock_ctx.model_id
+
+        # Raise an error when no model_id on block or PipelineContext
+        self.mock_ctx.model_id = None
+        with pytest.raises(BlockConfigParserError) as exc:
+            block = LLMMessagesBlock(
+                ctx=self.mock_ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                input_col="messages",
+                output_col="output",
+            )
+        assert "requires a model_id but none" in str(exc.value)
+
+        # model_id on block is default
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            input_col="messages",
+            output_col="output",
+            model_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        )
+        assert block.model_id == "mistralai/Mixtral-8x7B-Instruct-v0.1"
+
+        # model_id on PipelineContext gets used
+        self.mock_ctx.model_id = "test_model"
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            input_col="messages",
+            output_col="output",
+        )
+        assert block.model_id == "test_model"
+
+        # model_id on PipelineContext overrides
+        self.mock_ctx.model_id = "test_model"
+        block = LLMMessagesBlock(
+            ctx=self.mock_ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            input_col="messages",
+            output_col="output",
+            model_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
+        )
+        assert block.model_id == "test_model"
+
+        # restore state for future tests
+        self.mock_ctx.model_id = old_model_id

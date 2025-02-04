@@ -1,3 +1,15 @@
+## Upcoming v0.8.x
+
+### Features
+
+### LLMBlocks can now specify `model_family` or `model_id` in their config
+
+Each `LLMBlock` in a `Pipeline` can now specify `model_family` or `model_id` in their yaml configuration to set the values to use for these blocks, as opposed to setting this for the entire `Pipeline` in the `PipelineContext` object. This is useful for the cases where multiple `LLMBlocks` exist in the same `Pipeline` where each one uses a different model.
+
+#### Fewer required parameters for `PipelineContext`
+
+The parameters `model_family`, `model_id`, and `num_instructions_to_generate` are no longer required in `PipelineContext` objects. They used to be required, and if passed in will still get used as before. However, they can now be omitted if your `Pipeline` contains no `LLMBlock` entries or if your `LLMBlock` config specifies these values in the `Pipeline` yaml.
+
 ## v0.7.0
 
 ### Features

@@ -94,6 +94,12 @@
                       "type": "string"
                     }
                   },
+                  "model_id": {
+                    "type": "string"
+                  },
+                  "model_family": {
+                    "type": "string"
+                  },
                   "model_prompt": {
                     "type": "string"
                   },
@@ -176,6 +182,12 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "model_id": {
+                    "type": "string"
+                  },
+                  "model_family": {
+                    "type": "string"
                   },
                   "model_prompt": {
                     "type": "string"

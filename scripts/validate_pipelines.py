@@ -30,6 +30,7 @@ def main():
         schema = json.load(file)
 
     yaml_files = glob.glob("src/instructlab/sdg/pipelines/**/*.yaml", recursive=True)
+    yaml_files.extend(glob.glob("docs/examples/**/pipeline.yaml", recursive=True))
     all_valid = True
     for yaml_file in yaml_files:
         print("=======================================================")
