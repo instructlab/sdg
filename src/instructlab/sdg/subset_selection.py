@@ -67,7 +67,7 @@ class TemplateConfig:
     templates: Dict[str, str] = field(
         default_factory=lambda: {
             "default": "{{ text }}",
-            "conversation": "{% for msg in messages %}{{ msg.role }}: {{ msg.content }}\n{% endfor %}",
+            "conversation": "{% for msg in messages if msg.role != 'system' %}{{ msg.role }}: {{ msg.content }}\n{% endfor %}",
             "qa": "Question: {{ question }}\nAnswer: {{ answer }}",
         },
         metadata={"advanced": True},
