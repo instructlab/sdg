@@ -21,7 +21,8 @@ import numpy as np
 import torch
 
 # Local
-from .encoders import UnifiedBGEEncoder
+from .encoders.arctic_encoder import ArcticEmbedEncoder
+from .encoders.bge_unified_encoder import UnifiedBGEEncoder
 from .utils.subset_selection_utils import compute_pairwise_dense, get_default_num_gpus
 
 __DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -55,8 +56,10 @@ class EncoderConfig:
         metadata={"advanced": True},
     )
     query_description: str = field(default="Conversation", metadata={"advanced": True})
-    encoder_type: str = field(default="bge", metadata={"advanced": True})
-    encoder_model: str = field(default="BAAI/bge-m3", metadata={"advanced": True})
+    encoder_type: str = field(default="arctic", metadata={"advanced": True})
+    encoder_model: str = field(
+        default="Snowflake/snowflake-arctic-embed-l-v2.0", metadata={"advanced": True}
+    )
 
 
 @dataclass
@@ -885,6 +888,8 @@ def subset_datasets(
 
         if config.encoder.encoder_type == "bge":
             processor = DataProcessor(config, UnifiedBGEEncoder)
+        elif config.encoder.encoder_type == "arctic":
+            processor = DataProcessor(config, ArcticEmbedEncoder)
         else:
             raise ValueError(f"Unsupported encoder type: {config.encoder.encoder_type}")
 
