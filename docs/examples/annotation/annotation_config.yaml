@@ -1,0 +1,45 @@
+end_tags:
+- ''
+examples: 'Here are some examples to help you understand the annotation task better:
+
+
+  Input: A star-studded cast, including Leonardo DiCaprio and Jennifer Lawrence, has
+  been announced for the upcoming biographical drama film about the life of the famous
+  musician, Elvis Presley. The movie, directed by Baz Luhrmann, is set to release
+  in summer 2024 and promises to be a musical spectacle.
+
+  Label: entertainment
+
+
+  Input: The recent study suggests a correlation between increased sugar consumption
+  and a higher risk of cardiovascular disease, but more research is needed to confirm
+  the causal relationship. The American Heart Association recommends that adults limit
+  their daily sugar intake to 25 grams.
+
+  Label: health
+
+
+  Input: Rising sea levels threaten the homes of millions of people worldwide, with
+  coastal cities like Miami and Bangkok already experiencing frequent flooding. Climate
+  change is the main culprit behind this phenomenon, as the melting of polar ice caps
+  contributes to a global increase in ocean levels. In response, governments are investing
+  in sea walls and other infrastructure to protect against the rising tide, but some
+  experts argue that these measures may not be enough to save vulnerable communities.
+
+  Label: environment'
+generation: 'Here is the query for annotation:
+
+  {{document}}'
+introduction: 'Task Description: annotate the following text with the appropriate
+  category based on the context of the text.'
+principles: '
+
+  - The category should be based on the context of the text
+
+  - Use the single word category that best describes the text
+
+  - Use the category that is most dominant in the given text'
+start_tags:
+- ''
+system: You are an expert in annotation. You will be given a text and you need to
+  annotate it with the appropriate category based on the context of the text.
