@@ -19,7 +19,6 @@ from docling.datamodel.pipeline_options import (
     TesseractOcrOptions,
 )
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
-from tabulate import tabulate
 
 # First Party
 from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
@@ -190,7 +189,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         with open(json_fp, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        chunker = HybridChunker(tokenizer=self.tokenizer, max_token_per_chunk=500)
+        chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)
         chunk_iter = chunker.chunk(
             dl_doc=data
         )  # Use hybrid chunker to chunk the document

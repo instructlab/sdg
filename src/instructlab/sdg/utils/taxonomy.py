@@ -151,7 +151,7 @@ def extract_text_from_pdf(file_path: str) -> str:
             )
             page_text = "\n".join(text_lines)
             pdf_text += page_text + "\n"
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.warning(
                 f"Error extracting text from page {page_no} of '{file_path}': {e}"
             )
