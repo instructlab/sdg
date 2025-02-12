@@ -60,7 +60,7 @@ def resolve_ocr_options() -> OcrOptions:
 
         accelerator_options = AcceleratorOptions()
         _ = EasyOcrModel(
-            True, ocr_options, None, accelerator_options=accelerator_options
+            True, None, ocr_options, accelerator_options=accelerator_options
         )
         return ocr_options
     except ImportError:
