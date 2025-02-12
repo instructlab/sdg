@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 click>=8.1.7,<9.0.0
 datasets>=2.18.0,<3.0.0
+docling-core[chunking]>=2.9.0
 docling[tesserocr]>=2.9.0; sys_platform != 'darwin'
 docling>=2.9.0; sys_platform == 'darwin'
 docling-parse>=3.3.0
