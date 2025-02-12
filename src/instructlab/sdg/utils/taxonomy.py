@@ -13,7 +13,7 @@ import re
 from datasets import Dataset
 
 # pylint: disable=no-name-in-module
-from docling_parse.docling_parse import pdf_parser_v1
+from docling_parse.pdf_parsers import pdf_parser_v2
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -28,7 +28,7 @@ import yaml
 from .chunkers import DocumentChunker
 
 # Initialize the pdf parser
-PDFParser = pdf_parser_v1()
+PDFParser = pdf_parser_v2("error")
 
 logger = logging.getLogger(__name__)
 
@@ -122,13 +122,55 @@ def _string_contains_html(s: str) -> bool:
     return bool(html_tag_pattern.search(s))
 
 
+def extract_text_from_pdf(file_path: str) -> str:
+    """
+    Extracts text from a PDF file using the docling PdfParser API.
+
+    Args:
+        file_path (str): Path to the PDF file.
+
+    Returns:
+        str: The extracted text from all pages.
+    """
+    pdf_text = ""
+    # Load the PDF document in lazy mode. (Do not pass a doc_key here.)
+    pdf_doc = PDFParser.load(path_or_stream=file_path, lazy=True)
+    if pdf_doc is None:
+        logger.error(f"Failed to load PDF: {file_path}")
+        return ""
+
+    num_pages = pdf_doc.number_of_pages()
+    logger.info(f"PDF '{file_path}' has {num_pages} pages.")
+
+    # Note: The high-level API expects page numbers to be 1-indexed.
+    for page_no in range(1, num_pages + 1):
+        try:
+            pdf_page = pdf_doc.get_page(page_no=page_no)
+            text_lines = pdf_page.sanitized.export_to_textlines(
+                add_fontkey=True, add_fontname=False
+            )
+            page_text = "\n".join(text_lines)
+            pdf_text += page_text + "\n"
+        except Exception as e:
+            logger.warning(
+                f"Error extracting text from page {page_no} of '{file_path}': {e}"
+            )
+            continue
+
+    # Unload the document to free memory
+    PDFParser.unload_document(file_path)
+    logger.info(f"Unloaded PDF document: {file_path}")
+
+    return pdf_text
+
+
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
     document_output_dir: Path = None,
 ) -> Tuple[List[str], List[Path]]:
     """
-    Retrieve the content of files (Markdown and PDF) from a Git repository.
+    Retrieve the content of files (Markdown and PDFs) from a Git repository.
 
     Args:
         source (dict): Source info containing repository URL, commit hash, and list of file patterns.
@@ -186,55 +228,16 @@ def _get_documents(
                                 )
 
                         elif file_path.lower().endswith(".pdf"):
-                            # Process PDF files using docling_parse's pdf_parser_v1
-                            doc_key = f"key_{os.path.basename(file_path)}"  # Unique document key
-                            logger.info(f"Loading PDF document from {file_path}")
-
-                            success = PDFParser.load_document(doc_key, file_path)
-                            if not success:
-                                logger.warning(
-                                    f"Failed to load PDF document: {file_path}"
-                                )
-                                continue
-
-                            num_pages = PDFParser.number_of_pages(doc_key)
-                            logger.info(f"PDF '{file_path}' has {num_pages} pages.")
-
-                            pdf_text = ""
-
-                            for page in range(num_pages):
-                                try:
-                                    json_doc = PDFParser.parse_pdf_from_key_on_page(
-                                        doc_key, page
-                                    )
-                                    if "pages" not in json_doc or not json_doc["pages"]:
-                                        logger.warning(
-                                            f"Page {page + 1} could not be parsed in '{file_path}'"
-                                        )
-                                        continue
-
-                                    json_page = json_doc["pages"][0]
-
-                                    # Extract text from cells
-                                    for cell in json_page.get("cells", []):
-                                        text = cell.get("content", {}).get(
-                                            "rnormalized", ""
-                                        )
-                                        if text.strip():  # Only append non-empty text
-                                            pdf_text += text.strip() + "\n"
-                                except Exception as page_error:  # pylint: disable=broad-exception-caught
-                                    logger.warning(
-                                        f"Error parsing page {page + 1} of '{file_path}': {page_error}"
-                                    )
-                                    continue
-
+                            # Process PDF files using docling_parse's pdf_parser_v2
+                            logger.info(f"Extracting text from PDF file: {file_path}")
+                            pdf_text = extract_text_from_pdf(file_path)
                             if pdf_text:
                                 file_contents.append(pdf_text)
                                 filepaths.append(Path(file_path))
-
-                            # Unload the document to free memory
-                            PDFParser.unload_document(doc_key)
-                            logger.info(f"Unloaded PDF document: {file_path}")
+                            else:
+                                logger.warning(
+                                    f"PDF file {file_path} could not be processed"
+                                )
 
                         else:
                             logger.info(f"Skipping unsupported file type: {file_path}")
