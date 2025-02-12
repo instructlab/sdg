@@ -603,8 +603,9 @@ def mix_datasets(
     recipe_file: str,
     output_file: str,
     num_proc: Optional[int] = 8,
+    system_prompt: Optional[str] = None,
 ):
-    recipe = Recipe(recipe_file)
+    recipe = Recipe(recipe_file, system_prompt)
     if recipe.datasets:
         recipe.save_mixed_dataset(output_file, num_proc)
     else:
@@ -719,10 +720,12 @@ def generate_data(
     mix_datasets(
         recipe_file=f"{output_dir}/skills_recipe_{date_suffix}.yaml",
         output_file=f"{output_dir}/skills_train_msgs_{date_suffix}.jsonl",
+        system_prompt=system_prompt,
     )
     mix_datasets(
         recipe_file=f"{output_dir}/knowledge_recipe_{date_suffix}.yaml",
         output_file=f"{output_dir}/knowledge_train_msgs_{date_suffix}.jsonl",
+        system_prompt=system_prompt,
     )
 
     generate_duration = time.time() - generate_start
