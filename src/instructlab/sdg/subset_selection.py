@@ -1,7 +1,7 @@
 # Standard
 from dataclasses import dataclass, field
 from functools import wraps
-from multiprocessing import Pool, set_start_method
+from multiprocessing import Pool
 from typing import Any, Dict, List, Optional, Tuple, TypedDict, TypeVar, Union
 import gc
 import glob
