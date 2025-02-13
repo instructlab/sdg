@@ -12,6 +12,7 @@ from docling.chunking import HybridChunker
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
+    AcceleratorDevice,
     AcceleratorOptions,
     EasyOcrOptions,
     OcrOptions,
@@ -36,7 +37,12 @@ def _num_chars_from_tokens(num_tokens) -> int:
     return int(num_tokens * 4)  # 1 token ~ 4 English character
 
 
-def resolve_ocr_options() -> OcrOptions:
+def resolve_ocr_options(
+    docling_model_path: Optional[Path] = None,
+) -> Optional[OcrOptions]:
+    # Declare ocr_options explicitly as Optional[OcrOptions]
+    ocr_options: Optional[OcrOptions] = None
+
     # First, attempt to use tesserocr
     try:
         ocr_options = TesseractOcrOptions()
@@ -48,19 +54,30 @@ def resolve_ocr_options() -> OcrOptions:
         return ocr_options
     except ImportError:
         # No tesserocr, so try something else
-        pass
+        logger.warning("Tesseract not found, falling back to EasyOCR.")
+
     try:
-        ocr_options = EasyOcrOptions()
+        ocr_options = EasyOcrOptions(
+            lang=["en"],
+            use_gpu=False,
+            confidence_threshold=0.5,
+            model_storage_directory=str(docling_model_path),
+            recog_network="standard",
+            download_enabled=True,
+        )
         # Keep easyocr models on the CPU instead of GPU
         ocr_options.use_gpu = False
+        accelerator_options = AcceleratorOptions(device="cpu")
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
         # Third Party
         from docling.models.easyocr_model import EasyOcrModel
 
-        accelerator_options = AcceleratorOptions()
         _ = EasyOcrModel(
-            True, None, ocr_options, accelerator_options=accelerator_options
+            enabled=True,
+            artifacts_path=None,
+            options=ocr_options,
+            accelerator_options=accelerator_options,
         )
         return ocr_options
     except ImportError:
@@ -131,7 +148,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             do_ocr=False,
         )
 
-        ocr_options = resolve_ocr_options()
+        ocr_options = resolve_ocr_options(docling_model_path=self.docling_model_path)
         if ocr_options is not None:
             pipeline_options.do_ocr = True
             pipeline_options.ocr_options = ocr_options
@@ -190,10 +207,13 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             data = json.load(f)
 
         chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)
-        chunk_iter = chunker.chunk(
-            dl_doc=data
-        )  # Use hybrid chunker to chunk the document
-        chunks = [chunker.serialize_chunk(chunk) for chunk in chunk_iter]
+
+        try:
+            chunk_iter = chunker.chunk(dl_doc=data)
+            chunks = [chunker.serialize(chunk=chunk) for chunk in chunk_iter]
+        except Exception as e:
+            logger.error(f"Error chunking document {json_fp}: {e}")
+
         fused_texts = self.fuse_texts(chunks, 200)
 
         num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
@@ -317,11 +337,11 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
 
                 # Export Deep Search document JSON format:
                 with (docling_artifacts_path / f"{doc_filename}.json").open("w") as fp:
-                    fp.write(json.dumps(doc.legacy_document.export_to_dict()))
+                    fp.write(json.dumps(doc.document.export_to_dict()))
 
                 # Export Markdown format:
                 with (docling_artifacts_path / f"{doc_filename}.md").open("w") as fp:
-                    fp.write(doc.legacy_document.export_to_markdown())
+                    fp.write(doc.document.export_to_markdown())
             else:
                 logger.info(f"Document {doc.input.file} failed to convert.")
                 failure_count += 1
