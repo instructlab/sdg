@@ -874,12 +874,6 @@ def subset_datasets(
     )
 
     try:
-        # Set multiprocessing start method to 'spawn' for CUDA compatibility
-        try:
-            set_start_method("spawn")
-        except RuntimeError:
-            # Method is already set, ignore the error
-            pass
 
         logger.info(f"Processing configuration: {config}")
 
