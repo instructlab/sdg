@@ -874,7 +874,6 @@ def subset_datasets(
     )
 
     try:
-
         logger.info(f"Processing configuration: {config}")
 
         # Initialize data processor based on encoder type
