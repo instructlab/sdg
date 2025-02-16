@@ -9,6 +9,7 @@ gguf>=0.6.0
 httpx>=0.25.0,<1.0.0
 instructlab-schema>=0.4.0
 jinja2>=3.0.0
+kfp>=2.0.0,<3.0.0
 langchain-text-splitters
 openai>=1.13.3,<2.0.0
 sentencepiece>=0.2.0

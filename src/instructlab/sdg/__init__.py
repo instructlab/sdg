@@ -17,6 +17,7 @@ __all__ = (
     "LLMBlock",
     "LLMLogProbBlock",
     "LLMMessagesBlock",
+    "MockLLMBlock",
     "Pipeline",
     "PipelineBlockError",
     "PipelineConfigParserError",
@@ -42,6 +43,7 @@ from .blocks.llmblock import (
     LLMLogProbBlock,
     LLMMessagesBlock,
 )
+from .blocks.mockllmblock import MockLLMBlock
 from .blocks.utilblocks import (
     CombineColumnsBlock,
     DuplicateColumnsBlock,

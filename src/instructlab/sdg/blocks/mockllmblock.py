@@ -7,8 +7,10 @@ import string
 # Third Party
 from datasets import Dataset
 
-# First Party
-from instructlab.sdg import LLMBlock
+# Local
+from ..registry import BlockRegistry
+from ..utils import GenerateException
+from .llmblock import LLMBlock
 
 
 def _random_string(size):
@@ -44,12 +46,13 @@ def _add_mocked_cols(sample, block_name):
             sample["explanation"] = "This is an explanation."
             sample["rating"] = "1"
         case _:
-            raise Exception(
+            raise GenerateException(
                 f"Received an un-mocked LLMBlock: {block_name}. Add code in {__file__} to handle this block."
             )
     return sample
 
 
+@BlockRegistry.register("MockLLMBlock")
 class MockLLMBlock(LLMBlock):
     def generate(self, samples: Dataset):
         return samples.map(_add_mocked_cols, fn_kwargs={"block_name": self.block_name})

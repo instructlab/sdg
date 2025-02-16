@@ -22,7 +22,6 @@ from instructlab.sdg.generate_data import (
 )
 
 # Local
-from ..mockllmblock import MockLLMBlock
 from ..taxonomy import load_test_skills
 
 
@@ -54,9 +53,6 @@ class TestGranularAPI(unittest.TestCase):
         return glob.glob(str(self.tmp_path.joinpath("**/*")), recursive=True)
 
     def test_granular_api_end_to_end(self):
-        # Registry our mock block so we can reference it in pipelines
-        BlockRegistry.register("MockLLMBlock")(MockLLMBlock)
-
         # Clone a taxonomy and edit 1 file in it
         taxonomy_dir = self.tmp_path
 
