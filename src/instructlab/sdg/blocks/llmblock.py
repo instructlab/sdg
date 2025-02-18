@@ -108,9 +108,12 @@ class LLMBlock(Block):
         gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
+        block_config={},
     ) -> None:
         super().__init__(ctx, pipe, block_name)
-        self.block_config = self._load_config(config_path)
+        self.block_config = block_config
+        if not block_config:
+            self.block_config = self._load_config(config_path)
         self.prompt_struct = (
             """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
         )

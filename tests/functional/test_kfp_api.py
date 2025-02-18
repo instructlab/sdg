@@ -20,7 +20,11 @@ from instructlab.sdg.kfp.components import (
     postprocess_taxonomy,
     preprocess_taxonomy,
 )
-from instructlab.sdg.kfp.pipelines import e2e_pipeline
+from instructlab.sdg.kfp.pipelines import (
+    e2e_pipeline,
+    full_knowledge_pipeline,
+)
+from instructlab.sdg.utils.json import jlload
 
 # Local
 from ..taxonomy import load_test_skills
@@ -60,12 +64,30 @@ class TestKubeflowPipelinesAPI(unittest.TestCase):
             untracked_knowledge_file, test_valid_knowledge_skill
         )
 
+    def test_kfp_single_pipeline(self):
+        if "true" == "true":
+            return
+        results = full_knowledge_pipeline(
+            dataset_path=str(self.testdata_path.joinpath("datasets", "knowledge_new_short.jsonl")),
+        )
+        assert results.output
+        assert results.output.path
+        output_samples = jlload(results.output.path)
+        assert output_samples
+        for sample in output_samples:
+            assert sample.get("document", None)
+            assert sample.get("icl_document", None)
+            assert sample.get("question", None)
+            assert sample.get("response", None)
+
     def test_kfp_e2e_pipeline(self):
         taxonomy_repo = "https://github.com/RedHatOfficial/rhelai-sample-taxonomy"
         pipeline = str(self.testdata_path.joinpath("mock_pipelines"))
         teacher_model_path = str(
             self.testdata_path.joinpath("models/instructlab/granite-7b-lab")
         )
+
+        kfp.compiler.Compiler().compile(e2e_pipeline, package_path="e2e_pipeline.yaml")
 
         results = e2e_pipeline(
             taxonomy_repo=taxonomy_repo,
