@@ -78,6 +78,9 @@ def test_pipeline_batching_order_correct(sample_dataset, threaded_ctx):
         def __init__(self, *_, **__):
             pass
 
+        def block_name(self):
+            return "block-one"
+
         def generate(self, dataset):
             # Make sure the second half is processed before the first half
             if dataset[0]["foo"] == 0:
@@ -109,6 +112,9 @@ def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
         def __init__(self, ctx, pipeline, block_name, **block_config):
             self.ctx = ctx  # Save the context for use in generate if needed
 
+        def block_name(self):
+            return "block-one"
+
         def generate(self, dataset):
             # Assert that the dataset entering Block 1 is properly batched
             assert (
@@ -128,6 +134,9 @@ def test_pipeline_batching_after_each_block(sample_dataset, threaded_ctx):
     class MockBlockTwo:
         def __init__(self, ctx, pipeline, block_name, **block_config):
             self.ctx = ctx  # Save the context for use in generate if needed
+
+        def block_name(self):
+            return "block-two"
 
         def generate(self, dataset):
             # Assert that the dataset entering Block 2 is properly batched (this will fail if batching is not done after each block)
@@ -346,3 +355,31 @@ def test_pipeline_context_backwards_compat():
     assert ctx.client == client
     assert ctx.model_family is None
     assert ctx.save_freq == save_freq
+
+
+def test_pipeline_multiple_clients():
+    client1 = mock.MagicMock()
+    client2 = mock.MagicMock()
+
+    ctx = PipelineContext(client1)
+    assert ctx.client == client1
+
+    ctx = PipelineContext(
+        clients={
+            "default": client1,
+            "client2": client2,
+        }
+    )
+    assert ctx.client == client1
+    assert ctx.clients["default"] == client1
+    assert ctx.clients["client2"] == client2
+
+    ctx = PipelineContext(
+        clients={
+            "client1": client1,
+            "client2": client2,
+        }
+    )
+    assert ctx.client is None
+    assert ctx.clients["client1"] == client1
+    assert ctx.clients["client2"] == client2

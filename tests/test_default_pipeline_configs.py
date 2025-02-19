@@ -2,7 +2,7 @@
 
 # Standard
 from importlib import resources
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import unittest
 
 # Third Party
@@ -53,7 +53,7 @@ class TestDefaultPipelineConfigs(unittest.TestCase):
 
     def test_pipeline_from_config(self):
         ctx = PipelineContext(
-            client=None,
+            client=MagicMock(),
             model_family="mixtral",
             model_id="model",
             num_instructions_to_generate=1,

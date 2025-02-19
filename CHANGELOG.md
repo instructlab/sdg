@@ -2,6 +2,12 @@
 
 ### Features
 
+### Pipelines can now have LLMBlocks with different OpenAI clients
+
+For advanced use-cases, PipelineContext now accepts a `clients` dictionary of string to OpenAI client mappings. The special string of "default" sets the OpenAI client used for LLMBlocks by default, but individual LLMBlocks can override the client used by the `client` parameter in their yaml config.
+
+Backwards-compatibility is maintained for Pipelines that only need a single client, where setting the `client` property on PipelineContext objects just sets the default client in the `clients` dictionary automatically.
+
 ### LLMBlocks can now specify `model_family` or `model_id` in their config
 
 Each `LLMBlock` in a `Pipeline` can now specify `model_family` or `model_id` in their yaml configuration to set the values to use for these blocks, as opposed to setting this for the entire `Pipeline` in the `PipelineContext` object. This is useful for the cases where multiple `LLMBlocks` exist in the same `Pipeline` where each one uses a different model.

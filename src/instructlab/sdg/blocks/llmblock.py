@@ -63,6 +63,15 @@ def template_from_struct_and_config(struct, config):
     return PromptRegistry.template_from_string(struct.format(**filtered_config))
 
 
+def _resolve_client(client_name, context, block):
+    client = context.clients.get(client_name, None)
+    if not client:
+        raise BlockConfigParserError(
+            f"{type(block).__name__} {block.block_name} requests a client named {client_name} but no client of that name was found in the PipelineContext clients"
+        )
+    return client
+
+
 def _resolve_model_id(model_id, ctx_model_id, block):
     # If a model id was passed in the PipelineContext, use that
     if ctx_model_id:
@@ -105,6 +114,7 @@ class LLMBlock(Block):
         model_id=None,
         model_family=None,
         model_prompt=None,
+        client="default",
         gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
@@ -117,6 +127,7 @@ class LLMBlock(Block):
         self.prompt_template = template_from_struct_and_config(
             self.prompt_struct, self.block_config
         )
+        self.client = _resolve_client(client, self.ctx, self)
         self.model_id = _resolve_model_id(model_id, self.ctx.model_id, self)
         self.model_family = models.get_model_family(
             _resolve_model_family(model_family, self.ctx.model_family),
@@ -146,7 +157,7 @@ class LLMBlock(Block):
         # Whether the LLM server supports a list of input prompts
         # and supports the n parameter to generate n outputs per input
         self.server_supports_batched = server_supports_batched(
-            self.ctx.client, self.model_id
+            self.client, self.model_id
         )
 
     def _parse(self, generated_string) -> dict:
@@ -236,9 +247,7 @@ class LLMBlock(Block):
         logger.debug(f"STARTING GENERATION FOR LLMBlock USING PROMPTS: {prompts}")
         logger.debug(f"Generation arguments: {self.gen_kwargs}")
         if self.server_supports_batched:
-            response = self.ctx.client.completions.create(
-                prompt=prompts, **self.gen_kwargs
-            )
+            response = self.client.completions.create(prompt=prompts, **self.gen_kwargs)
             return [choice.text.strip() for choice in response.choices]
 
         results = []
@@ -248,7 +257,7 @@ class LLMBlock(Block):
         for prompt in prompts:
             logger.debug(f"CREATING COMPLETION FOR PROMPT: {prompt}")
             for _ in range(self.gen_kwargs.get("n", 1)):
-                response = self.ctx.client.completions.create(
+                response = self.client.completions.create(
                     prompt=prompt, **self.gen_kwargs
                 )
                 results.append(response.choices[0].text.strip())
@@ -514,9 +523,11 @@ class LLMMessagesBlock(Block):
         input_col,
         output_col,
         model_id=None,
+        client="default",
         gen_kwargs={},
     ) -> None:
         super().__init__(ctx, pipe, block_name)
+        self.client = _resolve_client(client, self.ctx, self)
         self.model_id = _resolve_model_id(model_id, self.ctx.model_id, self)
         self.input_col = input_col
         self.output_col = output_col
@@ -553,7 +564,7 @@ class LLMMessagesBlock(Block):
         n = self.gen_kwargs.get("n", 1)
         for message in messages:
             logger.debug(f"CREATING CHAT COMPLETION FOR MESSAGE: {message}")
-            responses = self.ctx.client.chat.completions.create(
+            responses = self.client.chat.completions.create(
                 messages=message, **self.gen_kwargs
             )
             if n > 1:
