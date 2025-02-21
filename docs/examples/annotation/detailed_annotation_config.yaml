@@ -37,9 +37,8 @@ examples: 'To better assist you with this task, here are some examples:
   [End of Output]
 
   {% endif %}'
-generation: 'Here is the query for annotation:
-
-  {{document}}'
+generation: "Here is the query for annotation:\n  [Start of Question]\n  {{text}}\n\
+  \  [End of Question]"
 introduction: 'Task Description: {{ simple_task_description }}'
 principles: '{{ principles }}'
 start_tags:
