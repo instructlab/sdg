@@ -360,7 +360,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         """
         prev_page_num, next_page_num = None, None
         for book_element in json_book["main-text"][idx - 1 :: -1]:
-            if "prov" in book_element:
+            if "prov" in book_element and book_element["prov"]:
                 prev_page_num = book_element["prov"][0]["page"]
                 break
         for book_element in json_book["main-text"][idx:]:
