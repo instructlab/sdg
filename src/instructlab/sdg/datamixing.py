@@ -8,6 +8,7 @@ import logging
 import os.path
 import random
 import uuid
+import warnings
 
 # Third Party
 from datasets import Dataset, concatenate_datasets, load_dataset
@@ -388,7 +389,20 @@ def _conv_pretrain(rec, use_legacy_pretraining_format: bool):
     Convert a messages dataset that contains only user/assistant entries per
     message (and in that order) to include an unmask field that indicates this
     sample should be used for pretraining.
+
+    Args:
+        rec: The record to convert
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     # Add unmask field to indicate this is a pretraining sample
     rec["unmask"] = True
     return rec
@@ -461,7 +475,7 @@ def _create_auxiliary_dataset(
 def _create_phase10_ds(
     generated_dataset: Dataset,
     auxiliary_inst: Optional[Dict[str, List[str]]],
-    use_legacy_pretraining_format: bool,
+    use_legacy_pretraining_format: bool,  # Deprecated. This parameter will be removed in a future version.
 ):
     """
     Create a dataset for Phase 1.0 of downstream training.
@@ -469,7 +483,21 @@ def _create_phase10_ds(
     This dataset is in our messages format, with each sample having
     additional context mixed in from other samples to improve the
     training outcomes.
+
+    Args:
+        generated_dataset: The dataset to create the phase10 dataset from
+        auxiliary_inst: The auxiliary instructions to use for the phase10 dataset
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=True
     )
@@ -493,15 +521,28 @@ def _create_phase10_ds(
 def _create_phase07_ds(
     generated_dataset: Dataset,
     auxiliary_inst: Optional[Dict[str, List[str]]],
-    use_legacy_pretraining_format: bool,
+    use_legacy_pretraining_format: bool,  # Deprecated. This parameter will be removed in a future version.
 ):
     """
     Create a dataset for Phase 0.7 of downstream training.
 
     Phase 0.7 is a pretraining phase, and this dataset contains messages
     with unmask=True to indicate these samples should be used for pretraining.
+
+    Args:
+        generated_dataset: The dataset to create the phase07 dataset from
+        auxiliary_inst: The auxiliary instructions to use for the phase07 dataset
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
-    # Phase 0.7
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=False
     )
@@ -658,8 +699,26 @@ class DataMixer:
         leaf_node_path,
         new_generated_data,
         is_knowledge,
-        use_legacy_pretraining_format,
+        use_legacy_pretraining_format,  # Deprecated. This parameter will be removed in a future version.
     ):
+        """
+        Collect the data generated from each taxonomy leaf node and write it to a file.
+
+        Args:
+            leaf_node_path: The path to the taxonomy leaf node
+            new_generated_data: The data generated from the taxonomy leaf node
+            is_knowledge: Whether the data is knowledge or skills
+            use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+                The new format simply sets unmask=True.
+        """
+        if use_legacy_pretraining_format:
+            warnings.warn(
+                "The use_legacy_pretraining_format parameter is deprecated and will be "
+                "removed in a future version. The new format simply sets unmask=True.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         if is_knowledge:
             knowledge_phase_data = _create_phase07_ds(
                 new_generated_data, self.auxiliary_inst, use_legacy_pretraining_format
