@@ -448,7 +448,9 @@ disable=raw-checker-failed,
         abstract-method,
         wrong-import-order,
         line-too-long,
-        logging-fstring-interpolation
+        logging-fstring-interpolation,
+        # This is being set off by our deprecation warnings
+        duplicate-code
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

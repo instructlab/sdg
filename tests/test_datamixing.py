@@ -17,10 +17,10 @@ from instructlab.sdg.datamixing import (
     DataMixer,
     Recipe,
     _add_extra_contexts_to_samples,
+    _conv_pretrain,
+    _create_auxiliary_dataset,
     _create_phase07_ds,
     _create_phase10_ds,
-    _create_auxiliary_dataset,
-    _conv_pretrain,
 )
 
 # We mock out the actual things that use num_procs anyway, but just
@@ -269,17 +269,17 @@ def test_phase07_creation(mock_auxiliary_dataset):
 
     # Check if Phase 0.7 contains knowledge and auxiliary datasets
     expected_phase07_size = len(knowledge_dataset) + len(auxiliary_dataset)
-    assert len(phase07_ds) == expected_phase07_size, (
-        "Phase 0.7 should contain knowledge and auxiliary datasets."
-    )
+    assert (
+        len(phase07_ds) == expected_phase07_size
+    ), "Phase 0.7 should contain knowledge and auxiliary datasets."
 
     # Verify that the content from all datasets is present in Phase 0.7
     auxiliary_ids = {item["id"] for item in auxiliary_dataset}
     phase07_ids = {item["id"] for item in phase07_ds}
 
-    assert auxiliary_ids.issubset(phase07_ids), (
-        "Phase 0.7 should include all auxiliary dataset entries."
-    )
+    assert auxiliary_ids.issubset(
+        phase07_ids
+    ), "Phase 0.7 should include all auxiliary dataset entries."
 
 
 @patch("instructlab.sdg.datamixing._create_auxiliary_dataset")
@@ -307,9 +307,9 @@ def test_phase10_creation(mock_auxiliary_dataset):
     )
 
     # Check if Phase 1.0 includes knowledge, auxiliary, and knowledge_skills content
-    assert len(phase10_ds) == phase10_expected_size, (
-        "Phase 1.0 should contain the expected number of entries, including Phase 0.7 content."
-    )
+    assert (
+        len(phase10_ds) == phase10_expected_size
+    ), "Phase 1.0 should contain the expected number of entries, including Phase 0.7 content."
 
 
 def test_all_samples_have_unmask_field():
@@ -375,11 +375,11 @@ def test_phase07_knowledge_samples_have_unmask_true():
             lambda rec: _conv_pretrain(rec, use_legacy_pretraining_format=False)
         )
         for sample in auxiliary_ds:
-            assert sample["unmask"] is True, (
-                "Auxiliary sample does not have unmask=True"
-            )
+            assert (
+                sample["unmask"] is True
+            ), "Auxiliary sample does not have unmask=True"
 
     # verify that at least ONE sample in phase10 has unmask=True
-    assert any(sample["unmask"] for sample in phase10_ds), (
-        "No samples in phase10 have unmask=True"
-    )
+    assert any(
+        sample["unmask"] for sample in phase10_ds
+    ), "No samples in phase10 have unmask=True"

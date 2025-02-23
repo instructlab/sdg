@@ -192,9 +192,9 @@ class Recipe:
         )
 
         # assert that the dataset only has the allowed columns
-        assert set(mixed_ds.column_names) == set(ALLOWED_COLS), (
-            "Dataset has invalid columns"
-        )
+        assert set(mixed_ds.column_names) == set(
+            ALLOWED_COLS
+        ), "Dataset has invalid columns"
         return mixed_ds
 
     def add_dataset(self, path, sampling_size):
