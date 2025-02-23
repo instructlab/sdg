@@ -174,7 +174,8 @@ def cleanup():
     if dist.is_initialized():
         dist.destroy_process_group()
 
-#FIXME: Use / Adapt below for unit / functional test for the encoder later
+
+# FIXME: Use / Adapt below for unit / functional test for the encoder later
 # def run_demo():
 #     try:
 #         encoder = ArcticEmbedEncoder(batch_size=2, max_length=512)
