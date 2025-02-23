@@ -21,8 +21,7 @@ import numpy as np
 import torch
 
 # Local
-from .encoders.arctic_encoder import ArcticEmbedEncoder
-from .encoders.bge_unified_encoder import UnifiedBGEEncoder
+# from .encoders.arctic_encoder import ArcticEmbedEncoder
 from .utils.subset_selection_utils import compute_pairwise_dense, get_default_num_gpus
 
 __DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -829,6 +828,28 @@ def process_folds_with_gpu(args):
         logger.error(f"Error in process_folds_with_gpu on GPU {gpu_id}: {str(e)}")
         raise
 
+def get_supported_encoders():
+    """Get list of supported encoder types from the .encoders directory."""
+    encoders_dir = os.path.join(os.path.dirname(__file__), "encoders")
+    encoder_files = glob.glob(os.path.join(encoders_dir, "*_encoder.py"))
+    return [os.path.basename(f).replace("_encoder.py", "") for f in encoder_files 
+            if not os.path.basename(f).startswith("__")]
+
+def get_encoder_class(encoder_type: str):
+    """Get the encoder class based on the encoder type."""
+    try:
+        # Convert encoder_type to class name (e.g., 'arctic' -> 'ArcticEmbedEncoder')
+        class_name = f"{encoder_type.capitalize()}EmbedEncoder"
+        # Import the module dynamically
+        module = __import__(f"instructlab.sdg.encoders.{encoder_type}_encoder", fromlist=[class_name])
+        # Get the class from the module
+        return getattr(module, class_name)
+    except (ImportError, AttributeError) as e:
+        supported_encoders = get_supported_encoders()
+        raise ValueError(
+            f"Unsupported encoder type: '{encoder_type}'. "
+            f"Supported types are: {[f'{t}' for t in supported_encoders]}"
+        ) from e
 
 def subset_datasets(
     input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs: Any
@@ -874,18 +895,20 @@ def subset_datasets(
     )
 
     try:
-        logger.info(f"Processing configuration: {config}")
+        # logger.info(f"Processing configuration: {config}")
 
-        # Initialize data processor based on encoder type
-        os.makedirs(config.basic.output_dir, exist_ok=True)
+        # # Initialize data processor based on encoder type
+        # os.makedirs(config.basic.output_dir, exist_ok=True)
 
-        if config.encoder.encoder_type == "bge":
-            processor = DataProcessor(config, UnifiedBGEEncoder)
-        elif config.encoder.encoder_type == "arctic":
-            processor = DataProcessor(config, ArcticEmbedEncoder)
-        else:
-            raise ValueError(f"Unsupported encoder type: {config.encoder.encoder_type}")
-
+        # if config.encoder.encoder_type == "arctic":
+        #     processor = DataProcessor(config, ArcticEmbedEncoder)
+        # else:
+        #     supported_encoders = get_supported_encoders()
+        #     raise ValueError(
+        #         f"Unsupported encoder type: {config.encoder.encoder_type}."
+        #         f"Supported types are: {', '.join(supported_encoders)}"
+        #     )
+        processor = DataProcessor(config, get_encoder_class(config.encoder.encoder_type))
         processor.process_files(input_files, config.basic.output_dir)
 
     except Exception as e:
