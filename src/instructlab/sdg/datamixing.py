@@ -47,12 +47,28 @@ def _adjust_train_sample_size(ds: Dataset, num_samples: int):
     return pandas.dataset_from_pandas_dataframe(df)
 
 
+def _create_empty_dataset():
+    """Create an empty dataset with the correct columns and types."""
+    return Dataset.from_dict(
+        {"id": [], "messages": [], "metadata": [], "unmask": []},
+        features={
+            "id": "string",
+            "messages": [{"content": "string", "role": "string"}],
+            "metadata": "string",
+            "unmask": "bool",
+        },
+    )
+
+
 def _sample_ds(dataset, sampling_size, num_proc):
     """
     Select sampling_size number/ratio of samples from a dataset, ensuring
     the returned dataset has only ALLOWED_COLS columns in it with any
     additional columns moved to the metadata section.
     """
+    if len(dataset) == 0:
+        return _create_empty_dataset()
+
     if sampling_size != 1.0:
         if isinstance(sampling_size, int):
             num_samples = sampling_size
@@ -70,6 +86,9 @@ def _sample_ds(dataset, sampling_size, num_proc):
                 metadata[col] = example[col]
                 example.pop(col)
         example["metadata"] = json.dumps(metadata)
+        # Ensure unmask field exists with default value False
+        if "unmask" not in example:
+            example["unmask"] = False
         return example
 
     dataset = dataset.map(_move_unallowed_cols_to_metadata, num_proc=num_proc)
