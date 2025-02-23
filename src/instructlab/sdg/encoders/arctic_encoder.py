@@ -4,16 +4,10 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, TypedDict, Union
 import os
-import sys
 
 # Third Party
-from datasets import Dataset
-from torch import Tensor
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
-from transformers import logging as hf_logging
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -133,7 +127,6 @@ class ArcticEmbedEncoder:
         instruction: str = "",
         return_tensors: bool = True,
         show_progress: bool = True,
-        **kwargs,
     ) -> Union[torch.Tensor, np.ndarray]:
         """Encode texts into embeddings."""
         input_was_string = isinstance(inputs, str)
@@ -181,56 +174,56 @@ def cleanup():
     if dist.is_initialized():
         dist.destroy_process_group()
 
+#FIXME: Use / Adapt below for unit / functional test for the encoder later
+# def run_demo():
+#     try:
+#         encoder = ArcticEmbedEncoder(batch_size=2, max_length=512)
+#         # Create some sample conversation texts. Multiply to have enough samples.
+#         conversations = [
+#             "User: I've been feeling really down lately...",
+#             "User: I have a big presentation tomorrow...",
+#             "User: I just read about the rapid decline in bee populations...",
+#             "User: I'm planning a trip to Japan next year...",
+#         ] * 10  # Adjust the number as needed
 
-def run_demo():
-    try:
-        encoder = ArcticEmbedEncoder(batch_size=2, max_length=512)
-        # Create some sample conversation texts. Multiply to have enough samples.
-        conversations = [
-            "User: I've been feeling really down lately...",
-            "User: I have a big presentation tomorrow...",
-            "User: I just read about the rapid decline in bee populations...",
-            "User: I'm planning a trip to Japan next year...",
-        ] * 10  # Adjust the number as needed
+#         if encoder.cfg.rank == 0:
+#             print("Last four conversations:")
+#             print(conversations)
 
-        if encoder.cfg.rank == 0:
-            print("Last four conversations:")
-            print(conversations)
+#         # Encode the texts using the encoder.encode method.
+#         embeddings = encoder.encode(
+#             conversations, instruction="Retrieve relevant passages."
+#         )
+#         if encoder.cfg.rank == 0:
+#             print("\nEncode results:")
+#             for i, (text, emb) in enumerate(zip(conversations, embeddings)):
+#                 print(f"{i+1}. {text[:50]}... -> Embedding shape: {emb.shape}")
 
-        # Encode the texts using the encoder.encode method.
-        embeddings = encoder.encode(
-            conversations, instruction="Retrieve relevant passages."
-        )
-        if encoder.cfg.rank == 0:
-            print("\nEncode results:")
-            for i, (text, emb) in enumerate(zip(conversations, embeddings)):
-                print(f"{i+1}. {text[:50]}... -> Embedding shape: {emb.shape}")
+#         # Demonstrate using embed_dataset directly.
+#         dataset = Dataset.from_dict(
+#             {"text": conversations, "idx": list(range(len(conversations)))}
+#         )
+#         embedded_ds = encoder.embed_dataset(
+#             dataset, instruction="Retrieve relevant passages.", add_to_dataset=True
+#         )
+#         if encoder.cfg.rank == 0:
+#             print("\nDataset results:")
+#             print(embedded_ds)
 
-        # Demonstrate using embed_dataset directly.
-        dataset = Dataset.from_dict(
-            {"text": conversations, "idx": list(range(len(conversations)))}
-        )
-        embedded_ds = encoder.embed_dataset(
-            dataset, instruction="Retrieve relevant passages.", add_to_dataset=True
-        )
-        if encoder.cfg.rank == 0:
-            print("\nDataset results:")
-            print(embedded_ds)
-
-        # Also show an example of returning numpy arrays.
-        embeddings_np = encoder.encode(
-            conversations,
-            instruction="Retrieve relevant passages.",
-            return_tensors=False,
-        )
-        if encoder.cfg.rank == 0:
-            print("\nNumpy array results:")
-            print(embeddings_np, embeddings_np.shape)
-    except Exception as e:
-        safe_print(dist.get_rank(), f"Demo failed: {str(e)}")
-    finally:
-        cleanup()
+#         # Also show an example of returning numpy arrays.
+#         embeddings_np = encoder.encode(
+#             conversations,
+#             instruction="Retrieve relevant passages.",
+#             return_tensors=False,
+#         )
+#         if encoder.cfg.rank == 0:
+#             print("\nNumpy array results:")
+#             print(embeddings_np, embeddings_np.shape)
+#     except Exception as e:
+#         safe_print(dist.get_rank(), f"Demo failed: {str(e)}")
+#     finally:
+#         cleanup()
 
 
-if __name__ == "__main__":
-    run_demo()
+# if __name__ == "__main__":
+#     run_demo()
