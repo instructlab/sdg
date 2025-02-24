@@ -116,9 +116,6 @@ class ProcessingConfig:
 
     def __post_init__(self):
         """Validate configuration after initialization."""
-        if not self.input_files:
-            raise ValueError("input_files cannot be empty")
-
         if not isinstance(self.subset_sizes, list):
             raise ValueError("subset_sizes must be a list")
 
@@ -903,19 +900,8 @@ def subset_datasets(
     )
 
     try:
-        # logger.info(f"Processing configuration: {config}")
+        logger.info(f"Processing configuration: {config}")
 
-        # # Initialize data processor based on encoder type
-        # os.makedirs(config.basic.output_dir, exist_ok=True)
-
-        # if config.encoder.encoder_type == "arctic":
-        #     processor = DataProcessor(config, ArcticEmbedEncoder)
-        # else:
-        #     supported_encoders = get_supported_encoders()
-        #     raise ValueError(
-        #         f"Unsupported encoder type: {config.encoder.encoder_type}."
-        #         f"Supported types are: {', '.join(supported_encoders)}"
-        #     )
         processor = DataProcessor(
             config, get_encoder_class(config.encoder.encoder_type)
         )

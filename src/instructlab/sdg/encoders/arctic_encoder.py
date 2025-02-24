@@ -4,7 +4,7 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, TypedDict, Union
 import os
-
+import logging
 # Third Party
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -13,13 +13,14 @@ import torch
 import torch.distributed as dist
 import torch.nn.functional as F
 
+logger = logging.getLogger(__name__)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def safe_print(rank, msg):
     """Only print from rank 0."""
     if rank == 0:
-        print(msg, flush=True)
+        logger.info(msg)
 
 
 # Define model configuration
@@ -97,7 +98,7 @@ class ArcticEmbedEncoder:
         self.model = self.model.to(self.cfg.device)
 
         if self.cfg.num_gpus > 1:
-            print(f"Using {self.cfg.num_gpus} GPUs")
+            logger.info(f"Using {self.cfg.num_gpus} GPUs")
             self.model = torch.nn.DataParallel(self.model)
 
         self.model.eval()
@@ -109,6 +110,13 @@ class ArcticEmbedEncoder:
         if isinstance(texts, str):
             texts = [texts]
 
+        #Ensure we always have an instruction
+        if not instruction and not self.cfg.use_default_instruction:
+            raise ValueError(
+                "An instruction must be provided when use_default_instruction is False. "
+                "Either provide an instruction or set use_default_instruction to True."
+            )
+
         if (
             not instruction
             and self.cfg.use_default_instruction
@@ -116,8 +124,13 @@ class ArcticEmbedEncoder:
         ):
             instruction = str(self.cfg.model_config["default_instruction"])
 
-        if instruction:
-            texts = [f"{instruction}: {text}" for text in texts]
+        if not instruction:  #catch if default_instruction is empty
+            raise ValueError(
+                "No instruction available. Either provide an instruction or ensure "
+                "the model config has a valid default_instruction."
+            )
+
+        texts = [f"{instruction}: {text}" for text in texts]
         return texts
 
     @torch.no_grad()

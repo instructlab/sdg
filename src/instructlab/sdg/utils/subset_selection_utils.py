@@ -1,13 +1,11 @@
 # Standard
-from typing import Optional
+from typing import Optional, Union
 import logging
 
 # Third Party
 from torch import Tensor
 from torch.nn import functional as F
 import torch
-
-__DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Configure logging
 logging.basicConfig(
@@ -30,12 +28,15 @@ def compute_pairwise_dense(
     tensor2: Optional[Tensor] = None,
     batch_size: int = 10000,
     metric: str = "cosine",
-    device: str = __DEVICE,
+    device: Optional[Union[str, torch.device]] = None,
     scaling: Optional[str] = None,
     kw: float = 0.1,
 ) -> Tensor:
     """Compute pairwise metric in batches between two sets of vectors."""
     assert batch_size > 0, "Batch size must be positive."
+
+    if not device:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     if tensor2 is None:
         tensor2 = tensor1
