@@ -1,6 +1,5 @@
 # Standard
 from dataclasses import dataclass, field
-from functools import wraps
 from multiprocessing import Pool
 from typing import Any, Dict, List, Optional, Tuple, TypedDict, TypeVar, Union
 import gc
@@ -9,7 +8,6 @@ import logging
 import math
 import os
 import re
-import time
 
 # Third Party
 from datasets import concatenate_datasets, load_dataset
@@ -21,10 +19,11 @@ import numpy as np
 import torch
 
 # Local
-# from .encoders.arctic_encoder import ArcticEmbedEncoder
-from .utils.subset_selection_utils import compute_pairwise_dense, get_default_num_gpus
-
-__DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+from .utils.subset_selection_utils import (
+    compute_pairwise_dense,
+    get_default_num_gpus,
+    retry_on_exception,
+)
 
 # Type variables
 T = TypeVar("T")
@@ -128,51 +127,6 @@ class ProcessingConfig:
                 )
             if isinstance(size, int) and size <= 0:
                 raise ValueError("Absolute values in subset_sizes must be positive")
-
-
-def retry_on_exception(func):
-    """
-    Decorator to retry a function upon exception up to a maximum number of retries.
-    """
-
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        last_exception = None
-        for attempt in range(self.config.system.max_retries):
-            try:
-                return func(self, *args, **kwargs)
-            except torch.cuda.OutOfMemoryError as e:
-                # Happens when GPU runs out of memory during batch processing
-                last_exception = e
-                logger.error(f"GPU out of memory on attempt {attempt + 1}: {str(e)}")
-            except RuntimeError as e:
-                # Common PyTorch errors (including some OOM errors and model issues)
-                last_exception = e
-                logger.error(
-                    f"PyTorch runtime error on attempt {attempt + 1}: {str(e)}"
-                )
-            except ValueError as e:
-                # From tokenizer or input validation
-                last_exception = e
-                logger.error(f"Value error on attempt {attempt + 1}: {str(e)}")
-            except TypeError as e:
-                # From incorrect input types or model parameter mismatches
-                last_exception = e
-                logger.error(f"Type error on attempt {attempt + 1}: {str(e)}")
-            except IndexError as e:
-                # Possible during tensor operations or batch processing
-                last_exception = e
-                logger.error(f"Index error on attempt {attempt + 1}: {str(e)}")
-
-            if attempt < self.config.system.max_retries - 1:
-                logger.info(f"Retrying in {self.config.system.retry_delay} seconds...")
-                time.sleep(self.config.system.retry_delay)
-                gc.collect()
-                torch.cuda.empty_cache()
-
-        raise last_exception
-
-    return wrapper
 
 
 class DataProcessor:

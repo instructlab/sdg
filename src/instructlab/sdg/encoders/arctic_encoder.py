@@ -3,8 +3,9 @@
 # Standard
 from dataclasses import dataclass
 from typing import Dict, List, Optional, TypedDict, Union
-import os
 import logging
+import os
+
 # Third Party
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -110,7 +111,7 @@ class ArcticEmbedEncoder:
         if isinstance(texts, str):
             texts = [texts]
 
-        #Ensure we always have an instruction
+        # Ensure we always have an instruction
         if not instruction and not self.cfg.use_default_instruction:
             raise ValueError(
                 "An instruction must be provided when use_default_instruction is False. "
@@ -124,7 +125,7 @@ class ArcticEmbedEncoder:
         ):
             instruction = str(self.cfg.model_config["default_instruction"])
 
-        if not instruction:  #catch if default_instruction is empty
+        if not instruction:  # catch if default_instruction is empty
             raise ValueError(
                 "No instruction available. Either provide an instruction or ensure "
                 "the model config has a valid default_instruction."

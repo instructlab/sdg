@@ -1,6 +1,9 @@
 # Standard
+from functools import wraps
 from typing import Optional, Union
+import gc
 import logging
+import time
 
 # Third Party
 from torch import Tensor
@@ -12,6 +15,51 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+def retry_on_exception(func):
+    """
+    Decorator to retry a function upon exception up to a maximum number of retries.
+    """
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        last_exception = None
+        for attempt in range(self.config.system.max_retries):
+            try:
+                return func(self, *args, **kwargs)
+            except torch.cuda.OutOfMemoryError as e:
+                # Happens when GPU runs out of memory during batch processing
+                last_exception = e
+                logger.error(f"GPU out of memory on attempt {attempt + 1}: {str(e)}")
+            except RuntimeError as e:
+                # Common PyTorch errors (including some OOM errors and model issues)
+                last_exception = e
+                logger.error(
+                    f"PyTorch runtime error on attempt {attempt + 1}: {str(e)}"
+                )
+            except ValueError as e:
+                # From tokenizer or input validation
+                last_exception = e
+                logger.error(f"Value error on attempt {attempt + 1}: {str(e)}")
+            except TypeError as e:
+                # From incorrect input types or model parameter mismatches
+                last_exception = e
+                logger.error(f"Type error on attempt {attempt + 1}: {str(e)}")
+            except IndexError as e:
+                # Possible during tensor operations or batch processing
+                last_exception = e
+                logger.error(f"Index error on attempt {attempt + 1}: {str(e)}")
+
+            if attempt < self.config.system.max_retries - 1:
+                logger.info(f"Retrying in {self.config.system.retry_delay} seconds...")
+                time.sleep(self.config.system.retry_delay)
+                gc.collect()
+                torch.cuda.empty_cache()
+
+        raise last_exception
+
+    return wrapper
 
 
 def get_default_num_gpus() -> int:
