@@ -12,8 +12,10 @@ instructlab-schema>=0.4.0
 jinja2>=3.0.0
 langchain-text-splitters
 openai>=1.13.3,<2.0.0
+semchunk >= 2.2.0
 sentencepiece>=0.2.0
 tabulate>=0.9.0
+transformers >=4.34.0
 
 # Note: this dependency goes along with langchain-text-splitters and may be
 #       removed once that one is removed.
