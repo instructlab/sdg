@@ -165,19 +165,27 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             List: a list of chunks from the documents
         """
 
-        if self.document_paths == []:
-            return []
-
         parsed_documents = self.converter.convert_all(self.document_paths)
+        all_chunks = []
+        for conversion_result in parsed_documents:
+            doc = conversion_result.document
+            chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)
+            try:
+                chunk_iter = chunker.chunk(dl_doc=doc)
+                chunks = [chunker.serialize(chunk=chunk) for chunk in chunk_iter]
+            except Exception as e:
+                logger.error(
+                    f"Error chunking document {conversion_result.input.file}: {e}"
+                )
+                chunks = []
 
-        docling_artifacts_path = self.export_documents(parsed_documents)
+            fused_texts = self.fuse_texts(chunks, 200)
+            num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
+            chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
+            final_chunks = chunk_markdowns(fused_texts, chunk_size)
+            all_chunks.extend(final_chunks)
 
-        docling_json_paths = list(docling_artifacts_path.glob("*.json"))
-        chunks = []
-        for json_fp in docling_json_paths:
-            chunks.extend(self._process_parsed_docling_json(json_fp))
-
-        return chunks
+        return all_chunks
 
     def _path_validator(self, path) -> Path:
         """
@@ -192,33 +200,6 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             if not path.exists():
                 raise FileNotFoundError(f"{path} does not exist.")
         return path
-
-    def _process_parsed_docling_json(self, json_fp: Path) -> Dataset:
-        """
-        Process the parsed docling json file and return a dataset.
-        Args:
-            json_fp (Path): Path to the parsed docling json file.
-        Returns:
-            List: a list of chunks built from the provided json file
-        """
-        logger.info(f"Processing parsed docling json file: {json_fp}")
-        with open(json_fp, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
-        chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)
-        chunks = []
-
-        try:
-            chunk_iter = chunker.chunk(dl_doc=data)
-            chunks = [chunker.serialize(chunk=chunk) for chunk in chunk_iter]
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.error(f"Error chunking document {json_fp}: {e}")
-
-        fused_texts = self.fuse_texts(chunks, 200)
-
-        num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
-        chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
-        return chunk_markdowns(fused_texts, chunk_size)
 
     def fuse_texts(
         self, text_list: List, short_length_threshold: int = 130
