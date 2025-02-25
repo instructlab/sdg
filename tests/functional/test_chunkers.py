@@ -25,52 +25,31 @@ def test_paths():
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def tokenizer_model_name():
     """Fixture to return the path to the tokenizer model."""
     return os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab")
 
 
 @pytest.mark.parametrize(
-    "doc_type, expected_chunks",
+    "document_type, expected_chunks",
     [
         ("pdf", 9),
-        ("md", 7),  # Assuming there's no specific text to check in Markdown
+        ("md", 7),
     ],
 )
 def test_chunk_documents(
-    tmp_path, tokenizer_model_name, test_paths, doc_type, expected_chunks, contains_text
+    tmp_path, tokenizer_model_name, test_paths, document_type, expected_chunks
 ):
     """
     Generalized test function for chunking documents.
-    """
-    document_path = test_paths[doc_type]
-    chunker = DocumentChunker(
-        document_paths=[document_path],
-        output_dir=tmp_path,
-        tokenizer_model_name=tokenizer_model_name,
-        server_ctx_size=4096,
-        chunk_word_count=500,
-    )
-    chunks = chunker.chunk_documents()
-    assert len(chunks) > expected_chunks
-    if contains_text:
-        assert contains_text in chunks[0]
-    for chunk in chunks:
-        assert len(chunk) < 2500
 
-
-def test_chunk_documents(
-    tmp_path, tokenizer_model_name, test_paths, doc_type, expected_chunks
-):
-    """
-    Generalized test function for chunking documents.
-    Instead of checking for a particular text, we verify that:
-      - The number of chunks is greater than a minimum expected value.
+    Verifies that:
+      - The number of chunks is greater than the expected minimum.
       - No chunk is empty.
-      - Each chunk is within a reasonable length.
+      - Each chunk's length is less than 2500 characters.
     """
-    document_path = test_paths[doc_type]
+    document_path = test_paths[document_type]
     chunker = DocumentChunker(
         document_paths=[document_path],
         output_dir=tmp_path,
@@ -80,12 +59,12 @@ def test_chunk_documents(
     )
     chunks = chunker.chunk_documents()
 
-    # Check that we have more chunks than expected
+    # Check that we have more chunks than expected.
     assert (
         len(chunks) > expected_chunks
     ), f"Expected more than {expected_chunks} chunks, got {len(chunks)}"
 
-    # Check that no chunk is empty and each chunk is within the max allowed length (2500 characters)
+    # Check that no chunk is empty and each chunk's length is within the allowed limit.
     for chunk in chunks:
         assert chunk, "Chunk should not be empty"
         assert len(chunk) < 2500, f"Chunk length {len(chunk)} exceeds maximum allowed"
