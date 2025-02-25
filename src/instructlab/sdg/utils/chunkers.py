@@ -12,7 +12,6 @@ from docling.chunking import HybridChunker
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
-    AcceleratorDevice,
     AcceleratorOptions,
     EasyOcrOptions,
     OcrOptions,
@@ -207,11 +206,12 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             data = json.load(f)
 
         chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)
+        chunks = []
 
         try:
             chunk_iter = chunker.chunk(dl_doc=data)
             chunks = [chunker.serialize(chunk=chunk) for chunk in chunk_iter]
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Error chunking document {json_fp}: {e}")
 
         fused_texts = self.fuse_texts(chunks, 200)
