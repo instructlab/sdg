@@ -8,7 +8,6 @@ import re
 
 # Third Party
 from datasets import Dataset
-from docling.chunking import HybridChunker
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
@@ -18,6 +17,7 @@ from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TesseractOcrOptions,
 )
+from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
 # First Party
