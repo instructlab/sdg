@@ -173,7 +173,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             try:
                 chunk_iter = chunker.chunk(dl_doc=doc)
                 chunks = [chunker.serialize(chunk=chunk) for chunk in chunk_iter]
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 logger.error(
                     f"Error chunking document {conversion_result.input.file}: {e}"
                 )
