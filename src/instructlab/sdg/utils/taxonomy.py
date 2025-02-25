@@ -158,7 +158,7 @@ def extract_text_from_pdf(file_path: str) -> str:
             continue
 
     # Unload the document to free memory
-    PDFParser.unload_document(file_path)
+    pdf_doc.unload()
     logger.info(f"Unloaded PDF document: {file_path}")
 
     return pdf_text
