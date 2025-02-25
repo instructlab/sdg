@@ -1,0 +1,11 @@
+end_tags:
+- ''
+examples: null
+generation: 'Here is the query for annotation:
+
+  {{text}}'
+introduction: 'Task Description: {{simple_task_description}}'
+principles: null
+start_tags:
+- ''
+system: null

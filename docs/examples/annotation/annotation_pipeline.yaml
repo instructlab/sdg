@@ -1,0 +1,21 @@
+blocks:
+- config:
+    config_path: detailed_annotation_config.yaml
+    gen_kwargs:
+      extra_body:
+        guided_choice:
+        - World
+        - Sports
+        - Business
+        - Sci/Tech
+        guided_decoding_backend: xgrammar
+      max_tokens: 20
+      temperature: 0
+    model_id: mistralai/Mixtral-8x7B-Instruct-v0.1
+    output_cols:
+    - output
+  drop_duplicates:
+  - text
+  name: annotation
+  type: LLMBlock
+version: '1.0'
