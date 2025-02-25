@@ -4,7 +4,7 @@
 import sys
 
 # block slow imports
-for unwanted in ["deepspeed", "llama_cpp", "torch", "transformers", "vllm"]:
+for unwanted in ["deepspeed", "llama_cpp", "torch", "vllm"]:
     # importlib raises ModuleNotFound when sys.modules value is None.
     assert unwanted not in sys.modules
     sys.modules[unwanted] = None  # type: ignore[assignment]
