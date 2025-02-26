@@ -4,13 +4,16 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 import json
 import logging
+import os
 import re
+import sys
 
 # Third Party
 from datasets import Dataset
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
+    AcceleratorDevice,
     AcceleratorOptions,
     EasyOcrOptions,
     OcrOptions,
@@ -146,7 +149,11 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             artifacts_path=self.docling_model_path,
             do_ocr=False,
         )
-
+        # deactivate MPS acceleration on Github CI
+        if os.getenv("CI") and sys.platform == "darwin":
+            pipeline_options.accelerator_options = AcceleratorOptions(
+                device=AcceleratorDevice.CPU
+            )
         ocr_options = resolve_ocr_options(docling_model_path=self.docling_model_path)
         if ocr_options is not None:
             pipeline_options.do_ocr = True
