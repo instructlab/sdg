@@ -1,0 +1,16 @@
+system: You are a helpful AI assistant.
+
+introduction: |
+  Repeat the document below back to me verbatim.
+
+principles: |
+  Do not change anything.
+
+examples: ""
+
+generation: |
+  Document:
+  {{document}}
+
+start_tags: [""]
+end_tags: [""]

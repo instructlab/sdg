@@ -60,7 +60,10 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     # on individual datasets
     DEFAULT_DATASET_NUM_PROCS = 8
 
-    client: OpenAI
+    # The key of our default client
+    DEFAULT_CLIENT_KEY = "default"
+
+    client: Optional[OpenAI] = None
     model_family: Optional[str] = None
     model_id: Optional[str] = None
     num_instructions_to_generate: Optional[int] = None
@@ -70,6 +73,9 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
     max_num_tokens: Optional[int] = llmblock.DEFAULT_MAX_NUM_TOKENS
     batch_size: int = DEFAULT_BATCH_SIZE
     batch_num_workers: Optional[int] = None
+    clients: Optional[Dict[str, OpenAI]] = None
+
+    _clients = None
 
     @property
     def batching_enabled(self) -> bool:
@@ -77,6 +83,33 @@ class PipelineContext:  # pylint: disable=too-many-instance-attributes
         workers is not set explicitly to 1
         """
         return self.batch_size > 0 and self.batch_num_workers != 1
+
+    @property  # type: ignore
+    def client(self):
+        return self.clients.get(self.DEFAULT_CLIENT_KEY, None)
+
+    @client.setter
+    def client(self, value):
+        if isinstance(value, property):
+            # No default value
+            value = None
+        self.clients[self.DEFAULT_CLIENT_KEY] = value
+
+    @property  # type: ignore
+    def clients(self):
+        if self._clients is None:
+            self._clients = {}
+        return self._clients
+
+    @clients.setter
+    def clients(self, value):
+        if isinstance(value, property):
+            # Empty hash default value
+            value = {}
+        if value:
+            # Only set _clients if passed in a value, so we don't
+            # override it with the default of None from the @dataclass
+            self._clients = value
 
 
 # This is part of the public API.

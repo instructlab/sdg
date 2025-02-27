@@ -20,6 +20,7 @@ from src.instructlab.sdg import (
     LLMBlock,
     LLMLogProbBlock,
     LLMMessagesBlock,
+    PipelineContext,
 )
 from src.instructlab.sdg.blocks.llmblock import server_supports_batched
 from src.instructlab.sdg.utils import models
@@ -156,9 +157,11 @@ class TestLLMBlockWithRealConfigs(unittest.TestCase):
 @patch("src.instructlab.sdg.blocks.block.Block._load_config")
 class TestLLMBlockOtherFunctions(unittest.TestCase):
     def setUp(self):
-        self.mock_ctx = MagicMock()
-        self.mock_ctx.model_family = "mixtral"
-        self.mock_ctx.model_id = "test_model"
+        self.ctx = PipelineContext()
+        self.ctx.model_family = "mixtral"
+        self.ctx.model_id = "test_model"
+        self.mock_client = MagicMock()
+        self.ctx.client = self.mock_client
         self.mock_pipe = MagicMock()
         self.config_return_value = {
             "system": "{{fruit}}",
@@ -170,10 +173,10 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
 
     def test_max_num_tokens_override(self, mock_load_config):
         mock_load_config.return_value = self.config_return_value
-        self.mock_ctx.max_num_tokens = 512
+        self.ctx.max_num_tokens = 512
         # Ensure that if max_tokens is specified, it is used correctly
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -193,7 +196,7 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
             "generation": "generation",
         }
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -212,12 +215,12 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
             "generation": "generation",
         }
         # save state for future tests
-        old_num_instructions = self.mock_ctx.num_instructions_to_generate
+        old_num_instructions = self.ctx.num_instructions_to_generate
 
-        self.mock_ctx.num_instructions_to_generate = None
+        self.ctx.num_instructions_to_generate = None
         with pytest.raises(BlockConfigParserError) as exc:
             block = LLMBlock(
-                ctx=self.mock_ctx,
+                ctx=self.ctx,
                 pipe=self.mock_pipe,
                 block_name="gen_knowledge",
                 config_path="",
@@ -226,9 +229,9 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
             )
         assert "num_instructions_to_generate was not set" in str(exc.value)
 
-        self.mock_ctx.num_instructions_to_generate = 5
+        self.ctx.num_instructions_to_generate = 5
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -238,7 +241,7 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block
 
         # restore state for future tests
-        self.mock_ctx.num_instructions_to_generate = old_num_instructions
+        self.ctx.num_instructions_to_generate = old_num_instructions
 
     def test_resolve_model_id(self, mock_load_config):
         mock_load_config.return_value = {
@@ -249,13 +252,13 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
             "generation": "generation",
         }
         # save state for future tests
-        old_model_id = self.mock_ctx.model_id
+        old_model_id = self.ctx.model_id
 
         # Raise an error when no model_id on block or PipelineContext
-        self.mock_ctx.model_id = None
+        self.ctx.model_id = None
         with pytest.raises(BlockConfigParserError) as exc:
             block = LLMBlock(
-                ctx=self.mock_ctx,
+                ctx=self.ctx,
                 pipe=self.mock_pipe,
                 block_name="gen_knowledge",
                 config_path="",
@@ -265,7 +268,7 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
 
         # model_id on block is default
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -275,9 +278,9 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block.model_id == "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
         # model_id on PipelineContext gets used
-        self.mock_ctx.model_id = "test_model"
+        self.ctx.model_id = "test_model"
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -286,9 +289,9 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block.model_id == "test_model"
 
         # model_id on PipelineContext overrides
-        self.mock_ctx.model_id = "test_model"
+        self.ctx.model_id = "test_model"
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -298,7 +301,7 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block.model_id == "test_model"
 
         # restore state for future tests
-        self.mock_ctx.model_id = old_model_id
+        self.ctx.model_id = old_model_id
 
     def test_resolve_model_family(self, mock_load_config):
         mock_load_config.return_value = {
@@ -309,12 +312,12 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
             "generation": "generation",
         }
         # save state for future tests
-        old_model_family = self.mock_ctx.model_family
+        old_model_family = self.ctx.model_family
 
         # Uses a default model_family when none specified
-        self.mock_ctx.model_family = None
+        self.ctx.model_family = None
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -324,7 +327,7 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
 
         # model_family on block is used by defalt
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -334,9 +337,9 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block.model_family == "granite"
 
         # model_family on PipelineContext gets used
-        self.mock_ctx.model_family = "mixtral"
+        self.ctx.model_family = "mixtral"
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -345,9 +348,9 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block.model_family == "mixtral"
 
         # model_family on PipelineContext overrides
-        self.mock_ctx.model_family = "mixtral"
+        self.ctx.model_family = "mixtral"
         block = LLMBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             config_path="",
@@ -357,7 +360,95 @@ class TestLLMBlockOtherFunctions(unittest.TestCase):
         assert block.model_family == "mixtral"
 
         # restore state for future tests
-        self.mock_ctx.model_family = old_model_family
+        self.ctx.model_family = old_model_family
+
+    def test_resolve_client(self, mock_load_config):
+        mock_load_config.return_value = {
+            "system": "{{fruit}}",
+            "introduction": "introduction",
+            "principles": "principles",
+            "examples": "examples",
+            "generation": "generation",
+        }
+        # save state for future tests
+        old_client = self.ctx.client
+        old_clients = self.ctx.clients
+
+        # Uses the default client when none specified
+        block = LLMBlock(
+            ctx=self.ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block.client == self.ctx.client
+
+        # client on block is used when given
+        client2 = MagicMock()
+        self.ctx.clients = {
+            "client2": client2,
+        }
+        block = LLMBlock(
+            ctx=self.ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            client="client2",
+        )
+        assert block.client == client2
+
+        # raises an error when a block tries to use a client that's
+        # not defined
+        with pytest.raises(BlockConfigParserError) as exc:
+            LLMBlock(
+                ctx=self.ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_path="",
+                output_cols=[],
+                client="client3",
+            )
+        assert "no client of that name" in str(exc.value)
+
+        # even if that's the "default" client, if the user gave an
+        # explicit mapping of clients that did not include a default
+        with pytest.raises(BlockConfigParserError) as exc:
+            LLMBlock(
+                ctx=self.ctx,
+                pipe=self.mock_pipe,
+                block_name="gen_knowledge",
+                config_path="",
+                output_cols=[],
+                client="default",
+            )
+        assert "no client of that name" in str(exc.value)
+
+        # can find the default client if default explicitly specified
+        client_default = MagicMock()
+        self.ctx.clients = {"default": client_default}
+        block = LLMBlock(
+            ctx=self.ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+            client="default",
+        )
+        assert block.client == client_default
+        block = LLMBlock(
+            ctx=self.ctx,
+            pipe=self.mock_pipe,
+            block_name="gen_knowledge",
+            config_path="",
+            output_cols=[],
+        )
+        assert block.client == client_default
+
+        # restore state for future tests
+        self.ctx.clients = old_clients
+        self.ctx.client = old_client
 
 
 class TestLLMBlockBatching(unittest.TestCase):
@@ -570,16 +661,16 @@ class TestLLMLogProbBlock(unittest.TestCase):
 
 class TestLLMMessagesBlock(unittest.TestCase):
     def setUp(self):
-        self.mock_ctx = MagicMock()
-        self.mock_ctx.model_family = "mixtral"
-        self.mock_ctx.model_id = "test_model"
+        self.ctx = PipelineContext()
+        self.ctx.model_family = "mixtral"
+        self.ctx.model_id = "test_model"
         self.mock_pipe = MagicMock()
         self.mock_client = MagicMock()
-        self.mock_ctx.client = self.mock_client
+        self.ctx.client = self.mock_client
 
     def test_constructor_works(self):
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -589,7 +680,7 @@ class TestLLMMessagesBlock(unittest.TestCase):
 
     def test_temperature_validation(self):
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -599,7 +690,7 @@ class TestLLMMessagesBlock(unittest.TestCase):
         assert block.gen_kwargs["temperature"] != 0
 
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -622,7 +713,7 @@ class TestLLMMessagesBlock(unittest.TestCase):
         mock_chat.completions = mock_completion
         self.mock_client.chat = mock_chat
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -641,13 +732,13 @@ class TestLLMMessagesBlock(unittest.TestCase):
 
     def test_resolve_model_id(self):
         # save state for future tests
-        old_model_id = self.mock_ctx.model_id
+        old_model_id = self.ctx.model_id
 
         # Raise an error when no model_id on block or PipelineContext
-        self.mock_ctx.model_id = None
+        self.ctx.model_id = None
         with pytest.raises(BlockConfigParserError) as exc:
             block = LLMMessagesBlock(
-                ctx=self.mock_ctx,
+                ctx=self.ctx,
                 pipe=self.mock_pipe,
                 block_name="gen_knowledge",
                 input_col="messages",
@@ -657,7 +748,7 @@ class TestLLMMessagesBlock(unittest.TestCase):
 
         # model_id on block is default
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -667,9 +758,9 @@ class TestLLMMessagesBlock(unittest.TestCase):
         assert block.model_id == "mistralai/Mixtral-8x7B-Instruct-v0.1"
 
         # model_id on PipelineContext gets used
-        self.mock_ctx.model_id = "test_model"
+        self.ctx.model_id = "test_model"
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -678,9 +769,9 @@ class TestLLMMessagesBlock(unittest.TestCase):
         assert block.model_id == "test_model"
 
         # model_id on PipelineContext overrides
-        self.mock_ctx.model_id = "test_model"
+        self.ctx.model_id = "test_model"
         block = LLMMessagesBlock(
-            ctx=self.mock_ctx,
+            ctx=self.ctx,
             pipe=self.mock_pipe,
             block_name="gen_knowledge",
             input_col="messages",
@@ -690,4 +781,4 @@ class TestLLMMessagesBlock(unittest.TestCase):
         assert block.model_id == "test_model"
 
         # restore state for future tests
-        self.mock_ctx.model_id = old_model_id
+        self.ctx.model_id = old_model_id
