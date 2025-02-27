@@ -68,7 +68,7 @@ def resolve_ocr_options(
             download_enabled=True,
         )
         # Keep easyocr models on the CPU instead of GPU
-        ocr_options.use_gpu = False
+        ocr_options.use_gpu = None
         accelerator_options = AcceleratorOptions(device="cpu")
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
