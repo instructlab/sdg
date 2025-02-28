@@ -22,6 +22,8 @@ from docling.datamodel.pipeline_options import (
 )
 from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
+import semchunk
+import transformers
 
 # First Party
 from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
