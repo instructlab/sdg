@@ -33,7 +33,7 @@ At the heart of the framework is the **Block**. Each block is a self-contained c
 - Performing data transformations
 - Applying filters
 
-Blocks are designed to be:
+Blocks are designed to be made:
 
 - **Modular**: Reusable across multiple pipelines.
 - **Composable**: Easily chained together to create workflows.
