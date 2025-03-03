@@ -43,6 +43,39 @@ class BasicConfig:
     batch_size: int = 100000
     num_folds: int = 50
     combine_files: bool = False
+    epsilon: float = field(
+        default=160.0,
+        metadata={
+            "advanced": True,
+            "help": "Epsilon parameter for the LazierThanLazyGreedy optimizer in facility location maximization. "
+                   "Default of 160.0 is optimized for datasets >100k samples. "
+                   "For smaller datasets, consider using much smaller values (starting from 0.1)."
+        }
+    )
+
+    def __post_init__(self):
+        """Validate configuration after initialization."""
+        if not 0 < self.epsilon <= 160:
+            raise ValueError("epsilon must be between 0 and 160")
+
+    def validate_epsilon_for_dataset_size(self, dataset_size: int) -> None:
+        """
+        Validate epsilon parameter based on dataset size and provide appropriate warnings.
+
+        Args:
+            dataset_size (int): Size of the dataset being processed
+        """
+        if dataset_size < 100000:
+            logger.warning(
+                "Subset selection is highly recommended to be used only with dataset sizes over 100k samples. "
+                f"Your dataset has {dataset_size:,} samples."
+            )
+            if self.epsilon > 1.0:
+                logger.warning(
+                    f"Current epsilon value ({self.epsilon}) may be too high for a dataset of this size. "
+                    "For smaller datasets, consider using much smaller values (starting from 0.1) "
+                    "to ensure proper subset selection."
+                )
 
 
 @dataclass
@@ -511,6 +544,7 @@ class DataProcessor:
                     embeddings,
                     self.config.subset_sizes,
                     len(embeddings),  # Pass total samples for absolute size calculation
+                    self.config.basic.epsilon,
                 )
             )
             start_fold = end_fold
@@ -627,6 +661,9 @@ class DataProcessor:
             input_file (str): Original input file path (for extension)
         """
         try:
+            # Validate epsilon based on dataset size
+            self.config.basic.validate_epsilon_for_dataset_size(len(dataset))
+
             # Create dataset-specific output directory
             dataset_output_dir = os.path.join(output_dir, dataset_name)
             os.makedirs(dataset_output_dir, exist_ok=True)
@@ -696,7 +733,7 @@ def process_folds_with_gpu(args):
     """
     Process folds on GPU with support for both percentage and absolute size specifications.
     """
-    gpu_id, gpu_folds_info, embeddings, subset_sizes, total_samples = args
+    gpu_id, gpu_folds_info, embeddings, subset_sizes, total_samples, epsilon = args
     try:
         torch.cuda.set_device(gpu_id)
         device = f"cuda:{gpu_id}"
@@ -747,7 +784,7 @@ def process_folds_with_gpu(args):
                     subset_result = ds_func.maximize(
                         budget=budget,
                         optimizer="LazierThanLazyGreedy",
-                        epsilon=0.1,
+                        epsilon=epsilon,
                         stopIfZeroGain=False,
                         stopIfNegativeGain=False,
                         verbose=False,
