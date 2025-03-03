@@ -88,9 +88,23 @@ class ArcticEmbedEncoder:
 
     def _initialize_model(self) -> None:
         """Initialize model."""
-        self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name)
+        home_dir = os.path.expanduser("~")
+        model_path = os.path.join(
+            home_dir, ".cache", "instructlab", "models", self.cfg.model_name
+        )
+
+        if not os.path.exists(model_path):
+            raise ValueError(
+                f"Model not found in available models: {self.cfg.model_name}\n"
+                "Please run `ilab model download` and download the necessary model"
+            )
+
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModel.from_pretrained(
-            self.cfg.model_name, add_pooling_layer=False, trust_remote_code=True
+            model_path,
+            add_pooling_layer=False,
+            trust_remote_code=True,
+            local_files_only=True,
         )
 
         if self.cfg.use_fp16:
