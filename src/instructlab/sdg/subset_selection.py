@@ -48,9 +48,9 @@ class BasicConfig:
         metadata={
             "advanced": True,
             "help": "Epsilon parameter for the LazierThanLazyGreedy optimizer in facility location maximization. "
-                   "Default of 160.0 is optimized for datasets >100k samples. "
-                   "For smaller datasets, consider using much smaller values (starting from 0.1)."
-        }
+            "Default of 160.0 is optimized for datasets >100k samples. "
+            "For smaller datasets, consider using much smaller values (starting from 0.1).",
+        },
     )
 
     def __post_init__(self):
