@@ -185,18 +185,6 @@ class ArcticEmbedEncoder:
 
         return embeddings if return_tensors else embeddings.numpy()
 
-    def encode_queries(
-        self, queries: Union[str, List[str]], instruction: str = "", **kwargs
-    ) -> Union[torch.Tensor, np.ndarray]:
-        """Specialized method for encoding queries."""
-        return self.encode(queries, instruction=instruction, **kwargs)
-
-    def encode_corpus(
-        self, corpus: Union[str, List[str]], instruction: str = "", **kwargs
-    ) -> Union[torch.Tensor, np.ndarray]:
-        """Specialized method for encoding corpus documents."""
-        return self.encode(corpus, instruction=instruction, **kwargs)
-
 
 def cleanup():
     if dist.is_initialized():

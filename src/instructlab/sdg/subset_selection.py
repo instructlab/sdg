@@ -86,7 +86,6 @@ class EncoderConfig:
         default="Generate embeddings that capture the core meaning of user-assistant conversations, ensuring the embeddings can be clustered based on semantic similarity for subset selection.",
         metadata={"advanced": True},
     )
-    query_description: str = field(default="Conversation", metadata={"advanced": True})
     encoder_type: str = field(default="arctic", metadata={"advanced": True})
     encoder_model: str = field(
         default="Snowflake/snowflake-arctic-embed-l-v2.0", metadata={"advanced": True}
@@ -112,12 +111,15 @@ class TemplateConfig:
 class SystemConfig:
     """System-related configuration parameters."""
 
-    num_gpus: int = field(
-        default_factory=get_default_num_gpus, metadata={"advanced": True}
-    )
+    num_gpus: int = field(init=False)  # Don't initialize in __init__
     seed: int = field(default=42, metadata={"advanced": True})
     max_retries: int = field(default=3, metadata={"advanced": True})
     retry_delay: int = field(default=30, metadata={"advanced": True})
+    testing_mode: bool = field(default=False, metadata={"advanced": True})
+
+    def __post_init__(self):
+        """Initialize num_gpus after other fields are set."""
+        self.num_gpus = get_default_num_gpus(testing_mode=self.testing_mode)
 
 
 @dataclass
@@ -302,7 +304,6 @@ class DataProcessor:
             self.encoder.encode(
                 inputs=batch_texts,
                 instruction=self.config.encoder.instruction,
-                query_description=self.config.encoder.query_description,
             )
             .cpu()
             .numpy()
@@ -545,6 +546,7 @@ class DataProcessor:
                     self.config.subset_sizes,
                     len(embeddings),  # Pass total samples for absolute size calculation
                     self.config.basic.epsilon,
+                    self.config.system.testing_mode,  # Explicitly pass testing_mode
                 )
             )
             start_fold = end_fold
@@ -731,12 +733,30 @@ class DataProcessor:
 
 def process_folds_with_gpu(args):
     """
-    Process folds on GPU with support for both percentage and absolute size specifications.
+    Process folds on GPU or CPU with support for both percentage and absolute size specifications.
     """
-    gpu_id, gpu_folds_info, embeddings, subset_sizes, total_samples, epsilon = args
+    (
+        gpu_id,
+        gpu_folds_info,
+        embeddings,
+        subset_sizes,
+        total_samples,
+        epsilon,
+        testing_mode,
+    ) = args
+
     try:
-        torch.cuda.set_device(gpu_id)
-        device = f"cuda:{gpu_id}"
+        if torch.cuda.is_available():
+            torch.cuda.set_device(gpu_id)
+            device = f"cuda:{gpu_id}"
+        else:
+            if not testing_mode:
+                raise RuntimeError("GPU processing required but CUDA is not available")
+            logger.warning(
+                "Running in CPU mode for testing. Production use requires GPU acceleration."
+            )
+            device = "cpu"
+
         results = []
         for fold_idx, fold_indices in gpu_folds_info:
             try:
@@ -747,7 +767,7 @@ def process_folds_with_gpu(args):
                 logger.info(f"Computing similarity matrix for fold {fold_idx + 1}")
                 max_sim_mat = compute_pairwise_dense(
                     fold_embeddings,
-                    batch_size=50,
+                    batch_size=50000,
                     metric="cosine",
                     device=device,
                     scaling="additive",
@@ -848,18 +868,21 @@ def get_encoder_class(encoder_type: str):
 
 
 def subset_datasets(
-    input_files: List[str], subset_sizes: List[Union[int, float]], **kwargs: Any
+    input_files: List[str],
+    subset_sizes: List[Union[int, float]],
+    testing_mode: bool = False,
+    **kwargs: Any,
 ) -> None:
     """Create subsets of datasets using facility location for diverse subset selection."""
 
     # Get system's available GPU count
-    available_gpus = get_default_num_gpus()
+    available_gpus = get_default_num_gpus(testing_mode=testing_mode)
 
     # Create configuration groups
     basic_config = BasicConfig()
     encoder_config = EncoderConfig()
     template_config = TemplateConfig()
-    system_config = SystemConfig()
+    system_config = SystemConfig(testing_mode=testing_mode)
 
     # Update configuration groups from kwargs
     for key, value in kwargs.items():
@@ -892,7 +915,6 @@ def subset_datasets(
 
     try:
         logger.info(f"Processing configuration: {config}")
-
         processor = DataProcessor(
             config, get_encoder_class(config.encoder.encoder_type)
         )
@@ -905,4 +927,5 @@ def subset_datasets(
     finally:
         # Cleanup
         gc.collect()
-        torch.cuda.empty_cache()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()

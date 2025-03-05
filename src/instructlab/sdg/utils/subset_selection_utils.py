@@ -62,9 +62,20 @@ def retry_on_exception(func):
     return wrapper
 
 
-def get_default_num_gpus() -> int:
-    """Get the default number of GPUs based on available CUDA devices."""
+def get_default_num_gpus(testing_mode: bool = False) -> int:
+    """
+    Get the default number of GPUs based on available CUDA devices.
+
+    Args:
+        testing_mode (bool): If True, allows CPU usage with warnings. For testing only.
+    """
     if not torch.cuda.is_available():
+        if testing_mode:
+            logger.warning(
+                "No CUDA devices detected. Running in testing mode with CPU. "
+                "Production use requires GPU acceleration."
+            )
+            return 1
         raise RuntimeError(
             "No CUDA devices detected. This functionality requires at least one GPU."
         )
