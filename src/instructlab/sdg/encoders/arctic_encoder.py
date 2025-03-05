@@ -43,6 +43,7 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
     }
 }
 
+
 # pylint: disable=too-many-instance-attributes
 @dataclass
 class EncoderConfig:
