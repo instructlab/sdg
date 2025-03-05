@@ -43,7 +43,7 @@ MODEL_CONFIGS: Dict[str, ModelConfig] = {
     }
 }
 
-
+# pylint: disable=too-many-instance-attributes
 @dataclass
 class EncoderConfig:
     model_name: str
@@ -53,6 +53,7 @@ class EncoderConfig:
     batch_size: int
     use_default_instruction: bool
     use_fp16: bool
+    testing_mode: bool = False
 
 
 class ArcticEmbedEncoder:
@@ -62,6 +63,7 @@ class ArcticEmbedEncoder:
         device: Optional[torch.device] = None,
         use_fp16: bool = False,
         use_default_instruction: bool = True,
+        testing_mode: bool = False,
     ) -> None:
         """Initialize the Arctic encoder."""
         if model_name not in MODEL_CONFIGS:
@@ -82,6 +84,7 @@ class ArcticEmbedEncoder:
             batch_size=batch_size,
             use_default_instruction=use_default_instruction,
             use_fp16=use_fp16,
+            testing_mode=testing_mode,
         )
 
         self._initialize_model()
@@ -93,11 +96,24 @@ class ArcticEmbedEncoder:
             home_dir, ".cache", "instructlab", "models", self.cfg.model_name
         )
 
-        if not os.path.exists(model_path):
-            raise ValueError(
-                f"Model not found in available models: {self.cfg.model_name}\n"
-                "Please run `ilab model download` and download the necessary model"
+        # In testing mode, allow direct download from HuggingFace
+        if hasattr(self.cfg, "testing_mode") and self.cfg.testing_mode:
+            logger.warning(
+                f"Model not found locally at {model_path}. "
+                "Testing mode enabled - downloading from HuggingFace..."
             )
+            self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name)
+            self.model = AutoModel.from_pretrained(
+                self.cfg.model_name,
+                add_pooling_layer=False,
+                trust_remote_code=True,
+            )
+        else:
+            if not os.path.exists(model_path):
+                raise ValueError(
+                    f"Model not found in available models: {self.cfg.model_name}\n"
+                    "Please run `ilab model download` and download the necessary model"
+                )
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         self.model = AutoModel.from_pretrained(

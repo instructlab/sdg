@@ -90,6 +90,7 @@ class EncoderConfig:
     encoder_model: str = field(
         default="Snowflake/snowflake-arctic-embed-l-v2.0", metadata={"advanced": True}
     )
+    testing_mode: bool = False
 
 
 @dataclass
@@ -178,7 +179,10 @@ class DataProcessor:
             encoder_cls: The encoder class to use for generating embeddings.
         """
         self.config = config
-        self.encoder = encoder_cls(model_name=config.encoder.encoder_model)
+        self.encoder = encoder_cls(
+            model_name=config.encoder.encoder_model,
+            testing_mode=config.encoder.testing_mode,
+        )
         self.env = Environment(loader=BaseLoader())
         self.templates = {
             k: self.env.from_string(v) for k, v in config.template.templates.items()
@@ -880,7 +884,7 @@ def subset_datasets(
 
     # Create configuration groups
     basic_config = BasicConfig()
-    encoder_config = EncoderConfig()
+    encoder_config = EncoderConfig(testing_mode=testing_mode)
     template_config = TemplateConfig()
     system_config = SystemConfig(testing_mode=testing_mode)
 
