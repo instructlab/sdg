@@ -33,10 +33,11 @@ def mock_gpu_environment():
 @pytest.fixture
 def mock_encoder():
     class MockEncoder:
-        def __init__(self, model_name):
+        def __init__(self, model_name, testing_mode=False):
             self.model_name = model_name
+            self.testing_mode = testing_mode
 
-        def encode(self, inputs, instruction, query_description):
+        def encode(self, inputs, instruction):
             # Return mock embeddings
             return torch.randn(len(inputs), 768)
 

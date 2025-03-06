@@ -116,13 +116,13 @@ class ArcticEmbedEncoder:
                     "Please run `ilab model download` and download the necessary model"
                 )
 
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModel.from_pretrained(
-            model_path,
-            add_pooling_layer=False,
-            trust_remote_code=True,
-            local_files_only=True,
-        )
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+            self.model = AutoModel.from_pretrained(
+                model_path,
+                add_pooling_layer=False,
+                trust_remote_code=True,
+                local_files_only=True,
+            )
 
         if self.cfg.use_fp16:
             self.model = self.model.half()
