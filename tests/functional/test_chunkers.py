@@ -42,15 +42,9 @@ def tokenizer_model_name():
 def force_cpu_on_macos_ci():
     """Force CPU usage on macOS CI environments."""
     logger.debug("=== Starting CPU force fixture ===")
-    is_ci = bool(os.getenv("CI"))  # Convert to boolean explicitly
     is_macos = sys.platform == "darwin"
-    logger.debug(f"CI environment: {is_ci}, Platform: {sys.platform}")
-
-    if is_ci and is_macos:
+    if is_macos:
         logger.info("Forcing CPU usage on macOS CI environment")
-        # Disable MPS
-        torch.backends.mps.enabled = False
-
         # Force CPU as default device
         os.environ["PYTORCH_DEVICE"] = "cpu"
         torch.set_default_device("cpu")
@@ -65,11 +59,9 @@ def force_cpu_on_macos_ci():
 
         # Additional MPS disabling
         os.environ["PYTORCH_MPS_ALLOCATOR_POLICY"] = "cpu"
-        if hasattr(torch.mps, "empty_cache"):
-            torch.mps.empty_cache()
 
-    logger.debug(f"After setup - MPS enabled: {torch.backends.mps.enabled}")
     logger.debug(f"Current device: {os.getenv('PYTORCH_DEVICE', 'not set')}")
+    logger.debug(f"Available PyTorch devices: CPU={torch.cuda.is_available()}")
     logger.debug("=== Finished CPU force fixture ===")
 
     yield

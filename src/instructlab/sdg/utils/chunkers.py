@@ -147,7 +147,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             do_ocr=False,
         )
         # deactivate MPS acceleration on Github CI
-        if os.getenv("CI") and sys.platform == "darwin":
+        if sys.platform == "darwin":
             pipeline_options.accelerator_options = AcceleratorOptions(
                 device=AcceleratorDevice.CPU
             )
