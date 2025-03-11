@@ -20,10 +20,7 @@ from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TesseractOcrOptions,
 )
-from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
-import semchunk
-import transformers
 
 # First Party
 from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
@@ -63,14 +60,12 @@ def resolve_ocr_options(
     try:
         ocr_options = EasyOcrOptions(
             lang=["en"],
-            use_gpu=False,
+            use_gpu=None,
             confidence_threshold=0.5,
             model_storage_directory=str(docling_model_path),
             recog_network="standard",
             download_enabled=True,
         )
-        # Keep easyocr models on the CPU instead of GPU
-        ocr_options.use_gpu = None
         accelerator_options = AcceleratorOptions(device="cpu")
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
@@ -173,6 +168,10 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         Returns:
             List: a list of chunks from the documents
         """
+        # Move docling_core import inside method where it's used to avoid importing transformers at top level
+        # pylint: disable=import-outside-toplevel
+        # Third Party
+        from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
 
         parsed_documents = self.converter.convert_all(self.document_paths)
         all_chunks = []
