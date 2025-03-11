@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 import json
 import logging
-import os
 import re
 import sys
 

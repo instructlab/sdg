@@ -49,16 +49,8 @@ def force_cpu_on_macos_ci():
         os.environ["PYTORCH_DEVICE"] = "cpu"
         torch.set_default_device("cpu")
 
-        # Ensure map_location is CPU for torch.load operations
-        def cpu_loader(storage, *args, **kwargs):
-            return storage.cpu()
-
-        torch.load = lambda f, *a, **kw: torch._load_global(
-            f, map_location=cpu_loader, *a, **kw
-        )
-
-        # Additional MPS disabling
-        os.environ["PYTORCH_MPS_ALLOCATOR_POLICY"] = "cpu"
+        # Disable MPS
+        os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "0"
 
     logger.debug(f"Current device: {os.getenv('PYTORCH_DEVICE', 'not set')}")
     logger.debug(f"Available PyTorch devices: CPU={torch.cuda.is_available()}")
