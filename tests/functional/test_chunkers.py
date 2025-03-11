@@ -2,6 +2,7 @@
 from pathlib import Path
 import os
 import sys
+import logging
 
 # Third Party
 import pytest
@@ -9,6 +10,10 @@ import torch
 
 # First Party
 from instructlab.sdg.utils.chunkers import DocumentChunker
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 # Constants for Test Directory and Test Documents
 TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "testdata")
@@ -36,19 +41,20 @@ def tokenizer_model_name():
 @pytest.fixture(scope="module", autouse=True)
 def force_cpu_on_macos_ci():
     """Force CPU usage on macOS CI environments."""
+    logger.debug("=== Starting CPU force fixture ===")
     is_ci = bool(os.getenv("CI"))  # Convert to boolean explicitly
     is_macos = sys.platform == "darwin"
-    print(f"::debug::CI environment: {is_ci}, Platform: {sys.platform}")
+    logger.debug(f"CI environment: {is_ci}, Platform: {sys.platform}")
 
     if is_ci and is_macos:
-        print("::notice::Forcing CPU usage on macOS CI environment")
+        logger.info("Forcing CPU usage on macOS CI environment")
         # Disable MPS
         torch.backends.mps.enabled = False
-
+        
         # Force CPU as default device
         os.environ["PYTORCH_DEVICE"] = "cpu"
         torch.set_default_device("cpu")
-
+        
         # Ensure map_location is CPU for torch.load operations
         def cpu_loader(storage, *args, **kwargs):
             return storage.cpu()
@@ -56,6 +62,15 @@ def force_cpu_on_macos_ci():
         torch.load = lambda f, *a, **kw: torch._load_global(
             f, map_location=cpu_loader, *a, **kw
         )
+
+        # Additional MPS disabling
+        os.environ["PYTORCH_MPS_ALLOCATOR_POLICY"] = "cpu"
+        if hasattr(torch.mps, 'empty_cache'):
+            torch.mps.empty_cache()
+
+    logger.debug(f"After setup - MPS enabled: {torch.backends.mps.enabled}")
+    logger.debug(f"Current device: {os.getenv('PYTORCH_DEVICE', 'not set')}")
+    logger.debug("=== Finished CPU force fixture ===")
 
     yield
 
