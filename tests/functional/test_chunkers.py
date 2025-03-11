@@ -1,8 +1,8 @@
 # Standard
 from pathlib import Path
+import logging
 import os
 import sys
-import logging
 
 # Third Party
 import pytest
@@ -50,11 +50,11 @@ def force_cpu_on_macos_ci():
         logger.info("Forcing CPU usage on macOS CI environment")
         # Disable MPS
         torch.backends.mps.enabled = False
-        
+
         # Force CPU as default device
         os.environ["PYTORCH_DEVICE"] = "cpu"
         torch.set_default_device("cpu")
-        
+
         # Ensure map_location is CPU for torch.load operations
         def cpu_loader(storage, *args, **kwargs):
             return storage.cpu()
@@ -65,7 +65,7 @@ def force_cpu_on_macos_ci():
 
         # Additional MPS disabling
         os.environ["PYTORCH_MPS_ALLOCATOR_POLICY"] = "cpu"
-        if hasattr(torch.mps, 'empty_cache'):
+        if hasattr(torch.mps, "empty_cache"):
             torch.mps.empty_cache()
 
     logger.debug(f"After setup - MPS enabled: {torch.backends.mps.enabled}")
