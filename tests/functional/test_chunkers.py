@@ -1,9 +1,11 @@
 # Standard
 from pathlib import Path
 import os
+import sys
 
 # Third Party
 import pytest
+import torch
 
 # First Party
 from instructlab.sdg.utils.chunkers import DocumentChunker
@@ -31,6 +33,13 @@ def tokenizer_model_name():
     return os.path.join(TEST_DATA_DIR, "models/instructlab/granite-7b-lab")
 
 
+@pytest.fixture(scope="module")
+def force_cpu_on_macos_ci():
+    """Force CPU usage on macOS CI environments."""
+    if os.getenv("CI") and sys.platform == "darwin":
+        torch.backends.mps.enabled = False
+
+
 @pytest.mark.parametrize(
     "document_type, expected_chunks",
     [
@@ -39,7 +48,12 @@ def tokenizer_model_name():
     ],
 )
 def test_chunk_documents(
-    tmp_path, tokenizer_model_name, test_paths, document_type, expected_chunks
+    tmp_path,
+    tokenizer_model_name,
+    test_paths,
+    document_type,
+    expected_chunks,
+    force_cpu_on_macos_ci,
 ):
     """
     Generalized test function for chunking documents.
