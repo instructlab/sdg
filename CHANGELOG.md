@@ -1,3 +1,15 @@
+## v0.7.2
+
+### Fixes
+
+* When chunking knowledge documents, PDF or Markdown documents containing a table would often result in a "list index out of range". The cases for that error resulting from the chunking of table content are now fixed. We've also had users report other cases where a "list index out of range" error can show up in the version of Docling we rely on, and those specific cases won't be fixed until we upgrade the Docling version.
+
+## v0.7.1
+
+### Fixes
+
+* When mixing datasets, we were not always properly plumbing through the user's expected system prompt into the samples of the mixed dataset. And, specifically for the new `mix_datasets` API added in v0.7.0, we were never setting the system prompt. This adds that as a parameter to that API and ensures we use it when creating our mixed datasets.
+
 ## v0.7.0
 
 ### Features
