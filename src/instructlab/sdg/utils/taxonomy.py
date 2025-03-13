@@ -13,7 +13,6 @@ import re
 from datasets import Dataset
 
 # pylint: disable=no-name-in-module
-from docling_parse.pdf_parsers import pdf_parser_v2
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -26,9 +25,6 @@ import yaml
 
 # Local
 from .chunkers import DocumentChunker
-
-# Initialize the pdf parser
-PDFParser = pdf_parser_v2("error")
 
 logger = logging.getLogger(__name__)
 
@@ -122,55 +118,13 @@ def _string_contains_html(s: str) -> bool:
     return bool(html_tag_pattern.search(s))
 
 
-def extract_text_from_pdf(file_path: str) -> str:
-    """
-    Extracts text from a PDF file using the docling PdfParser API.
-
-    Args:
-        file_path (str): Path to the PDF file.
-
-    Returns:
-        str: The extracted text from all pages.
-    """
-    pdf_text = ""
-    # Load the PDF document in lazy mode. (Do not pass a doc_key here.)
-    pdf_doc = PDFParser.load(path_or_stream=file_path, lazy=True)
-    if pdf_doc is None:
-        logger.error(f"Failed to load PDF: {file_path}")
-        return ""
-
-    num_pages = pdf_doc.number_of_pages()
-    logger.info(f"PDF '{file_path}' has {num_pages} pages.")
-
-    # Note: The high-level API expects page numbers to be 1-indexed.
-    for page_no in range(1, num_pages + 1):
-        try:
-            pdf_page = pdf_doc.get_page(page_no=page_no)
-            text_lines = pdf_page.sanitized.export_to_textlines(
-                add_fontkey=True, add_fontname=False
-            )
-            page_text = "\n".join(text_lines)
-            pdf_text += page_text + "\n"
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            logger.warning(
-                f"Error extracting text from page {page_no} of '{file_path}': {e}"
-            )
-            continue
-
-    # Unload the document to free memory
-    pdf_doc.unload()
-    logger.info(f"Unloaded PDF document: {file_path}")
-
-    return pdf_text
-
-
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
     document_output_dir: Path = None,
-) -> Tuple[List[str], List[Path]]:
+) -> Tuple[List[Path], List[Path]]:
     """
-    Retrieve the content of files (Markdown and PDFs) from a Git repository.
+    Retrieve file paths (Markdown and PDFs) from a Git repository.
 
     Args:
         source (dict): Source info containing repository URL, commit hash, and list of file patterns.
@@ -178,8 +132,8 @@ def _get_documents(
         document_output_dir (Path, optional): Directory to clone the repository into. Defaults to current directory.
 
     Returns:
-        Tuple[List[str], List[Path]]:
-            - List of document contents (Markdown as text and PDFs as extracted text).
+        Tuple[List[Path], List[Path]]:
+            - List of file paths for valid documents (Markdown and PDFs).
             - List of corresponding file paths.
 
     Raises:
@@ -196,12 +150,10 @@ def _get_documents(
         if not skip_checkout and commit_hash:
             repo.git.checkout(commit_hash)
 
-        file_contents = []
         filepaths = []
 
         logger.info("Processing files...")
         for pattern in file_patterns:
-            # Use glob to find files matching the pattern
             matched_files = glob.glob(
                 os.path.join(repo.working_dir, pattern), recursive=True
             )
@@ -211,37 +163,13 @@ def _get_documents(
                 if os.path.isfile(file_path):
                     logger.info(f"Processing file: {file_path}")
                     try:
-                        if file_path.lower().endswith(".md"):
-                            # Process Markdown files
-                            with open(file_path, "r", encoding="utf-8") as file:
-                                content = file.read()
-                                if _string_contains_html(content):
-                                    logging.warning(
-                                        f"Provided markdown file {file_path} contains HTML contents, which is currently unsupported as a part of markdown"
-                                        "NOTE: Continuing this might affect your data generation quality."
-                                        "To get best results please format your markdown documents without the use of HTML or use a different document filetype."
-                                    )
-                                file_contents.append(content)
-                                filepaths.append(Path(file_path))
-                                logger.info(
-                                    f"Appended Markdown content from {file_path}"
-                                )
-
-                        elif file_path.lower().endswith(".pdf"):
-                            # Process PDF files using docling_parse's pdf_parser_v2
-                            logger.info(f"Extracting text from PDF file: {file_path}")
-                            pdf_text = extract_text_from_pdf(file_path)
-                            if pdf_text:
-                                file_contents.append(pdf_text)
-                                filepaths.append(Path(file_path))
-                            else:
-                                logger.warning(
-                                    f"PDF file {file_path} could not be processed"
-                                )
-
+                        if file_path.lower().endswith((".md", ".pdf")):
+                            filepaths.append(Path(file_path))
+                            logger.info(f"Added file path: {file_path}")
                         else:
                             logger.info(f"Skipping unsupported file type: {file_path}")
-                    except Exception as file_error:  # pylint: disable=broad-exception-caught
+                    # pylint: disable=broad-exception-caught
+                    except Exception as file_error:
                         logger.error(
                             f"Error processing file '{file_path}': {file_error}"
                         )
@@ -249,8 +177,8 @@ def _get_documents(
                 else:
                     logger.info(f"Skipping non-file path: {file_path}")
 
-        if file_contents:
-            return file_contents, filepaths
+        if filepaths:
+            return filepaths, filepaths
         raise SystemExit("Couldn't find knowledge documents")
 
     except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
@@ -284,17 +212,17 @@ def _read_taxonomy_file(
         task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
-        document_contents, doc_filepaths = None, None
+        doc_filepaths, _ = None, None
         if documents:
             os.makedirs(document_output_dir, exist_ok=True)
             unique_output_dir = mkdtemp(
                 prefix=f"{leaf_node_path}_", dir=document_output_dir
             )
-            document_contents, doc_filepaths = _get_documents(
+            doc_filepaths, _ = _get_documents(
                 source=documents,
                 document_output_dir=unique_output_dir,
             )
-            logger.debug("Content from git repo fetched")
+            logger.debug("File paths from git repo fetched")
 
         for seed_example in contents.get("seed_examples"):
             context = seed_example.get("context", "")
@@ -305,7 +233,6 @@ def _read_taxonomy_file(
                         "questions_and_answers": question_answer_list,
                         "context": context,
                         "taxonomy_path": tax_path,
-                        "documents": document_contents,
                         "filepaths": doc_filepaths,
                         "domain": domain,
                         "document_outline": contents.get("document_outline"),
@@ -322,7 +249,6 @@ def _read_taxonomy_file(
                         "output": answer,
                         "taxonomy_path": tax_path,
                         "task_description": task_description,
-                        "document": documents,
                         "domain": domain,
                     }
                 )
@@ -496,7 +422,7 @@ def leaf_node_to_samples(
     docling_model_path=None,
 ):
     samples = []
-    if leaf_node and leaf_node[0].get("documents"):
+    if leaf_node and leaf_node[0].get("filepaths"):
         samples = _knowledge_leaf_node_to_samples(
             leaf_node,
             server_ctx_size,

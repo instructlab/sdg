@@ -4,7 +4,6 @@ datasets>=2.18.0,<3.0.0
 docling-core[chunking]>=2.9.0
 docling[tesserocr]>=2.9.0; sys_platform != 'darwin'
 docling>=2.9.0; sys_platform == 'darwin'
-docling-parse>=3.3.0
 GitPython>=3.1.42,<4.0.0
 gguf>=0.6.0
 httpx>=0.25.0,<1.0.0
