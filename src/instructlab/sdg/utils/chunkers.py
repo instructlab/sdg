@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 import json
 import logging
+import os
 import re
 import sys
 
@@ -146,7 +147,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             do_ocr=False,
         )
         # deactivate MPS acceleration on Github CI
-        if sys.platform == "darwin":
+        if os.getenv("CI") and sys.platform == "darwin":
             pipeline_options.accelerator_options = AcceleratorOptions(
                 device=AcceleratorDevice.CPU
             )
