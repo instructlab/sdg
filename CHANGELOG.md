@@ -10,6 +10,18 @@ Each `LLMBlock` in a `Pipeline` can now specify `model_family` or `model_id` in 
 
 The parameters `model_family`, `model_id`, and `num_instructions_to_generate` are no longer required in `PipelineContext` objects. They used to be required, and if passed in will still get used as before. However, they can now be omitted if your `Pipeline` contains no `LLMBlock` entries or if your `LLMBlock` config specifies these values in the `Pipeline` yaml.
 
+## v0.7.2
+
+### Fixes
+
+* When chunking knowledge documents, PDF or Markdown documents containing a table would often result in a "list index out of range". The cases for that error resulting from the chunking of table content are now fixed. We've also had users report other cases where a "list index out of range" error can show up in the version of Docling we rely on, and those specific cases won't be fixed until we upgrade the Docling version.
+
+## v0.7.1
+
+### Fixes
+
+* When mixing datasets, we were not always properly plumbing through the user's expected system prompt into the samples of the mixed dataset. And, specifically for the new `mix_datasets` API added in v0.7.0, we were never setting the system prompt. This adds that as a parameter to that API and ensures we use it when creating our mixed datasets.
+
 ## v0.7.0
 
 ### Features
