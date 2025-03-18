@@ -41,7 +41,7 @@ def _num_chars_from_tokens(num_tokens) -> int:
 
 def resolve_ocr_options(
     docling_model_path: Optional[Path] = None,
-) -> OcrOptions:
+) -> Optional[OcrOptions]:
     # Declare ocr_options explicitly as Optional[OcrOptions]
     ocr_options: Optional[OcrOptions] = None
 
