@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 import json
 import logging
-import re
 import os
+import re
 import sys
 
 # Third Party
@@ -40,11 +40,11 @@ def _num_chars_from_tokens(num_tokens) -> int:
 
 
 def resolve_ocr_options(
-        docling_model_path: Optional[Path] = None,
+    docling_model_path: Optional[Path] = None,
 ) -> OcrOptions:
     # Declare ocr_options explicitly as Optional[OcrOptions]
     ocr_options: Optional[OcrOptions] = None
-    
+
     # First, attempt to use tesserocr
     try:
         ocr_options = TesseractOcrOptions()
@@ -52,15 +52,17 @@ def resolve_ocr_options(
         # Third Party
         from docling.models.tesseract_ocr_model import TesseractOcrModel
 
-        _ = TesseractOcrModel(enabled=True, 
-                              artifacts_path=docling_model_path, 
-                              options=ocr_options, 
-                              accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU))
+        _ = TesseractOcrModel(
+            enabled=True,
+            artifacts_path=docling_model_path,
+            options=ocr_options,
+            accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU),
+        )
         return ocr_options
     except ImportError:
         # No tesserocr, so try something else
         logger.warning("Tesseract not found, falling back to EasyOCR.")
-    
+
     try:
         ocr_options = EasyOcrOptions(
             lang=["en"],

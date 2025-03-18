@@ -56,8 +56,8 @@ def test_chunk_documents(
     assert len(chunks) > expected_chunks
     if contains_text:
         # Normalize spaces and remove newlines for more flexible text comparison
-        normalized_chunk = ' '.join(chunks[0].replace('\n', ' ').split())
-        normalized_text = ' '.join(contains_text.split())
+        normalized_chunk = " ".join(chunks[0].replace("\n", " ").split())
+        normalized_text = " ".join(contains_text.split())
         assert normalized_text in normalized_chunk
     for chunk in chunks:
         assert len(chunk) < 2500
