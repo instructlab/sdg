@@ -11,7 +11,6 @@ import re
 
 # Third Party
 from datasets import Dataset
-
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -142,7 +141,7 @@ def _get_documents(
     repo_url = source.get("repo")
     commit_hash = source.get("commit")
     file_patterns = source.get("patterns", [])
-
+    # pylint: disable=too-many-nested-blocks
     try:
         repo = git.Repo.clone_from(repo_url, document_output_dir)
 
@@ -174,6 +173,7 @@ def _get_documents(
                                     )
                         filepaths.append(Path(file_path))
                         logger.info(f"Collected filepath: {file_path}")
+                    # pylint: disable=broad-exception-caught
                     except Exception as file_error:
                         logger.error(
                             f"Error processing file '{file_path}': {file_error}"
