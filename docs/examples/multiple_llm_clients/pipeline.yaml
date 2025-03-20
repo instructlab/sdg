@@ -1,0 +1,44 @@
+version: "1.0"
+blocks:
+  # This uses the default client, since we don't specify one
+  - name: default_client
+    type: LLMBlock
+    config:
+      model_family: mixtral
+      model_id: Mixtral-8x7B-Instruct-v0.1
+      config_path: llm_config.yaml
+      output_cols:
+        - column_one
+
+  # We can also explicitly specify the default client
+  - name: also_default_client
+    type: LLMBlock
+    config:
+      client: default
+      model_family: mixtral
+      model_id: Mixtral-8x7B-Instruct-v0.1
+      config_path: llm_config.yaml
+      output_cols:
+        - column_two
+
+  # This uses the "server_a" client explicitly
+  - name: server_a_client
+    type: LLMBlock
+    config:
+      client: server_a
+      model_family: granite
+      model_id: granite-7b-lab
+      config_path: llm_config.yaml
+      output_cols:
+        - column_three
+
+  # This uses the "server_b" client explicitly
+  - name: server_b_client
+    type: LLMBlock
+    config:
+      client: server_b
+      model_family: granite
+      model_id: granite-7b-lab
+      config_path: llm_config.yaml
+      output_cols:
+        - column_four
