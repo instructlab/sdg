@@ -3,7 +3,7 @@
 # Standard
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 import glob
 import logging
 import os
@@ -120,7 +120,7 @@ def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
     document_output_dir: Path = None,
-) -> Tuple[List[Path]]:
+) -> List[Path]:
     """
     Retrieve the file paths of files (Markdown and PDF) from a Git repository.
 
@@ -428,6 +428,7 @@ def leaf_node_to_samples(
     docling_model_path=None,
 ):
     samples = []
+    # check if the leaf node has document filepaths, if so, it's a knowledge leaf node
     if leaf_node and (leaf_node[0].get("filepaths")):
         samples = _knowledge_leaf_node_to_samples(
             leaf_node,
