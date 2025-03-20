@@ -3,7 +3,7 @@ click>=8.1.7,<9.0.0
 datasets>=2.18.0,<3.0.0
 docling[tesserocr]>=2.4.2,<=2.8.3; sys_platform != 'darwin'
 docling>=2.4.2,<=2.8.3; sys_platform == 'darwin'
-docling-parse>=2.0.0,<3.0.0
+docling-parse>=2.0.0,<5.0.0
 GitPython>=3.1.42,<4.0.0
 gguf>=0.6.0
 httpx>=0.25.0,<1.0.0
