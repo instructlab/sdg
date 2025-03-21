@@ -4,13 +4,17 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 import json
 import logging
+import os
 import re
+import sys
 
 # Third Party
 from datasets import Dataset
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
+    AcceleratorDevice,
+    AcceleratorOptions,
     EasyOcrOptions,
     OcrOptions,
     PdfPipelineOptions,
@@ -35,7 +39,12 @@ def _num_chars_from_tokens(num_tokens) -> int:
     return int(num_tokens * 4)  # 1 token ~ 4 English character
 
 
-def resolve_ocr_options() -> OcrOptions:
+def resolve_ocr_options(
+    docling_model_path: Optional[Path] = None,
+) -> Optional[OcrOptions]:
+    # Declare ocr_options explicitly as Optional[OcrOptions]
+    ocr_options: Optional[OcrOptions] = None
+
     # First, attempt to use tesserocr
     try:
         ocr_options = TesseractOcrOptions()
@@ -43,21 +52,37 @@ def resolve_ocr_options() -> OcrOptions:
         # Third Party
         from docling.models.tesseract_ocr_model import TesseractOcrModel
 
-        _ = TesseractOcrModel(True, ocr_options)
+        _ = TesseractOcrModel(
+            enabled=True,
+            artifacts_path=docling_model_path,
+            options=ocr_options,
+            accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU),
+        )
         return ocr_options
     except ImportError:
         # No tesserocr, so try something else
-        pass
+        logger.warning("Tesseract not found, falling back to EasyOCR.")
+
     try:
-        ocr_options = EasyOcrOptions()
-        # Keep easyocr models on the CPU instead of GPU
-        ocr_options.use_gpu = False
+        ocr_options = EasyOcrOptions(
+            lang=["en"],
+            use_gpu=None,
+            confidence_threshold=0.5,
+            model_storage_directory=str(docling_model_path),
+            recog_network="standard",
+            download_enabled=True,
+        )
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
         # Third Party
         from docling.models.easyocr_model import EasyOcrModel
 
-        _ = EasyOcrModel(True, ocr_options)
+        _ = EasyOcrModel(
+            enabled=True,
+            artifacts_path=None,
+            options=ocr_options,
+            accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU),
+        )
         return ocr_options
     except ImportError:
         # no easyocr either, so don't use any OCR
@@ -127,7 +152,12 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             do_ocr=False,
         )
 
-        ocr_options = resolve_ocr_options()
+        # deactivate MPS acceleration on Github CI
+        if os.getenv("CI") and sys.platform == "darwin":
+            pipeline_options.accelerator_options = AcceleratorOptions(
+                device=AcceleratorDevice.CPU
+            )
+        ocr_options = resolve_ocr_options(docling_model_path=self.docling_model_path)
         if ocr_options is not None:
             pipeline_options.do_ocr = True
             pipeline_options.ocr_options = ocr_options
