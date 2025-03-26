@@ -67,7 +67,7 @@ pull_request_rules:
         - or:
           - files~=\.py$
           - files=pyproject.toml
-          - files=^requirements.*\.txt$
+          - files~=^requirements.*\.txt$
           - files=.github/workflows/functional-gpu-nvidia-t4-x1.yml
       - and:
         - -files~=\.py$
