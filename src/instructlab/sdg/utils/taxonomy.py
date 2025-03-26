@@ -3,7 +3,7 @@
 # Standard
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 import glob
 import logging
 import os
@@ -122,7 +122,7 @@ def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
     document_output_dir: Path = None,
-) -> Tuple[List[Path], List[Path]]:
+) -> List[Path]:
     """
     Retrieve file paths (Markdown and PDFs) from a Git repository.
 
@@ -143,8 +143,8 @@ def _get_documents(
     repo_url = source.get("repo")
     commit_hash = source.get("commit")
     file_patterns = source.get("patterns", [])
-
-    try:  # pylint: disable=too-many-nested-blocks
+    # pylint: disable=too-many-nested-blocks
+    try:
         repo = git.Repo.clone_from(repo_url, document_output_dir)
 
         if not skip_checkout and commit_hash:
@@ -178,7 +178,7 @@ def _get_documents(
                     logger.info(f"Skipping non-file path: {file_path}")
 
         if filepaths:
-            return filepaths, filepaths
+            return filepaths
         raise SystemExit("Couldn't find knowledge documents")
 
     except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
@@ -212,13 +212,13 @@ def _read_taxonomy_file(
         task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
-        doc_filepaths, _ = None, None
+        doc_filepaths = None
         if documents:
             os.makedirs(document_output_dir, exist_ok=True)
             unique_output_dir = mkdtemp(
                 prefix=f"{leaf_node_path}_", dir=document_output_dir
             )
-            doc_filepaths, _ = _get_documents(
+            doc_filepaths = _get_documents(
                 source=documents,
                 document_output_dir=unique_output_dir,
             )

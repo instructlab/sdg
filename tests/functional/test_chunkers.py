@@ -90,13 +90,12 @@ def test_chunk_documents(
         chunk_word_count=500,
     )
     chunks = chunker.chunk_documents()
-
-    # Check that we have more chunks than expected.
-    assert (
-        len(chunks) > expected_chunks
-    ), f"Expected more than {expected_chunks} chunks, got {len(chunks)}"
-
-    # Check that no chunk is empty and each chunk's length is within the allowed limit.
+    assert len(chunks) > expected_chunks
+    if contains_text:
+        # Normalize spaces and remove newlines for more flexible text comparison
+        normalized_chunk = " ".join(chunks[0].replace("\n", " ").split())
+        normalized_text = " ".join(contains_text.split())
+        assert normalized_text in normalized_chunk
     for chunk in chunks:
         assert chunk, "Chunk should not be empty"
         assert len(chunk) < 2500, f"Chunk length {len(chunk)} exceeds maximum allowed"

@@ -5,7 +5,9 @@ from typing import Dict, Iterable, List, Optional
 import json
 import logging
 import os
+import os
 import re
+import sys
 import sys
 
 # Third Party
@@ -13,6 +15,8 @@ from datasets import Dataset
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
+    AcceleratorDevice,
+    AcceleratorOptions,
     AcceleratorDevice,
     AcceleratorOptions,
     EasyOcrOptions,
@@ -51,7 +55,12 @@ def resolve_ocr_options(
         # Third Party
         from docling.models.tesseract_ocr_model import TesseractOcrModel
 
-        _ = TesseractOcrModel(True, ocr_options)
+        _ = TesseractOcrModel(
+            enabled=True,
+            artifacts_path=docling_model_path,
+            options=ocr_options,
+            accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU),
+        )
         return ocr_options
     except ImportError:
         # No tesserocr, so try something else
@@ -66,7 +75,6 @@ def resolve_ocr_options(
             recog_network="standard",
             download_enabled=True,
         )
-        accelerator_options = AcceleratorOptions(device="cpu")
         # triggers torch loading, import lazily
         # pylint: disable=import-outside-toplevel
         # Third Party
@@ -76,7 +84,7 @@ def resolve_ocr_options(
             enabled=True,
             artifacts_path=None,
             options=ocr_options,
-            accelerator_options=accelerator_options,
+            accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU),
         )
         return ocr_options
     except ImportError:
@@ -146,6 +154,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             artifacts_path=self.docling_model_path,
             do_ocr=False,
         )
+
         # deactivate MPS acceleration on Github CI
         if os.getenv("CI") and sys.platform == "darwin":
             pipeline_options.accelerator_options = AcceleratorOptions(
