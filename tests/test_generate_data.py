@@ -93,20 +93,21 @@ def validate_messages_dataset(dataset_file_name, expected_samples):
 
 def validate_skill_leaf_node_dataset(dataset_file_name):
     ds = load_dataset("json", data_files=dataset_file_name, split="train")
-    assert len(ds.features) == 9
+    assert len(ds.features) == 10
     features = [
-        "task_description",
-        "seed_context",
-        "seed_question",
-        "seed_response",
-        "output",
-        "id",
-        "leaf_node_path",
-        "leaf_node_type",
+        ("task_description", "string"),
+        ("seed_context", "string"),
+        ("seed_question", "string"),
+        ("seed_response", "string"),
+        ("output", "string"),
+        ("id", "string"),
+        ("leaf_node_path", "string"),
+        ("leaf_node_type", "string"),
+        ("unmask", "bool"),
     ]
-    for feature in features:
+    for feature, dtype in features:
         assert feature in ds.features
-        assert ds.features[feature].dtype == "string"
+        assert ds.features[feature].dtype == dtype
     assert "messages" in ds.features
     assert len(ds.features["messages"]) == 1
     assert len(ds.features["messages"][0]) == 2
@@ -116,11 +117,11 @@ def validate_skill_leaf_node_dataset(dataset_file_name):
 
 def validate_phase_leaf_node_dataset(dataset_file_name):
     ds = load_dataset("json", data_files=dataset_file_name, split="train")
-    assert len(ds.features) == 3
-    features = ["metadata", "id"]
-    for feature in features:
+    assert len(ds.features) == 4
+    features = [("metadata", "string"), ("id", "string"), ("unmask", "bool")]
+    for feature, dtype in features:
         assert feature in ds.features
-        assert ds.features[feature].dtype == "string"
+        assert ds.features[feature].dtype == dtype
     assert "messages" in ds.features
     assert len(ds.features["messages"]) == 1
     assert len(ds.features["messages"][0]) == 2

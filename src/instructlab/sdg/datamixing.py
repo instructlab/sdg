@@ -8,6 +8,7 @@ import logging
 import os.path
 import random
 import uuid
+import warnings
 
 # Third Party
 from datasets import Dataset, concatenate_datasets, load_dataset
@@ -21,7 +22,7 @@ from instructlab.sdg.utils.pandas import dataset_from_pandas_dataframe
 #               below which we upsample knowledge samples from. This only applies
 #               when |knowledge| << |skills|
 MIN_UPSAMPLE_THRESHOLD = 0.03
-ALLOWED_COLS = ["id", "messages", "metadata"]
+ALLOWED_COLS = ["id", "messages", "metadata", "unmask"]
 logger = logging.getLogger(__name__)
 
 
@@ -46,12 +47,28 @@ def _adjust_train_sample_size(ds: Dataset, num_samples: int):
     return pandas.dataset_from_pandas_dataframe(df)
 
 
+def _create_empty_dataset():
+    """Create an empty dataset with the correct columns and types."""
+    return Dataset.from_dict(
+        {"id": [], "messages": [], "metadata": [], "unmask": []},
+        features={
+            "id": "string",
+            "messages": [{"content": "string", "role": "string"}],
+            "metadata": "string",
+            "unmask": "bool",
+        },
+    )
+
+
 def _sample_ds(dataset, sampling_size, num_proc):
     """
     Select sampling_size number/ratio of samples from a dataset, ensuring
     the returned dataset has only ALLOWED_COLS columns in it with any
     additional columns moved to the metadata section.
     """
+    if len(dataset) == 0:
+        return _create_empty_dataset()
+
     if sampling_size != 1.0:
         if isinstance(sampling_size, int):
             num_samples = sampling_size
@@ -69,6 +86,9 @@ def _sample_ds(dataset, sampling_size, num_proc):
                 metadata[col] = example[col]
                 example.pop(col)
         example["metadata"] = json.dumps(metadata)
+        # Ensure unmask field exists with default value False
+        if "unmask" not in example:
+            example["unmask"] = False
         return example
 
     dataset = dataset.map(_move_unallowed_cols_to_metadata, num_proc=num_proc)
@@ -261,7 +281,7 @@ def _generate_knowledge_qa_dataset(
     """
     Generate question and answer pairs from the newly generated dataset
     for each taxonomy leaf node. Each row of the generated dataset gets
-    converted to have messages, metadata, and id columns.
+    converted to have messages, metadata, id, and unmask columns.
 
     If `keep_context_separate` is True, then a context column is also added.
     If `keep_context_separate` is False, the context colum is omitted and
@@ -296,13 +316,19 @@ def _generate_knowledge_qa_dataset(
                 "metadata": metadata,
                 "id": msg_id,
                 "context": context,
+                "unmask": False,
             }
         messages = [
             {"role": "user", "content": f"{context}\n\n{instruction}"},
             {"role": "assistant", "content": response},
         ]
 
-        return {"messages": messages, "metadata": metadata, "id": msg_id}
+        return {
+            "messages": messages,
+            "metadata": metadata,
+            "id": msg_id,
+            "unmask": False,
+        }
 
     knowledge_ds = generated_dataset.map(
         __create_qa_row, remove_columns=generated_dataset.column_names
@@ -380,23 +406,24 @@ def _add_extra_contexts_to_samples(ds: Dataset, p, num_doc_in_context=4):
 def _conv_pretrain(rec, use_legacy_pretraining_format: bool):
     """
     Convert a messages dataset that contains only user/assistant entries per
-    message (and in that order) to a pretraining message used downstream by
-    the training pipeline. `_generate_knowledge_qa_dataset` creates the type
-    of dataset expected here.
+    message (and in that order) to include an unmask field that indicates this
+    sample should be used for pretraining.
+
+    Args:
+        rec: The record to convert
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
     if use_legacy_pretraining_format:
-        user = "<|user|>"
-        assistant = "<|assistant|>"
-    else:
-        user = "<|start_of_role|>user<|end_of_role|>"
-        assistant = "<|start_of_role|>assistant<|end_of_role|>"
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
-    rec["messages"] = [
-        {
-            "role": "pretraining",
-            "content": f"{user}\n{rec['messages'][0]['content']}\n{assistant}\n{rec['messages'][1]['content']}",
-        }
-    ]
+    # Add unmask field to indicate this is a pretraining sample
+    rec["unmask"] = True
     return rec
 
 
@@ -451,7 +478,12 @@ def _create_auxiliary_dataset(
                 "domain": rec["domain"],
             }
         )
-        return {"messages": messages, "metadata": metadata, "id": str(uuid.uuid4())}
+        return {
+            "messages": messages,
+            "metadata": metadata,
+            "id": str(uuid.uuid4()),
+            "unmask": False,
+        }
 
     unique_document_auxiliary = unique_document_auxiliary.map(
         __create_auxiliary_ds, remove_columns=unique_document_auxiliary.column_names
@@ -462,7 +494,7 @@ def _create_auxiliary_dataset(
 def _create_phase10_ds(
     generated_dataset: Dataset,
     auxiliary_inst: Optional[Dict[str, List[str]]],
-    use_legacy_pretraining_format: bool,
+    use_legacy_pretraining_format: bool,  # Deprecated. This parameter will be removed in a future version.
 ):
     """
     Create a dataset for Phase 1.0 of downstream training.
@@ -470,12 +502,26 @@ def _create_phase10_ds(
     This dataset is in our messages format, with each sample having
     additional context mixed in from other samples to improve the
     training outcomes.
+
+    Args:
+        generated_dataset: The dataset to create the phase10 dataset from
+        auxiliary_inst: The auxiliary instructions to use for the phase10 dataset
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=True
     )
     raft_knowledge_ds = _add_extra_contexts_to_samples(knowledge_ds, p=0.4)
-    # Include phase07
+    # Include phase07 samples with unmask=True
     pretraining_knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=False
     ).map(lambda rec: _conv_pretrain(rec, use_legacy_pretraining_format))
@@ -494,16 +540,28 @@ def _create_phase10_ds(
 def _create_phase07_ds(
     generated_dataset: Dataset,
     auxiliary_inst: Optional[Dict[str, List[str]]],
-    use_legacy_pretraining_format: bool,
+    use_legacy_pretraining_format: bool,  # Deprecated. This parameter will be removed in a future version.
 ):
     """
     Create a dataset for Phase 0.7 of downstream training.
 
     Phase 0.7 is a pretraining phase, and this dataset contains messages
-    with a special `pretraining` role used by downstream training before
-    running the full training with the Phase 1.0 dataset.
+    with unmask=True to indicate these samples should be used for pretraining.
+
+    Args:
+        generated_dataset: The dataset to create the phase07 dataset from
+        auxiliary_inst: The auxiliary instructions to use for the phase07 dataset
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
-    # Phase 0.7
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     knowledge_ds = _generate_knowledge_qa_dataset(
         generated_dataset, keep_context_separate=False
     )
@@ -565,11 +623,8 @@ def _total_length_of_datasets(datasets: List[DatasetListing]) -> int:
 
 def _convert_to_leaf_node_messages(sample: dict, sys_prompt: str):
     """
-    Convert a sample dictionary to contain a 'messages' column required
-    for training.
-
-    Note that this is for the new messages format, introduced with data
-    mixing.
+    Convert a sample dictionary to contain 'messages' and 'unmask' columns
+    required for training.
     """
     user_query = _unescape(_get_question_hack(sample))
     response = _unescape(_get_response_hack(sample))
@@ -580,6 +635,7 @@ def _convert_to_leaf_node_messages(sample: dict, sys_prompt: str):
         {"content": user_query, "role": "user"},
         {"content": response, "role": "assistant"},
     ]
+    sample["unmask"] = False
 
     return sample
 
@@ -662,8 +718,26 @@ class DataMixer:
         leaf_node_path,
         new_generated_data,
         is_knowledge,
-        use_legacy_pretraining_format,
+        use_legacy_pretraining_format,  # Deprecated. This parameter will be removed in a future version.
     ):
+        """
+        Collect the data generated from each taxonomy leaf node and write it to a file.
+
+        Args:
+            leaf_node_path: The path to the taxonomy leaf node
+            new_generated_data: The data generated from the taxonomy leaf node
+            is_knowledge: Whether the data is knowledge or skills
+            use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+                The new format simply sets unmask=True.
+        """
+        if use_legacy_pretraining_format:
+            warnings.warn(
+                "The use_legacy_pretraining_format parameter is deprecated and will be "
+                "removed in a future version. The new format simply sets unmask=True.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
         if is_knowledge:
             knowledge_phase_data = _create_phase07_ds(
                 new_generated_data, self.auxiliary_inst, use_legacy_pretraining_format
