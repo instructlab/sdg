@@ -5,9 +5,7 @@ from typing import Dict, Iterable, List, Optional
 import json
 import logging
 import os
-import os
 import re
-import sys
 import sys
 
 # Third Party
@@ -15,8 +13,6 @@ from datasets import Dataset
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
-    AcceleratorDevice,
-    AcceleratorOptions,
     AcceleratorDevice,
     AcceleratorOptions,
     EasyOcrOptions,
