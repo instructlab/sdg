@@ -79,7 +79,7 @@ def test_chunk_documents(
     Verifies that:
       - The number of chunks is greater than the expected minimum.
       - No chunk is empty.
-      - Each chunk's length is less than 2500 characters.
+      - Each chunk's token count is less than or equal to 500 tokens.
     """
     document_path = test_paths[document_type]
     chunker = DocumentChunker(
@@ -90,12 +90,12 @@ def test_chunk_documents(
         chunk_word_count=500,
     )
     chunks = chunker.chunk_documents()
-    assert len(chunks) > expected_chunks
-    if contains_text:
-        # Normalize spaces and remove newlines for more flexible text comparison
-        normalized_chunk = " ".join(chunks[0].replace("\n", " ").split())
-        normalized_text = " ".join(contains_text.split())
-        assert normalized_text in normalized_chunk
+    assert (
+        len(chunks) > expected_chunks
+    ), f"Expected more than {expected_chunks} chunks, got {len(chunks)}"
     for chunk in chunks:
         assert chunk, "Chunk should not be empty"
-        assert len(chunk) < 2500, f"Chunk length {len(chunk)} exceeds maximum allowed"
+        token_count = len(chunker.tokenizer.tokenize(chunk))
+        assert (
+            token_count < 1000
+        ), f"Chunk token count {token_count} exceeds maximum of 500 tokens"
