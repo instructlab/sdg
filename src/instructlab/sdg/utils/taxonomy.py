@@ -3,7 +3,7 @@
 # Standard
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 import glob
 import logging
 import os
@@ -11,9 +11,6 @@ import re
 
 # Third Party
 from datasets import Dataset
-
-# pylint: disable=no-name-in-module
-from docling_parse.docling_parse import pdf_parser_v1
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -26,9 +23,6 @@ import yaml
 
 # Local
 from .chunkers import DocumentChunker
-
-# Initialize the pdf parser
-PDFParser = pdf_parser_v1()
 
 logger = logging.getLogger(__name__)
 
@@ -126,9 +120,9 @@ def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
     document_output_dir: Path = None,
-) -> Tuple[List[str], List[Path]]:
+) -> List[Path]:
     """
-    Retrieve the content of files (Markdown and PDF) from a Git repository.
+    Retrieve the file paths of files (Markdown and PDF) from a Git repository.
 
     Args:
         source (dict): Source info containing repository URL, commit hash, and list of file patterns.
@@ -147,14 +141,13 @@ def _get_documents(
     repo_url = source.get("repo")
     commit_hash = source.get("commit")
     file_patterns = source.get("patterns", [])
-
-    try:  # pylint: disable=too-many-nested-blocks
+    # pylint: disable=too-many-nested-blocks
+    try:
         repo = git.Repo.clone_from(repo_url, document_output_dir)
 
         if not skip_checkout and commit_hash:
             repo.git.checkout(commit_hash)
 
-        file_contents = []
         filepaths = []
 
         logger.info("Processing files...")
@@ -170,7 +163,6 @@ def _get_documents(
                     logger.info(f"Processing file: {file_path}")
                     try:
                         if file_path.lower().endswith(".md"):
-                            # Process Markdown files
                             with open(file_path, "r", encoding="utf-8") as file:
                                 content = file.read()
                                 if _string_contains_html(content):
@@ -179,66 +171,10 @@ def _get_documents(
                                         "NOTE: Continuing this might affect your data generation quality."
                                         "To get best results please format your markdown documents without the use of HTML or use a different document filetype."
                                     )
-                                file_contents.append(content)
-                                filepaths.append(Path(file_path))
-                                logger.info(
-                                    f"Appended Markdown content from {file_path}"
-                                )
-
-                        elif file_path.lower().endswith(".pdf"):
-                            # Process PDF files using docling_parse's pdf_parser_v1
-                            doc_key = f"key_{os.path.basename(file_path)}"  # Unique document key
-                            logger.info(f"Loading PDF document from {file_path}")
-
-                            success = PDFParser.load_document(doc_key, file_path)
-                            if not success:
-                                logger.warning(
-                                    f"Failed to load PDF document: {file_path}"
-                                )
-                                continue
-
-                            num_pages = PDFParser.number_of_pages(doc_key)
-                            logger.info(f"PDF '{file_path}' has {num_pages} pages.")
-
-                            pdf_text = ""
-
-                            for page in range(num_pages):
-                                try:
-                                    json_doc = PDFParser.parse_pdf_from_key_on_page(
-                                        doc_key, page
-                                    )
-                                    if "pages" not in json_doc or not json_doc["pages"]:
-                                        logger.warning(
-                                            f"Page {page + 1} could not be parsed in '{file_path}'"
-                                        )
-                                        continue
-
-                                    json_page = json_doc["pages"][0]
-
-                                    # Extract text from cells
-                                    for cell in json_page.get("cells", []):
-                                        text = cell.get("content", {}).get(
-                                            "rnormalized", ""
-                                        )
-                                        if text.strip():  # Only append non-empty text
-                                            pdf_text += text.strip() + "\n"
-                                except Exception as page_error:  # pylint: disable=broad-exception-caught
-                                    logger.warning(
-                                        f"Error parsing page {page + 1} of '{file_path}': {page_error}"
-                                    )
-                                    continue
-
-                            if pdf_text:
-                                file_contents.append(pdf_text)
-                                filepaths.append(Path(file_path))
-
-                            # Unload the document to free memory
-                            PDFParser.unload_document(doc_key)
-                            logger.info(f"Unloaded PDF document: {file_path}")
-
-                        else:
-                            logger.info(f"Skipping unsupported file type: {file_path}")
-                    except Exception as file_error:  # pylint: disable=broad-exception-caught
+                        filepaths.append(Path(file_path))
+                        logger.info(f"Collected filepath: {file_path}")
+                    # pylint: disable=broad-exception-caught
+                    except Exception as file_error:
                         logger.error(
                             f"Error processing file '{file_path}': {file_error}"
                         )
@@ -246,8 +182,8 @@ def _get_documents(
                 else:
                     logger.info(f"Skipping non-file path: {file_path}")
 
-        if file_contents:
-            return file_contents, filepaths
+        if filepaths:
+            return filepaths
         raise SystemExit("Couldn't find knowledge documents")
 
     except (OSError, git.exc.GitCommandError, FileNotFoundError) as e:
@@ -281,13 +217,13 @@ def _read_taxonomy_file(
         task_description = contents.get("task_description", None)
         domain = contents.get("domain")
         documents = contents.get("document")
-        document_contents, doc_filepaths = None, None
+        doc_filepaths = None
         if documents:
             os.makedirs(document_output_dir, exist_ok=True)
             unique_output_dir = mkdtemp(
                 prefix=f"{leaf_node_path}_", dir=document_output_dir
             )
-            document_contents, doc_filepaths = _get_documents(
+            doc_filepaths = _get_documents(
                 source=documents,
                 document_output_dir=unique_output_dir,
             )
@@ -302,7 +238,6 @@ def _read_taxonomy_file(
                         "questions_and_answers": question_answer_list,
                         "context": context,
                         "taxonomy_path": tax_path,
-                        "documents": document_contents,
                         "filepaths": doc_filepaths,
                         "domain": domain,
                         "document_outline": contents.get("document_outline"),
@@ -493,7 +428,8 @@ def leaf_node_to_samples(
     docling_model_path=None,
 ):
     samples = []
-    if leaf_node and leaf_node[0].get("documents"):
+    # check if the leaf node has document filepaths, if so, it's a knowledge leaf node
+    if leaf_node and (leaf_node[0].get("filepaths")):
         samples = _knowledge_leaf_node_to_samples(
             leaf_node,
             server_ctx_size,

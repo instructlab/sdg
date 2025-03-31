@@ -2,16 +2,18 @@
 
 # Standard
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 import os
 import tempfile
 
 # Third Party
 from docling.datamodel.pipeline_options import EasyOcrOptions, TesseractOcrOptions
+import git
 import pytest
 
 # First Party
 from instructlab.sdg.utils.chunkers import DocumentChunker, resolve_ocr_options
+from instructlab.sdg.utils.taxonomy import _get_documents
 
 # Local
 from .testdata import testdata
@@ -120,3 +122,99 @@ def test_invalid_tokenizer(model_name):
     model_path = os.path.join(TEST_DATA_DIR, model_name)
     with pytest.raises(ValueError):
         DocumentChunker.create_tokenizer(model_path)
+
+
+def test_get_documents_basic():
+    """Test successful document retrieval with basic inputs"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        source = {
+            "repo": "https://fake-repo-url.git",
+            "commit": "abc123",
+            "patterns": ["*.md", "*.pdf"],
+        }
+
+        mock_repo = Mock()
+        mock_repo.working_dir = temp_dir
+
+        # Create test files
+        test_md = Path(temp_dir) / "test.md"
+        test_md.write_text("# Test content")
+
+        with patch("git.Repo.clone_from", return_value=mock_repo):
+            result = _get_documents(source, document_output_dir=Path(temp_dir))
+
+        assert len(result) == 1
+        assert result[0].name == "test.md"
+
+
+def test_get_documents_html_warning():
+    """Test warning is logged when markdown contains HTML"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        source = {"repo": "https://fake-repo-url.git", "patterns": ["*.md"]}
+
+        mock_repo = Mock()
+        mock_repo.working_dir = temp_dir
+
+        # Create test file with HTML
+        test_md = Path(temp_dir) / "test.md"
+        test_md.write_text("# Test\n<div>Some HTML</div>")
+
+        with (
+            patch("git.Repo.clone_from", return_value=mock_repo),
+            patch("logging.Logger.warning") as mock_warning,
+        ):
+            result = _get_documents(source, document_output_dir=Path(temp_dir))
+
+        mock_warning.assert_called_once()
+        assert len(result) == 1
+
+
+def test_get_documents_no_files():
+    """Test error when no valid documents are found"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        source = {"repo": "https://fake-repo-url.git", "patterns": ["*.md"]}
+
+        mock_repo = Mock()
+        mock_repo.working_dir = temp_dir
+
+        with (
+            patch("git.Repo.clone_from", return_value=mock_repo),
+            pytest.raises(SystemExit),
+        ):
+            _get_documents(source, document_output_dir=Path(temp_dir))
+
+
+def test_get_documents_git_error():
+    """Test handling of git errors"""
+    source = {"repo": "https://fake-repo-url.git", "patterns": ["*.md"]}
+
+    with patch("git.Repo.clone_from") as mock_clone:
+        mock_clone.side_effect = git.exc.GitCommandError("clone", "error")
+        with pytest.raises(git.exc.GitCommandError):
+            _get_documents(source)
+
+
+def test_get_documents_skip_checkout():
+    """Test that commit checkout is skipped when specified"""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        source = {
+            "repo": "https://fake-repo-url.git",
+            "commit": "abc123",
+            "patterns": ["*.md"],
+        }
+
+        mock_repo = Mock()
+        mock_repo.working_dir = temp_dir
+
+        # Create a test file so the function finds something
+        test_md = Path(temp_dir) / "test.md"
+        test_md.write_text("# Test content")
+
+        with patch("git.Repo.clone_from", return_value=mock_repo) as mock_clone:
+            result = _get_documents(
+                source, skip_checkout=True, document_output_dir=Path(temp_dir)
+            )
+
+        mock_repo.git.checkout.assert_not_called()
+        assert len(result) == 1
+        assert result[0].name == "test.md"
