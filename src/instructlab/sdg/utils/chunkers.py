@@ -5,11 +5,9 @@ from typing import Dict, Iterable, List, Optional
 import json
 import logging
 import os
-import re
 import sys
 
 # Third Party
-from datasets import Dataset
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.document import ConversionResult
 from docling.datamodel.pipeline_options import (
@@ -20,7 +18,6 @@ from docling.datamodel.pipeline_options import (
     PdfPipelineOptions,
     TesseractOcrOptions,
 )
-from langchain_text_splitters import Language, RecursiveCharacterTextSplitter
 
 # First Party
 from instructlab.sdg.utils.model_formats import is_model_gguf, is_model_safetensors
@@ -191,13 +188,7 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
                     f"Error chunking document {conversion_result.input.file}: {e}"
                 )
                 chunks = []
-
-            fused_texts = self.fuse_texts(chunks, 200)
-            num_tokens_per_doc = _num_tokens_from_words(self.chunk_word_count)
-            chunk_size = _num_chars_from_tokens(num_tokens_per_doc)
-            final_chunks = chunk_markdowns(fused_texts, chunk_size)
-            all_chunks.extend(final_chunks)
-
+            all_chunks.extend(chunks)
         return all_chunks
 
     def _path_validator(self, path) -> Path:
@@ -213,37 +204,6 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
             if not path.exists():
                 raise FileNotFoundError(f"{path} does not exist.")
         return path
-
-    def fuse_texts(
-        self, text_list: List, short_length_threshold: int = 130
-    ) -> List[str]:
-        """
-        Fuse short texts with preceding longer texts if their token count is below the threshold.
-        Args:
-            text_list (list): List of text chunks to process.
-            short_length_threshold (int): The token count threshold for determining short texts.
-                                      Default is 130, tuned specifically for the Mixtral tokenizer.
-                                      Update this value if changing the tokenizer model.
-        Returns:
-            list: List of fused texts.
-        """
-        fused_texts: List[str] = []
-        previous_long_text = ""
-
-        for text in text_list:
-            token_count = self.get_token_count(
-                text, self.tokenizer
-            )  # Use tokenizer for token count
-
-            if token_count <= short_length_threshold and previous_long_text:
-                # Append the short text to the last long text
-                fused_texts[-1] += "\n\n" + text
-            else:
-                # This is a long text, so add it to the list and remember it
-                fused_texts.append(text)
-                previous_long_text = text
-
-        return fused_texts
 
     @staticmethod
     def create_tokenizer(model_path: str | Path):
@@ -345,37 +305,3 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         )
 
         return docling_artifacts_path
-
-
-def chunk_markdowns(documents: List | Dataset, chunk_size) -> Dataset:
-    """
-    Iterates over the documents and splits them into chunks based on the word count provided by the user.
-    Args:
-        documents (list): List of documents retrieved from git (can also consist of a single document).
-        server_ctx_size (int): Context window size of server.
-        chunk_word_count (int): Maximum number of words to chunk a document.
-    Returns:
-         List[str]: List of chunked documents.
-    """
-
-    # Checks for input type error
-    content = []
-    # chunk_size = _num_chars_from_tokens(no_tokens_per_doc)
-    chunk_overlap = _DEFAULT_CHUNK_OVERLAP
-
-    # Using Markdown as default, document-specific chunking will be implemented in separate pr.
-    text_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=Language.MARKDOWN,
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-    )
-
-    # Determine file type for heuristics, default with markdown
-    for docs in documents:
-        # Use regex to remove unnecessary dashes in front of pipe characters in a markdown table.
-        docs = re.sub(r"-{2,}\|", "-|", docs)
-        # Remove unnecessary spaces in front of pipe characters in a markdown table.
-        docs = re.sub(r"\  +\|", " |", docs)
-        temp = text_splitter.create_documents([docs])
-        content.extend([item.page_content for item in temp])
-    return content
