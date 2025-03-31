@@ -1,3 +1,9 @@
+## v0.7.3
+
+### Fixes
+
+* Update to a newer version of Docling, fixing additional cases where a user might hit a "list index out of range" error when converting documents.
+
 ## v0.7.2
 
 ### Fixes
