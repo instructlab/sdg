@@ -107,9 +107,6 @@ jobs:
       - name: Run unit and functional tests with tox
         run: |
           tox
-        env:
-          # Increase from 1.7 to a greater value to avoid the PyTorch MPS backend running OOM.
-          PYTORCH_MPS_HIGH_WATERMARK_RATIO: 2.0
 
       - name: Remove llama-cpp-python from cache
         if: always()
