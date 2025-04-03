@@ -11,6 +11,8 @@ import re
 
 # Third Party
 from datasets import Dataset
+
+# pylint: disable=no-name-in-module
 from instructlab.schema.taxonomy import DEFAULT_TAXONOMY_FOLDERS as TAXONOMY_FOLDERS
 from instructlab.schema.taxonomy import (
     TaxonomyMessageFormat,
@@ -104,25 +106,13 @@ def _get_taxonomy(repo="taxonomy"):
     return taxonomy_file_paths
 
 
-def _string_contains_html(s: str) -> bool:
-    """Detect HTML tags in a string.
-
-    We use this to catch markdown files that may contain html elements since
-    docling does not support this."""
-    # Define a regex to detect HTML tags
-    html_tag_pattern = re.compile(r"<\/?[a-zA-Z][\s\S]*?>")
-
-    # Check for HTML tags in the content
-    return bool(html_tag_pattern.search(s))
-
-
 def _get_documents(
     source: Dict[str, Union[str, List[str]]],
     skip_checkout: bool = False,
     document_output_dir: Path = None,
 ) -> List[Path]:
     """
-    Retrieve the file paths of files (Markdown and PDF) from a Git repository.
+    Retrieve file paths (Markdown and PDFs) from a Git repository.
 
     Args:
         source (dict): Source info containing repository URL, commit hash, and list of file patterns.
@@ -130,8 +120,8 @@ def _get_documents(
         document_output_dir (Path, optional): Directory to clone the repository into. Defaults to current directory.
 
     Returns:
-        Tuple[List[str], List[Path]]:
-            - List of document contents (Markdown as text and PDFs as extracted text).
+        Tuple[List[Path], List[Path]]:
+            - List of file paths for valid documents (Markdown and PDFs).
             - List of corresponding file paths.
 
     Raises:
@@ -152,7 +142,6 @@ def _get_documents(
 
         logger.info("Processing files...")
         for pattern in file_patterns:
-            # Use glob to find files matching the pattern
             matched_files = glob.glob(
                 os.path.join(repo.working_dir, pattern), recursive=True
             )
@@ -162,17 +151,11 @@ def _get_documents(
                 if os.path.isfile(file_path):
                     logger.info(f"Processing file: {file_path}")
                     try:
-                        if file_path.lower().endswith(".md"):
-                            with open(file_path, "r", encoding="utf-8") as file:
-                                content = file.read()
-                                if _string_contains_html(content):
-                                    logging.warning(
-                                        f"Provided markdown file {file_path} contains HTML contents, which is currently unsupported as a part of markdown"
-                                        "NOTE: Continuing this might affect your data generation quality."
-                                        "To get best results please format your markdown documents without the use of HTML or use a different document filetype."
-                                    )
-                        filepaths.append(Path(file_path))
-                        logger.info(f"Collected filepath: {file_path}")
+                        if file_path.lower().endswith((".md", ".pdf")):
+                            filepaths.append(Path(file_path))
+                            logger.info(f"Added file path: {file_path}")
+                        else:
+                            logger.info(f"Skipping unsupported file type: {file_path}")
                     # pylint: disable=broad-exception-caught
                     except Exception as file_error:
                         logger.error(
@@ -227,7 +210,7 @@ def _read_taxonomy_file(
                 source=documents,
                 document_output_dir=unique_output_dir,
             )
-            logger.debug("Content from git repo fetched")
+            logger.debug("File paths from git repo fetched")
 
         for seed_example in contents.get("seed_examples"):
             context = seed_example.get("context", "")
@@ -254,7 +237,6 @@ def _read_taxonomy_file(
                         "output": answer,
                         "taxonomy_path": tax_path,
                         "task_description": task_description,
-                        "document": documents,
                         "domain": domain,
                     }
                 )
@@ -428,8 +410,7 @@ def leaf_node_to_samples(
     docling_model_path=None,
 ):
     samples = []
-    # check if the leaf node has document filepaths, if so, it's a knowledge leaf node
-    if leaf_node and (leaf_node[0].get("filepaths")):
+    if leaf_node and leaf_node[0].get("filepaths"):
         samples = _knowledge_leaf_node_to_samples(
             leaf_node,
             server_ctx_size,
