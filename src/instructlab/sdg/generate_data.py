@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import time
+import warnings
 
 # Third Party
 # instructlab - All of these need to go away (other than sdg) - issue #6
@@ -543,8 +544,20 @@ def postprocess_taxonomy(
     pipeline: Optional[str] = "simple",
     num_procs: Optional[int] = PipelineContext.DEFAULT_DATASET_NUM_PROCS,
     system_prompt: Optional[str] = _SYS_PROMPT,
-    use_legacy_pretraining_format: Optional[bool] = True,
+    use_legacy_pretraining_format: Optional[bool] = True,  # Deprecated, will be removed
 ):
+    """
+    Args:
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
+    """
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     knowledge_pipe, _, _ = _sdg_init(None, pipeline)
     mixer = _mixer_init(
         num_procs,
@@ -619,7 +632,7 @@ def generate_data(
     client: openai.OpenAI,
     logger: logging.Logger = logger,  # pylint: disable=redefined-outer-name
     system_prompt: Optional[str] = None,
-    use_legacy_pretraining_format: Optional[bool] = True,
+    use_legacy_pretraining_format: Optional[bool] = True,  # Deprecated, will be removed
     model_family: Optional[str] = None,
     model_name: Optional[str] = None,
     num_cpus: Optional[int] = None,
@@ -649,7 +662,16 @@ def generate_data(
                   or an absolute path to a directory containing the pipeline YAML files.
                   We expect three files to be present in this directory: "knowledge.yaml",
                     "freeform_skills.yaml", and "grounded_skills.yaml".
+        use_legacy_pretraining_format: Deprecated. This parameter will be removed in a future version.
+            The new format simply sets unmask=True.
     """
+    if use_legacy_pretraining_format:
+        warnings.warn(
+            "The use_legacy_pretraining_format parameter is deprecated and will be "
+            "removed in a future version. The new format simply sets unmask=True.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     generate_start = time.time()
 
     system_prompt = system_prompt if system_prompt is not None else _SYS_PROMPT
