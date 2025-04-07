@@ -1,14 +1,15 @@
 version: "1.0"
 blocks:
   - name: gen_skill_grounded
-    type: LLMBlock
+    type: TranslationBlock
     config:
       config_path: ../../configs/skills/simple_generate_qa_grounded.yaml
-      output_cols:
-        - output
+      output_cols: output  # The new column after translation
       gen_kwargs:
         max_tokens: 2048
         temperature: 0.7
         n: scaled
+      source_lang: "en"  # Source language (English)
+      target_lang: "hi"  # Target language (French)
     drop_duplicates:
-      - output
+    - output
