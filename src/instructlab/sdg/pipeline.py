@@ -323,3 +323,4 @@ def _parse_pipeline_config_file(pipeline_yaml):
 SIMPLE_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.simple"
 FULL_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.full"
 EVAL_PIPELINES_PKG = "instructlab.sdg.pipelines.eval"
+LLAMA_PIPELINES_PKG = "instructlab.sdg.pipelines.llama"

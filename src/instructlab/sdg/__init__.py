@@ -28,6 +28,7 @@ __all__ = (
     "SetToMajorityValueBlock",
     "FULL_PIPELINES_PACKAGE",
     "SIMPLE_PIPELINES_PACKAGE",
+    "LLAMA_PIPELINES_PKG",
     "generate_data",
     "mix_datasets",
 )
@@ -54,6 +55,7 @@ from .blocks.utilblocks import (
 from .generate_data import generate_data, mix_datasets
 from .pipeline import (
     FULL_PIPELINES_PACKAGE,
+    LLAMA_PIPELINES_PKG,
     SIMPLE_PIPELINES_PACKAGE,
     EmptyDatasetError,
     Pipeline,
