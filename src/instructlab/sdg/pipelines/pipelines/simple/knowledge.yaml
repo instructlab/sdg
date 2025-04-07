@@ -1,0 +1,14 @@
+version: "1.0"
+blocks:
+  - name: gen_knowledge
+    type: LLMBlock
+    config:
+      config_path: ../../configs/knowledge/simple_generate_qa.yaml
+      output_cols:
+      - output
+      gen_kwargs:
+        max_tokens: 2048
+        temperature: 0.7
+        n: scaled
+    drop_duplicates:
+    - output

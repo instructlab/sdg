@@ -1,0 +1,401 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "blocks"],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "blocks": {
+      "type": "array",
+      "additionalProperties": false,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "type", "config"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "drop_duplicates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "drop_columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "config": {
+            "anyOf": [
+              {
+                "type": "object",
+                "description": "FilterByValueBlock",
+                "required": ["filter_column", "filter_value", "operation"],
+                "additionalProperties": false,
+                "properties": {
+                  "convert_dtype": {
+                    "type": "string",
+                    "enum": ["float", "int", "bool"]
+                  },
+                  "default_value": {
+                    "type": "string"
+                  },
+                  "filter_column": {
+                    "type": "string"
+                  },
+                  "filter_value": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "operation": {
+                    "type": "string",
+                    "enum": ["eq", "ne", "gt", "ge", "lt", "le", "contains"]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "LLMBlock",
+                "required": ["config_path", "output_cols"],
+                "additionalProperties": false,
+                "properties": {
+                  "config_path": {
+                    "type": "string"
+                  },
+                  "output_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "model_id": {
+                    "type": "string"
+                  },
+                  "model_family": {
+                    "type": "string"
+                  },
+                  "model_prompt": {
+                    "type": "string"
+                  },
+                  "parser_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "parser_name": {
+                        "type": "string"
+                      },
+                      "parsing_pattern": {
+                        "type": "string"
+                      },
+                      "parser_cleanup_tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "batch_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "num_samples": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "gen_kwargs": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "max_tokens": {
+                        "type": "number"
+                      },
+                      "temperature": {
+                        "type": "number"
+                      },
+                      "n": {
+                        "oneOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["scaled"]
+                          }
+                        ]
+                      },
+                      "seed": {
+                        "type": "number"
+                      },
+                      "extra_body": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "ConditionalLLMBlock",
+                "required": ["config_paths", "output_cols", "selector_column_name"],
+                "additionalProperties": false,
+                "properties": {
+                  "config_paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items":{
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "output_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "model_id": {
+                    "type": "string"
+                  },
+                  "model_family": {
+                    "type": "string"
+                  },
+                  "model_prompt": {
+                    "type": "string"
+                  },
+                  "selector_column_name": {
+                    "type": "string"
+                  },
+                  "parser_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "parser_name": {
+                        "type": "string"
+                      },
+                      "parsing_pattern": {
+                        "type": "string"
+                      },
+                      "parser_cleanup_tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "batch_kwargs": {
+                    "type": "object",
+                    "properties": {
+                      "num_samples": {
+                        "type": "number"
+                      }
+                    }
+                  },
+                  "gen_kwargs": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "model": {
+                        "type": "string"
+                      },
+                      "max_tokens": {
+                        "type": "number"
+                      },
+                      "temperature": {
+                        "type": "number"
+                      },
+                      "n": {
+                        "oneOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "enum": ["scaled"]
+                          }
+                        ]
+                      },
+                      "seed": {
+                        "type": "number"
+                      },
+                      "extra_body": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type:": "object",
+                "description": "SamplePopulatorBlock",
+                "additionalProperties": false,
+                "required": ["config_paths", "column_name"],
+                "properties": {
+                  "config_paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "column_name": {
+                    "type": "string"
+                  },
+                  "post_fix": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type:": "object",
+                "description": "SelectorBlock",
+                "additionalProperties": false,
+                "required": ["choice_map", "choice_col", "output_col"],
+                "properties": {
+                  "choice_map": {
+                    "type": "object"
+                  },
+                  "choice_col": {
+                    "type": "string"
+                  },
+                  "output_col": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type:": "object",
+                "description": "CombineColumnsBlock",
+                "additionalProperties": false,
+                "required": ["columns", "output_col"],
+                "properties": {
+                  "output_col": {
+                    "type": "string"
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "FlattenColumnsBlock",
+                "required": ["value_name", "var_cols", "var_name"],
+                "additionalProperties": false,
+                "properties": {
+                  "value_name": {
+                    "type": "string"
+                  },
+                  "var_cols": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "var_name": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "DuplicateColumnsBlock",
+                "required": ["columns_map"],
+                "additionalProperties": false,
+                "properties": {
+                  "columns_map": {
+                    "type": "object"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "RenameColumnsBlock",
+                "required": ["columns_map"],
+                "additionalProperties": false,
+                "properties": {
+                  "columns_map": {
+                    "type": "object"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "SetToMajorityValueBlock",
+                "required": ["col_name"],
+                "additionalProperties": false,
+                "properties": {
+                  "col_name": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "description": "IterBlock",
+                "required": ["num_iters", "block_type"],
+                "additionalProperties": true,
+                "properties": {
+                  "num_iters": {
+                    "type": "number"
+                  },
+                  "block_type": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "datamixing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "auxiliary_instructions": {
+          "type": "object",
+          "patternProperties": {
+            ".*": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

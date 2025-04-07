@@ -20,6 +20,7 @@ from instructlab.sdg.utils import pandas
 
 # Local
 from .blocks import llmblock
+from .blocks import translationblock
 from .blocks.block import Block
 from .registry import BlockRegistry
 
@@ -323,3 +324,4 @@ def _parse_pipeline_config_file(pipeline_yaml):
 SIMPLE_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.simple"
 FULL_PIPELINES_PACKAGE = "instructlab.sdg.pipelines.full"
 EVAL_PIPELINES_PKG = "instructlab.sdg.pipelines.eval"
+TRANS_PIPELINES_PKG = "instructlab.sdg.pipelines.transpipe"

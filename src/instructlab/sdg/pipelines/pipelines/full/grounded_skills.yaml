@@ -1,0 +1,70 @@
+version: "1.0"
+blocks:
+  - name: gen_contexts
+    type: LLMBlock
+    config:
+      config_path: ../../configs/skills/contexts.yaml
+      output_cols:
+        - context
+      gen_kwargs:
+        temperature: 0.7
+        max_tokens: 2048
+        n: 10
+        seed: 42
+    drop_duplicates:
+      - context
+  - name: gen_grounded_questions
+    type: LLMBlock
+    config:
+      config_path: ../../configs/skills/grounded_questions.yaml
+      output_cols:
+        - question
+      batch_kwargs:
+        num_samples: 3
+    drop_duplicates:
+      - question
+  - name: eval_grounded_questions
+    type: LLMBlock
+    config:
+      config_path: ../../configs/skills/evaluate_grounded_questions.yaml
+      output_cols:
+        - evaluation
+        - score
+  - name: filter_grounded_questions
+    type: FilterByValueBlock
+    config:
+      filter_column: score
+      filter_value: 1.0
+      operation: eq
+      convert_dtype: float
+    drop_columns:
+      - evaluation
+      - score
+      - num_samples
+  - name: gen_grounded_responses
+    type: LLMBlock
+    config:
+      config_path: ../../configs/skills/grounded_responses.yaml
+      output_cols:
+        - response
+  - name: evaluate_grounded_qa_pair
+    type: LLMBlock
+    config:
+      config_path: ../../configs/skills/evaluate_grounded_pair.yaml
+      output_cols:
+        - evaluation
+        - score
+  - name: filter_grounded_qa_pair
+    type: FilterByValueBlock
+    config:
+      filter_column: score
+      filter_value: 2.0
+      operation: ge
+      convert_dtype: float
+  - name: combine_question_and_context
+    type: CombineColumnsBlock
+    config:
+      columns:
+        - context
+        - question
+      output_col: question

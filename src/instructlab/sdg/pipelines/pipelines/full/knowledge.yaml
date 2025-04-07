@@ -1,0 +1,113 @@
+version: "1.0"
+blocks:
+  - name: duplicate_document_col
+    type: DuplicateColumnsBlock
+    config:
+      columns_map:
+        document: base_document
+
+  - name: gen_spellcheck
+    type: LLMBlock
+    config:
+      config_path: ../../configs/knowledge/spellcheck.yaml
+      output_cols:
+        - spellcheck
+      gen_kwargs:
+        max_tokens: 2048
+
+  - name: flatten_auxiliary_columns
+    type: FlattenColumnsBlock
+    config:
+      var_cols:
+        - spellcheck
+        - base_document
+      value_name: corrected_document
+      var_name: dataset_type
+
+  - name: rename_to_document_column
+    type: RenameColumnsBlock
+    config:
+      columns_map:
+        document: raw_document
+        corrected_document: document
+
+  - name: gen_knowledge
+    type: LLMBlock
+    config:
+      config_path: ../../configs/knowledge/generate_questions_responses.yaml
+      output_cols:
+        - question
+        - response
+      parser_kwargs:
+        parser_name: custom
+        parsing_pattern: '\[(?:Question|QUESTION)\]\s*(.*?)\s*\[(?:Answer|ANSWER)\]\s*(.*?)\s*(?=\[(?:Question|QUESTION)\]|$)'
+        parser_cleanup_tags:
+          - "[END]"
+          - "[End]"
+      gen_kwargs:
+        max_tokens: 2048
+    drop_duplicates:
+      - question
+  - name: eval_faithfulness_qa_pair
+    type: LLMBlock
+    config:
+      config_path: ../../configs/knowledge/evaluate_faithfulness.yaml
+      output_cols:
+        - explanation
+        - judgment
+      gen_kwargs:
+        max_tokens: 2048
+  - name: filter_faithfulness
+    type: FilterByValueBlock
+    config:
+      filter_column: judgment
+      filter_value: "YES"
+      operation: eq
+    drop_columns:
+      - judgment
+      - explanation
+  - name: eval_relevancy_qa_pair
+    type: LLMBlock
+    config:
+      config_path: ../../configs/knowledge/evaluate_relevancy.yaml
+      output_cols:
+        - feedback
+        - score
+      gen_kwargs:
+        max_tokens: 2048
+  - name: filter_relevancy
+    type: FilterByValueBlock
+    config:
+      filter_column: score
+      filter_value: 2.0
+      operation: eq
+      convert_dtype: float
+    drop_columns:
+      - feedback
+      - score
+  - name: eval_verify_question
+    type: LLMBlock
+    config:
+      config_path: ../../configs/knowledge/evaluate_question.yaml
+      output_cols:
+        - explanation
+        - rating
+      gen_kwargs:
+        max_tokens: 2048
+  - name: filter_verify_question
+    type: FilterByValueBlock
+    config:
+      filter_column: rating
+      filter_value: 1.0
+      operation: eq
+      convert_dtype: float
+    drop_columns:
+      - explanation
+      - rating
+      - __index_level_0__
+
+datamixing:
+  auxiliary_instructions:
+    spellcheck:
+      - Correct any spelling errors in the document and output the corrected version.
+      - Rewrite the document to remove any spelling errors.

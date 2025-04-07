@@ -30,6 +30,7 @@ from instructlab.sdg.eval_data import generate_eval_task_data, mmlubench_pipe_in
 from instructlab.sdg.pipeline import (
     FULL_PIPELINES_PACKAGE,
     SIMPLE_PIPELINES_PACKAGE,
+    TRANS_PIPELINES_PKG,
     Pipeline,
     PipelineContext,
 )
@@ -253,6 +254,8 @@ def _sdg_init(ctx, pipeline):
             pipeline_pkg = FULL_PIPELINES_PACKAGE
         elif pipeline == "simple":
             pipeline_pkg = SIMPLE_PIPELINES_PACKAGE
+        elif pipeline == "transpipe":
+            pipeline_pkg = TRANS_PIPELINES_PKG
         else:
             # Validate that pipeline is a valid directory and that it contains the required files
             if not os.path.exists(pipeline):
