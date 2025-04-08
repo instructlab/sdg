@@ -17,9 +17,12 @@ from instructlab.sdg.datamixing import (
     DataMixer,
     Recipe,
     _add_extra_contexts_to_samples,
+    _conv_pretrain,
+    _create_auxiliary_dataset,
     _create_phase07_ds,
     _create_phase10_ds,
 )
+from instructlab.sdg.utils.json import jldump, jlload
 
 # We mock out the actual things that use num_procs anyway, but just
 # for a consistent value in the tests...
@@ -32,6 +35,9 @@ TEST_KNOWLEDGE_SKILLS_PATH = os.path.join(
     TEST_DATA_DIR, "datasets/knowledge_skills.jsonl"
 )
 TEST_AUXILIARY_PATH = os.path.join(TEST_DATA_DIR, "datasets/auxiliary.jsonl")
+TEST_PRECOMPUTED_07X_PATH = os.path.join(
+    TEST_DATA_DIR, "datasets/precomputed_skills_07x.jsonl"
+)
 
 
 auxiliary_inst = {
@@ -213,7 +219,7 @@ def test_add_extra_contexts_to_samples_with_six_samples_golden_path():
     for i, sample in enumerate(dataset):
         sample_content = sample["messages"][0]["content"]
         # ensure every sample contains its own context
-        assert f"context context{i+1}" in sample_content
+        assert f"context context{i + 1}" in sample_content
         # ensure we have the expected number of contexts
         assert sample_content.count("Document:\ncontext") == num_doc_in_context
 
@@ -242,7 +248,7 @@ def test_add_extra_contexts_to_samples_with_six_samples_distractor_path():
     for i, sample in enumerate(dataset):
         sample_content = sample["messages"][0]["content"]
         # ensure no sample contains its own context
-        assert f"context context{i+1}" not in sample_content
+        assert f"context context{i + 1}" not in sample_content
         # ensure we have the expected number of contexts
         assert sample_content.count("Document:\ncontext") == num_doc_in_context
 
@@ -308,3 +314,111 @@ def test_phase10_creation(mock_auxiliary_dataset):
     assert (
         len(phase10_ds) == phase10_expected_size
     ), "Phase 1.0 should contain the expected number of entries, including Phase 0.7 content."
+
+
+def test_all_samples_have_unmask_field():
+    """
+    Test that all samples have an unmask field after mixing, regardless of
+    whether they are knowledge or skills samples.
+    """
+    # create a knowledge dataset
+    knowledge_dataset = load_knowledge_dataset()
+
+    # create both phase07 and phase10 datasets
+    phase07_ds = _create_phase07_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+
+    phase10_ds = _create_phase10_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+
+    # verify every sample in both datasets has an unmask field
+    for sample in phase07_ds:
+        assert "unmask" in sample, "Sample missing unmask field in phase07"
+
+    for sample in phase10_ds:
+        assert "unmask" in sample, "Sample missing unmask field in phase10"
+
+
+def test_phase07_knowledge_samples_have_unmask_true():
+    """
+    Test that all samples in phase07 knowledge dataset have unmask=True.
+    This is important as phase07 is used for pretraining.
+    """
+
+    # Create a knowledge dataset
+    knowledge_dataset = load_knowledge_dataset()
+
+    # Create phase07 dataset
+    phase07_ds = _create_phase07_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+
+    # create phase10 dataset
+    phase10_ds = _create_phase10_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+
+    # verify every sample has unmask=True
+    for sample in phase07_ds:
+        assert sample["unmask"] is True, "Phase07 sample does not have unmask=True"
+
+    # also verify the auxiliary dataset samples if present
+    auxiliary_dataset = _create_auxiliary_dataset(knowledge_dataset, auxiliary_inst)
+    if auxiliary_dataset is not None:
+        auxiliary_ds = auxiliary_dataset.map(
+            lambda rec: _conv_pretrain(rec, use_legacy_pretraining_format=False)
+        )
+        for sample in auxiliary_ds:
+            assert (
+                sample["unmask"] is True
+            ), "Auxiliary sample does not have unmask=True"
+
+    # verify that at least ONE sample in phase10 has unmask=True
+    assert any(
+        sample["unmask"] for sample in phase10_ds
+    ), "No samples in phase10 have unmask=True"
+
+
+def test_mix_instructlab_07x_precomputed_skills_with_unmask(tmp_path):
+    """
+    Test that we can mix the precomputed skills data format used in
+    InstructLab 0.7.x with new data that has the unmask field.
+    """
+
+    # Create a knowledge dataset
+    knowledge_dataset = load_knowledge_dataset()
+
+    # Create phase07 dataset
+    phase10_ds = _create_phase10_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+    phase10_path = os.path.join(tmp_path, "knowledge_p10.jsonl")
+    jldump(phase10_ds, phase10_path)
+
+    output_path = os.path.join(tmp_path, "output.jsonl")
+    recipe = Recipe()
+    # Add an old precomputed skills dataset in that does NOT have an unmask field
+    recipe.add_dataset(TEST_PRECOMPUTED_07X_PATH, 1.0)
+    # Add in our new phase10 dataset that does have unmask fields
+    recipe.add_dataset(phase10_path, 1.0)
+    # Mix the two datasets, ensuring nothing errors out
+    recipe.save_mixed_dataset(output_path, TEST_NUM_PROCS)
+
+    # Ensure all the mixed samples have an unmask field
+    mixed_samples = jlload(output_path)
+    for sample in mixed_samples:
+        assert (
+            sample.get("unmask", None) is not None
+        ), "Mixed sample does not have unmask"
