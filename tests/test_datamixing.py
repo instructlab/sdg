@@ -22,6 +22,7 @@ from instructlab.sdg.datamixing import (
     _create_phase07_ds,
     _create_phase10_ds,
 )
+from instructlab.sdg.utils.json import jldump, jlload
 
 # We mock out the actual things that use num_procs anyway, but just
 # for a consistent value in the tests...
@@ -34,6 +35,9 @@ TEST_KNOWLEDGE_SKILLS_PATH = os.path.join(
     TEST_DATA_DIR, "datasets/knowledge_skills.jsonl"
 )
 TEST_AUXILIARY_PATH = os.path.join(TEST_DATA_DIR, "datasets/auxiliary.jsonl")
+TEST_PRECOMPUTED_07X_PATH = os.path.join(
+    TEST_DATA_DIR, "datasets/precomputed_skills_07x.jsonl"
+)
 
 
 auxiliary_inst = {
@@ -383,3 +387,38 @@ def test_phase07_knowledge_samples_have_unmask_true():
     assert any(
         sample["unmask"] for sample in phase10_ds
     ), "No samples in phase10 have unmask=True"
+
+
+def test_mix_instructlab_07x_precomputed_skills_with_unmask(tmp_path):
+    """
+    Test that we can mix the precomputed skills data format used in
+    InstructLab 0.7.x with new data that has the unmask field.
+    """
+
+    # Create a knowledge dataset
+    knowledge_dataset = load_knowledge_dataset()
+
+    # Create phase07 dataset
+    phase10_ds = _create_phase10_ds(
+        generated_dataset=knowledge_dataset,
+        auxiliary_inst=auxiliary_inst,
+        use_legacy_pretraining_format=False,
+    )
+    phase10_path = os.path.join(tmp_path, "knowledge_p10.jsonl")
+    jldump(phase10_ds, phase10_path)
+
+    output_path = os.path.join(tmp_path, "output.jsonl")
+    recipe = Recipe()
+    # Add an old precomputed skills dataset in that does NOT have an unmask field
+    recipe.add_dataset(TEST_PRECOMPUTED_07X_PATH, 1.0)
+    # Add in our new phase10 dataset that does have unmask fields
+    recipe.add_dataset(phase10_path, 1.0)
+    # Mix the two datasets, ensuring nothing errors out
+    recipe.save_mixed_dataset(output_path, TEST_NUM_PROCS)
+
+    # Ensure all the mixed samples have an unmask field
+    mixed_samples = jlload(output_path)
+    for sample in mixed_samples:
+        assert (
+            sample.get("unmask", None) is not None
+        ), "Mixed sample does not have unmask"
