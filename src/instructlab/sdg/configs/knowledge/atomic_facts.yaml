@@ -4,7 +4,7 @@ introduction: |
   Please break down the following snippet from an article about {{domain}} into atomic facts.
 
 principles: |
-  1. Makesure each fact is grounded in the given text.
+  1. Make sure each fact is grounded in the given text.
   2. Include any necessary information needed to explain the fact or concept
   3. The atomic facts should be as simple as possible, if it’s compound sentence, break down one more time
   4. For clarity, avoid using pronouns like ’it’, ’he’, ’she’, ’this’, ’that’ etc., and instead use the full names or titles.
