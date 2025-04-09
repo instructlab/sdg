@@ -97,8 +97,10 @@ class TranslationBlock(Block):
         model_prompt=None,
         trans_model_id=None,
         trans_model = None,
-        source_lang="en",  # Default source language
-        target_lang="hi",  # Default target language
+        source_lang = "eng_Latn",
+        target_lang = "hin_Deva",
+        # source_lang="en",  # Default source language
+        # target_lang="hi",  # Default target language
         gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
@@ -117,7 +119,8 @@ class TranslationBlock(Block):
             self.model_id,
         )
         self.model_prompt = model_prompt
-        self.trans_model_id = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}" 
+        self.trans_model_id = f"facebook/nllb-200-3.3B"
+        # self.trans_model_id = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}" 
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
         max_num_token_override = ctx.max_num_tokens
