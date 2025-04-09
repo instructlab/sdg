@@ -1,23 +1,16 @@
 version: "1.0"
 blocks:
-  - name: translate_output
+  - name: gen_knowledge
     type: TranslationBlock
     config:
       config_path: ../../configs/knowledge/simple_generate_qa.yaml
       output_cols:
-        - question
-        - response
-      source_lang: "en"  
-      target_lang: "hi"  
-      parser_kwargs:
-        parser_name: custom
-        parsing_pattern: '\[(?:Question|QUESTION)\]\s*(.*?)\s*\[(?:Answer|ANSWER)\]\s*(.*?)\s*(?=\[(?:Question|QUESTION)\]|$)'
-        parser_cleanup_tags:
-          - "[END]"
-          - "[End]"
+      - output
       gen_kwargs:
-        max_tokens: 512
+        max_tokens: 2048
         temperature: 0.7
         n: scaled
+      source_lang: "en"  # Source language (English)
+      target_lang: "hi"  # Target language (French)
     drop_duplicates:
-      - question
+    - output

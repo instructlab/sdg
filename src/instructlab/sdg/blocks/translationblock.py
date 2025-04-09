@@ -45,11 +45,6 @@ def _resolve_model_family(model_family, ctx_model_family):
     # If a model family was passed in the PipelineContext, use that
     if ctx_model_family:
         return ctx_model_family
-
-    # Otherwise fallback to the model_family specified in the block config
-    # This could be None, but that's ok for model_family because when the
-    # actual prompt gets selected it falls back to merlinite if nothing
-    # else was given.
     return model_family
 def server_supports_batched(client, model_id: str) -> bool:
     supported = getattr(client, "server_supports_batched", None)
@@ -288,8 +283,39 @@ class TranslationBlock(Block):
                     prompt=prompt, **self.gen_kwargs
                 )
                 text = response.choices[0].text.strip()
-                # translated_text = self._translate({"output": text})
-                results.append(text)
+                text = response.choices[0].text.strip()
+                print(f"Generated text: {text}")
+                translated_text = text
+                # firest strip the text ,if it begins with "Question:" or "Answer:"
+                if text.startswith("Question:") or text.startswith("Answer:"):
+                    q_part, a_part = None, None
+                    if "Question:" in text:
+                        q_start = text.find("Question:")
+                        a_start = text.find("Answer:")
+                        if a_start != -1 and a_start > q_start:
+                            q_part = text[q_start + len("Question:"):a_start].strip()
+                            a_part = text[a_start + len("Answer:"):].strip()
+                        else:
+                            q_part = text[q_start + len("Question:"):].strip()
+                    elif "Answer:" in text:
+                        a_part = text[len("Answer:"):].strip()
+
+                    translated_q = self._translate(q_part) if q_part else None
+                    translated_a = self._translate(a_part) if a_part else None
+
+                    translated_text = ""
+                    if translated_q:
+                        translated_text += "Question: " + translated_q + "\n"
+                    if translated_a:
+                        translated_text += "Answer: " + translated_a
+                else:
+                    translated_text = self._translate(text)
+
+                print(f"Translated text: {translated_text}")
+
+             
+
+                results.append(translated_text)
                 # logger.debug(f"RESULT: {translated_text}")
                 progress_bar.update(1)
         return results
@@ -332,7 +358,7 @@ class TranslationBlock(Block):
         # generate the output
 
         outputs = self._generate(samples)
-        logger.debug("Generated outputs: %s", outputs)
+        logger.debug("Generated Translated outputs: %s", outputs)
 
         num_parallel_samples = self.gen_kwargs.get("n", 1)
         extended_samples = []
