@@ -118,6 +118,8 @@ class TranslationBlock(Block):
             _resolve_model_family(model_family, self.ctx.model_family),
             self.model_id,
         )
+        self.source_lang = source_lang
+        self.target_lang = target_lang
         self.model_prompt = model_prompt
         self.trans_model_id = f"facebook/nllb-200-3.3B"
         # self.trans_model_id = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}" 
@@ -130,10 +132,15 @@ class TranslationBlock(Block):
 
          # Load tokenizer and model for translation
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.trans_model_id)
+            self.tokenizer = AutoTokenizer.from_pretrained(self.trans_model_id,src_lang=self.source_lang)
             self.trans_model = AutoModelForSeq2SeqLM.from_pretrained(self.trans_model_id).to(DEVICE)
         except Exception as e:
             raise ValueError(f"Error loading TRANSLATOIN model {self.model_id}: {e}")
+        # try:
+        #     self.tokenizer = AutoTokenizer.from_pretrained(self.trans_model_id)
+        #     self.trans_model = AutoModelForSeq2SeqLM.from_pretrained(self.trans_model_id).to(DEVICE)
+        # except Exception as e:
+        #     raise ValueError(f"Error loading TRANSLATOIN model {self.model_id}: {e}")
         # max_num_tokens should only be applicable to knowledge blocks
         # gen_knowledge if the full/simple pipeline's knowledge generation block
         if block_name != "gen_knowledge":
@@ -157,11 +164,13 @@ class TranslationBlock(Block):
     def _translate(self, text: str) -> str:
         """Translates a single string and returns the translated text."""
         logging.debug(f"Translating text using model {self.model_id}")
-        encoded_input = self.tokenizer([text], return_tensors="pt", padding=True, truncation=True).to(DEVICE)
+        encoded_input = self.tokenizer([text] ,return_tensors="pt").to(DEVICE)
+        # encoded_input = self.tokenizer([text], return_tensors="pt", padding=True, truncation=True).to(DEVICE)
         with torch.no_grad():
-            translated_tokens = self.trans_model.generate(**encoded_input)
+            translated_tokens = self.trans_model.generate(**encoded_input,forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_lang),max_length=1024)
+            # translated_tokens = self.trans_model.generate(**encoded_input)
 
-        translation = self.tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
+        translation = self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
         return translation
 
     # def _translate(self, samples: List[Dict]) -> List[Dict]:

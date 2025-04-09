@@ -1,0 +1,97 @@
+version: 3
+
+# General information about the document
+domain: legal
+created_by: kundeshwar
+
+seed_examples:
+
+  - context: |
+      Physical altercations, even minor ones, can have legal consequences.
+      If force is used against another person without a lawful reason,
+      it may be punishable under the law.
+    questions_and_answers:
+      - question: "I was at a market when a man got angry and shoved the shopkeeper because he thought he was overcharging. The shopkeeper didn’t hit back, but was this push illegal?"
+        answer: "Yes, this is an offense under Section 131, as force was used without grave and sudden provocation."
+      - question: "My neighbor and I got into a fight over parking. In frustration, he suddenly slapped me. Can I take legal action?"
+        answer: "Yes, the slap is considered criminal force under Section 131, and legal action can be taken."
+      - question: "At a wedding, my cousin threw a drink at another guest during an argument. It wasn’t a fight, just anger. Could this get him into legal trouble?"
+        answer: "Yes, this act falls under Section 131, as it constitutes criminal force."
+      - question: "While cycling, I was blocked by a pedestrian. In anger, I pushed him aside. Could I be in legal trouble for this?"
+        answer: "Yes, using force in such a situation can be punishable under Section 131."
+      - question: "My boss slapped my colleague for making a mistake at work. Can my colleague file a complaint?"
+        answer: "Yes, under Section 131, the employer can be charged for using criminal force."
+
+  - context: |
+      Public servants, such as police officers and government officials,
+      perform duties that sometimes involve enforcing the law or making
+      difficult decisions. Using force against them is a criminal offense.
+    questions_and_answers:
+      - question: "A traffic policeman stopped me for speeding. I was so angry that I pushed him and drove away. Did I commit a crime?"
+        answer: "Yes, under Section 132, assaulting a public servant on duty is punishable."
+      - question: "Municipal workers were removing illegal stalls in our area. The stall owner grabbed one of them to stop them from taking his things. Is this legal?"
+        answer: "No, preventing a public servant from doing their duty using force is an offense under Section 132."
+      - question: "During an election rally, some people shoved a government officer because he wasn’t allowing an unauthorized gathering. Can they be arrested?"
+        answer: "Yes, this is an offense under Section 132."
+      - question: "My friend’s illegally constructed shop was being seized by government officials. He physically tried to stop them. Can he get into trouble?"
+        answer: "Yes, his actions violate Section 132 and are punishable."
+      - question: "A group of protesters tried to forcefully enter a government office and pushed security guards aside. Is this a crime?"
+        answer: "Yes, under Section 132, assaulting public servants in duty is a crime."
+
+  - context: |
+      In certain cases, force is used not to injure but to humiliate or
+      degrade another person. The law punishes such acts of dishonor.
+    questions_and_answers:
+      - question: "During a heated argument, a man in my neighborhood ripped off a woman’s scarf to insult her. Can she take legal action?"
+        answer: "Yes, this falls under Section 133, as force was used with intent to dishonor."
+      - question: "A group in our village forcibly paraded a man through the streets to embarrass him. Is this against the law?"
+        answer: "Yes, under Section 133, using force to dishonor someone is a criminal offense."
+      - question: "Someone threw ink on a journalist in public to shame him. Is this considered a crime?"
+        answer: "Yes, this act falls under Section 133."
+      - question: "At a wedding, the groom's family forced the bride's father to bow before them as an act of superiority. Can they be punished?"
+        answer: "Yes, under Section 133, this is an offense."
+      - question: "During a meeting, a group dragged someone out forcefully just to embarrass him. Can he file a complaint?"
+        answer: "Yes, this is punishable under Section 133."
+
+  - context: |
+      Theft becomes more serious when force is used. If someone attempts
+      to steal property that another person is carrying and uses force
+      in the process, it is a criminal offense.
+    questions_and_answers:
+      - question: "My aunt was walking home when a man snatched her handbag and pushed her to the ground. What legal action can she take?"
+        answer: "This falls under Section 134, as force was used in an attempt to commit theft."
+      - question: "At a crowded market, someone tried to grab my gold chain and hit me when I resisted. Is this a crime?"
+        answer: "Yes, this is an offense under Section 134."
+      - question: "A thief grabbed a delivery boy's cash bag and punched him when he refused to let go. Can the thief be charged?"
+        answer: "Yes, this is a criminal offense under Section 134."
+      - question: "During a festival, someone forcefully snatched a mobile phone from a person in the crowd. Can this be reported?"
+        answer: "Yes, this is an offense under Section 134."
+      - question: "A thief tried to grab a street vendor's money and shoved him to escape. Does this fall under any law?"
+        answer: "Yes, under Section 134, using force while attempting theft is a punishable crime."
+
+  - context: |
+      Confining someone against their will is unlawful. If force is used
+      in an attempt to restrain or prevent a person from moving freely,
+      it can be legally punished.
+    questions_and_answers:
+      - question: "During a rent dispute, my landlord locked my brother inside his room. Can we file a legal complaint?"
+        answer: "Yes, this is an offense under Section 135."
+      - question: "At a local meeting, a group of people physically blocked a man from leaving because they didn't like what he said. Is this legal?"
+        answer: "No, this is wrongful confinement under Section 135."
+      - question: "Security guards at a shopping mall locked a customer inside a room without any valid reason. Can he take legal action?"
+        answer: "Yes, this falls under Section 135."
+      - question: "A group of people stopped my sister from leaving a house by standing in the way and physically blocking her. Is this a crime?"
+        answer: "Yes, under Section 135, wrongful confinement with force is a crime."
+      - question: "During a protest, some people locked a journalist inside a vehicle to stop him from covering the event. Can this be reported?"
+        answer: "Yes, this act is punishable under Section 135."
+
+# End of document
+
+document_outline: |
+  This document outlines various legal provisions related to criminal force, explaining the relevant statutes through real-world scenarios. It aims to educate individuals on their rights and the legal consequences of using force unlawfully.
+
+document:
+  repo: https://github.com/piyushianand/taxonomy
+  commit: 3ad9b1204b587969d1c66f24c72ed3cf6f76b4a6
+  patterns:
+    - criminal_force.md
