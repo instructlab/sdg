@@ -9,7 +9,7 @@ blocks:
         max_tokens: 2048
         temperature: 0.7
         n: scaled
-      source_lang: "en"  # Source language (English)
-      target_lang: "hi"  # Target language (French)
+      source_lang: "eng_Latn"  # Source language (English)
+      target_lang: "hin_Deva"  # Target language (French)
     drop_duplicates:
     - output
