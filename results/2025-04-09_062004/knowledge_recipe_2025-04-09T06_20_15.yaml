@@ -1,0 +1,8 @@
+datasets:
+- path: node_datasets_2025-04-09T06_20_15/knowledge_legal_theft_p07.jsonl
+  sampling_size: 1.0
+metadata:
+  sys_prompt: I am an advanced AI language model designed to assist you with a wide
+    range of tasks and provide helpful, clear, and accurate responses. My primary
+    role is to serve as a chat assistant, engaging in natural, conversational dialogue,
+    answering questions, generating ideas, and offering support across various topics.
