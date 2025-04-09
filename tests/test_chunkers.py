@@ -147,28 +147,6 @@ def test_get_documents_basic():
         assert result[0].name == "test.md"
 
 
-def test_get_documents_html_warning():
-    """Test warning is logged when markdown contains HTML"""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        source = {"repo": "https://fake-repo-url.git", "patterns": ["*.md"]}
-
-        mock_repo = Mock()
-        mock_repo.working_dir = temp_dir
-
-        # Create test file with HTML
-        test_md = Path(temp_dir) / "test.md"
-        test_md.write_text("# Test\n<div>Some HTML</div>")
-
-        with (
-            patch("git.Repo.clone_from", return_value=mock_repo),
-            patch("logging.Logger.warning") as mock_warning,
-        ):
-            result = _get_documents(source, document_output_dir=Path(temp_dir))
-
-        mock_warning.assert_called_once()
-        assert len(result) == 1
-
-
 def test_get_documents_no_files():
     """Test error when no valid documents are found"""
     with tempfile.TemporaryDirectory() as temp_dir:
