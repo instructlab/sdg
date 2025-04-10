@@ -48,35 +48,115 @@ In your `config.yaml`, replace the `generate` section with the following:
 
 ```yaml
 generate:
+  # Number of Batches to send for generation on each core.
+  # Default: 8
   batch_size: 8
+  # Maximum number of words per chunk.
+  # Default: 1000
   chunk_word_count: 1000
+  # The maximum amount of tokens for the model to generate during knowledge
+  # generation. A lower number yields less data but a faster SDG run. It is
+  # reccomended to use this on consumer hardware
+  # Default: 4096
   max_num_tokens: 4096
+  # Teacher model that will be used to synthetically generate training data.
+  # Default: /opt/app-root/src/.cache/instructlab/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf
   model: /opt/app-root/src/.cache/instructlab/models/mistralai-7b-instruct-v0.2.Q4_K_M.gguf
+  # Number of CPU cores to use for generation.
+  # Default: 10
   num_cpus: 10
+  # Number of instructions to use
+  # Default: -1
+  # Deprecated: see 'sdg_scale_factor' instead
   num_instructions: -1
+  # Directory where generated datasets are stored.
+  # Default: /opt/app-root/src/.local/share/instructlab/datasets
   output_dir: /opt/app-root/src/.local/share/instructlab/datasets
+  # Data generation pipeline to use. Available: 'simple', 'full', or a valid path to
+  # a directory of pipeline workflow YAML files. Note that 'full' requires a larger
+  # teacher model, Mixtral-8x7b.
+  # Default: full
   pipeline: transpipe
+  # The total number of instructions to be generated.
+  # Default: 30
   sdg_scale_factor: 30
+  # Branch of taxonomy used to calculate diff against.
+  # Default: origin/main
   taxonomy_base: origin/main
-  taxonomy_path: /opt/app-root/src/.local/share/instructlab/taxonomy
-
+  # Directory where taxonomy is stored and accessed from.
+  # Default: /opt/app-root/src/.local/share/instructlab/taxonomy
+  taxonomy_path: /opt/app-root/src/.local/share/instructlab/taxonomy_mine
+  # Teacher configuration
   teacher:
+    # Serving backend to use to host the model.
+    # Default: None
+    # Examples:
+    #   - vllm
+    #   - llama-cpp
     backend: llama-cpp
+    # Chat template to supply to the model. Possible values: 'auto'(default),
+    # 'tokenizer', a path to a jinja2 file.
+    # Default: None
+    # Examples:
+    #   - auto
+    #   - tokenizer
+    #   - A filesystem path expressing the location of a custom template
     chat_template:
+    # llama-cpp serving settings.
     llama_cpp:
+      # Number of model layers to offload to GPU. -1 means all layers.
+      # Default: -1
       gpu_layers: -1
+      # Large Language Model Family
+      # Default: ''
+      # Examples:
+      #   - granite
+      #   - mixtral
       llm_family: ''
+      # Maximum number of tokens that can be processed by the model.
+      # Default: 4096
       max_ctx_size: 4096
+    # Directory where model to be served is stored.
+    # Default: /opt/app-root/src/.cache/instructlab/models/granite-7b-lab-Q4_K_M.gguf
     model_path: /opt/app-root/src/.cache/instructlab/models/granite-7b-lab-Q4_K_M.gguf
+    # Server configuration including host and port.
+    # Default: host='127.0.0.1' port=8000 backend_type='' current_max_ctx_size=4096
     server:
+      # Backend Instance Type
+      # Default: ''
+      # Examples:
+      #   - llama-cpp
+      #   - vllm
       backend_type: ''
+      # Maximum number of tokens that can be processed by the currently served model.
+      # Default: 4096
       current_max_ctx_size: 4096
+      # Host to serve on.
+      # Default: 127.0.0.1
       host: 127.0.0.1
+      # Port to serve on.
+      # Default: 8000
       port: 8000
+    # vLLM serving settings.
     vllm:
+      # Number of GPUs to use.
+      # Default: None
       gpus: 2
+      # Large Language Model Family
+      # Default: ''
+      # Examples:
+      #   - granite
+      #   - mixtral
       llm_family: granite
+      # Maximum number of attempts to start the vLLM server.
+      # Default: 120
       max_startup_attempts: 120
+      # vLLM specific arguments. All settings can be passed as a list of strings, see:
+      # https://docs.vllm.ai/en/latest/serving/openai_compatible_server.html
+      # Default: []
+      # Examples:
+      #   - ['--dtype', 'auto']
+      #   - ['--lora-alpha', '32']
       vllm_args: []
 ```
 
