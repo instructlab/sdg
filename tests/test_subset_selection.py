@@ -9,6 +9,7 @@ from unittest.mock import patch
 import os
 
 # Third Party
+from datasets import Dataset
 import h5py
 import pytest
 import torch
@@ -68,12 +69,12 @@ def test_format_text(data_processor):
 
 def test_calculate_subset_size(data_processor):
     """Test subset size calculation for both percentage and absolute values"""
-    # Test percentage
-    assert data_processor.calculate_subset_size(1000, 10.5) == 105
+    # Test percentage (now using 0-1 range instead of 0-100)
+    assert data_processor.calculate_subset_size(1000, 0.105) == 105
     # Test absolute
     assert data_processor.calculate_subset_size(1000, 50) == 50
     # Test percentage rounding
-    assert data_processor.calculate_subset_size(1000, 0.1) == 1
+    assert data_processor.calculate_subset_size(1000, 0.001) == 1
     # Test absolute capping
     assert data_processor.calculate_subset_size(10, 20) == 10
 
@@ -139,36 +140,63 @@ def test_process_batch(mock_gpu_environment, data_processor, tmp_path):
         assert embeddings.shape == (3, embedding_dim)
 
 
-def test_generate_embeddings_resume(mock_gpu_environment, data_processor, tmp_path):
-    """Test embedding generation with resume capability"""
+def test_generate_embeddings_parallel(mock_gpu_environment, tmp_path, mock_encoder):
+    """Test the parallelized embedding generation feature."""
+    # Create a sample dataset
+    sample_texts = [f"text{i}" for i in range(50)]
+    dataset = Dataset.from_dict({"text": sample_texts})
+
+    # Create output directory
     output_dir = str(tmp_path / "embeddings")
     os.makedirs(output_dir, exist_ok=True)
 
-    # Create pre-existing batch files to simulate partial processing
-    mock_embeddings = torch.randn(10, 768)
-    batch_0_file = os.path.join(output_dir, "batch_0.h5")
+    # Create mock embeddings file to test the early return
+    merged_file = os.path.join(output_dir, "embeddings.h5")
+    with h5py.File(merged_file, "w") as f:
+        f.create_dataset("embeddings", data=torch.randn(50, 768).numpy())
 
-    with h5py.File(batch_0_file, "w") as f:
-        f.create_dataset("embeddings", data=mock_embeddings.numpy())
+    # Create config
+    basic_config = BasicConfig(output_dir=str(tmp_path))
+    config = ProcessingConfig(
+        input_files=["test.jsonl"],
+        subset_sizes=[10, 0.2],  # Both absolute and percentage
+        basic=basic_config,
+    )
+    config.system.num_gpus = 2
 
-    # dummy dataset
-    dataset = [{"text": f"text{i}"} for i in range(30)]
+    # Create processor
+    processor = DataProcessor(config, mock_encoder)
 
-    merged_file = data_processor.generate_embeddings(dataset, output_dir)
+    # Test case 1: File exists, should return early
+    result_path = processor.generate_embeddings(dataset, output_dir)
+    assert result_path == merged_file
 
-    # Verify resume behavior
-    assert os.path.exists(merged_file)
+    # Test case 2: File doesn't exist, should process data
+    # First remove the existing file
+    os.remove(merged_file)
 
-    # Verify the merged file exists and contains embeddings
-    with h5py.File(merged_file, "r") as f:
-        final_embeddings = f["embeddings"][:]
-        # Just verify the embedding dimension is correct
-        assert final_embeddings.shape[1] == 768
+    # We need to patch the Pool.map call instead of the functions directly
+    # This avoids the pickling issue
+    with patch("multiprocessing.pool.Pool.map") as mock_map:
+        # Set up mock return values
+        shard_files = [
+            os.path.join(output_dir, f"shard_{i}", f"embeddings_shard_{i}.h5")
+            for i in range(2)
+        ]
+        mock_map.return_value = shard_files
 
-    # Run again with same dataset - should skip processing
-    new_merged_file = data_processor.generate_embeddings(dataset, output_dir)
+        # Also mock the merge function to avoid actually creating files
+        with patch("instructlab.sdg.subset_selection._merge_shard_files") as mock_merge:
+            mock_merge.side_effect = lambda shard_files, merged_path: None
 
-    # Verify the file is the same and has same number of embeddings
-    with h5py.File(new_merged_file, "r") as f:
-        new_embeddings = f["embeddings"][:]
-        assert new_embeddings.shape == final_embeddings.shape
+            # Call the function
+            result_path = processor.generate_embeddings(dataset, output_dir)
+
+            # Verify Pool.map was called
+            mock_map.assert_called_once()
+
+            # Verify the correct path is returned
+            assert result_path == os.path.join(output_dir, "embeddings.h5")
+
+            # Verify merge was called with the right arguments
+            mock_merge.assert_called_once_with(shard_files, merged_file)
