@@ -85,7 +85,7 @@ generate:
   taxonomy_base: origin/main
   # Directory where taxonomy is stored and accessed from.
   # Default: /opt/app-root/src/.local/share/instructlab/taxonomy
-  taxonomy_path: /opt/app-root/src/.local/share/instructlab/taxonomy_mine
+  taxonomy_path: /opt/app-root/src/.local/share/instructlab/taxonomy
   # Teacher configuration
   teacher:
     # Serving backend to use to host the model.
