@@ -4,10 +4,12 @@ from multiprocessing import Pool
 from typing import Any, Dict, List, Optional, Tuple, TypedDict, TypeVar, Union
 import gc
 import glob
+import importlib
 import logging
 import math
 import os
 import re
+import sys
 
 # Third Party
 from datasets import concatenate_datasets, load_dataset
@@ -256,8 +258,13 @@ class DataProcessor:
             int: Actual number of samples to select.
         """
         if isinstance(size_spec, float):
-            # Treat as percentage
-            return max(1, int(size_spec / 100 * total_samples))
+            # if not in range of 0 to 1, raise error
+            if size_spec <= 0 or size_spec > 1:
+                raise ValueError(
+                    "Percentage values must be between 0(non-inclusive) and 1(inclusive)"
+                )
+            # If between 0 and 1, treat as decimal percentage (0.5 = 50%)
+            return max(1, int((size_spec) * total_samples))
         # Treat as absolute number
         return min(size_spec, total_samples)
 
@@ -333,7 +340,7 @@ class DataProcessor:
     @retry_on_exception
     def generate_embeddings(self, dataset, output_dir: str) -> str:
         """
-        Generates embeddings for the dataset and saves them to the output directory.
+        Generates embeddings for the dataset and saves them to the output directory, using multiple GPUs in parallel.
 
         Args:
             dataset: The dataset to process.
@@ -343,74 +350,61 @@ class DataProcessor:
             str: The path to the merged embeddings file.
         """
         os.makedirs(output_dir, exist_ok=True)
-        if os.path.exists(os.path.join(output_dir, "embeddings.h5")):
+        merged_path = os.path.join(output_dir, "embeddings.h5")
+
+        # If embeddings already exist, return early
+        if os.path.exists(merged_path):
             logger.info(f"Embeddings file already exists in {output_dir}, skipping")
-            return os.path.join(output_dir, "embeddings.h5")
-        last_batch, last_batch_file = self.get_last_processed_batch(output_dir)
-        if last_batch >= 0:
-            logger.info(f"Resuming from batch {last_batch} in {last_batch_file}")
-        else:
-            logger.info("Starting from scratch")
-        batch_texts = []
+            return merged_path
 
-        # Initialize total_processed based on last batch
-        if last_batch >= 0:
-            # For the last batch, we need to check the number of samples processed
-            embedding_size, _ = self.get_embedding_size_dim_from_file(
-                str(last_batch_file)
+        # Get number of GPUs to use
+        num_gpus = min(self.config.system.num_gpus, torch.cuda.device_count())
+        logger.info(f"Using {num_gpus} GPUs for embedding generation")
+
+        # Create dataset shards - one per GPU
+        total_samples = len(dataset)
+        per_gpu_samples = (total_samples + num_gpus - 1) // num_gpus  # Ceiling division
+
+        # Prepare arguments for parallel processing
+        args_list = []
+        for gpu_id in range(num_gpus):
+            # Calculate start and end indices for this shard
+            start_idx = gpu_id * per_gpu_samples
+            end_idx = min(start_idx + per_gpu_samples, total_samples)
+
+            if start_idx >= total_samples:
+                continue  # Skip if this GPU has no data to process
+
+            # Create arguments for this GPU
+            args_list.append(
+                (
+                    gpu_id,
+                    dataset.select(range(start_idx, end_idx)),
+                    output_dir,
+                    self.config.encoder.encoder_type,
+                    self.config.encoder.encoder_model,
+                    self.config.encoder.instruction,
+                    self.config.template.template_name,
+                    self.config.template.templates,
+                    self.config.basic.batch_size,
+                    self.config.encoder.testing_mode,
+                )
             )
-            total_processed = (
-                last_batch * int(self.config.basic.batch_size) + embedding_size
-            )
-        else:
-            total_processed = 0
 
-        batch_number = last_batch + 1
+        # Process dataset shards in parallel
+        with Pool(processes=num_gpus) as pool:
+            shard_files = pool.map(_process_dataset_shard, args_list)
 
-        # Initialize progress bar
-        progress_bar = tqdm(
-            desc="Generating embeddings",
-            initial=total_processed,
-            unit=" samples",
-            total=len(dataset),
-        )
+        # Filter out None values (failed shards)
+        shard_files = [f for f in shard_files if f is not None]
 
-        # Iterate over dataset examples
-        for i, example in enumerate(dataset):
-            if i < total_processed:
-                continue  # Skip already processed samples
+        if not shard_files:
+            raise ValueError("No embeddings were generated from any GPU")
 
-            text = self.format_text(
-                example, format_type=self.config.template.template_name
-            )
-            if i < 5:
-                logger.info(f"Example {i + 1}: {text}")
-            batch_texts.append(text)
+        # Merge all shard files
+        _merge_shard_files(shard_files, merged_path)
 
-            if len(batch_texts) == self.config.basic.batch_size:
-                # Process batch
-                batch_file = os.path.join(output_dir, f"batch_{batch_number}.h5")
-                self.process_batch(batch_texts, batch_file)
-                total_processed += len(batch_texts)
-                progress_bar.update(len(batch_texts))
-                batch_texts = []
-                batch_number += 1
-                gc.collect()
-                torch.cuda.empty_cache()
-
-        # Process any remaining texts in the final batch
-        if batch_texts:
-            batch_file = os.path.join(output_dir, f"batch_{batch_number}.h5")
-            self.process_batch(batch_texts, batch_file)
-            total_processed += len(batch_texts)
-            progress_bar.update(len(batch_texts))
-
-        progress_bar.close()
-
-        # Merge all batch embeddings into a single file
-        merged_file = os.path.join(output_dir, "embeddings.h5")
-        self.merge_embeddings(output_dir, merged_file, total_samples=total_processed)
-        return merged_file
+        return merged_path
 
     def extract_batch_number(self, filename):
         """
@@ -580,6 +574,7 @@ class DataProcessor:
 
         for size_spec in self.config.subset_sizes:
             actual_size = self.calculate_subset_size(len(embeddings), size_spec)
+            logger.info(f"Actual subset size: {actual_size}")
             sorted_indices_gains = sorted(
                 zip(
                     combined_subsets[size_spec]["indices"],
@@ -735,6 +730,170 @@ class DataProcessor:
             subset_data.to_parquet(output_file)
 
 
+def _process_dataset_shard(args):
+    """Process a dataset shard on a specific GPU."""
+    (
+        gpu_id,
+        dataset_shard,
+        output_dir,
+        encoder_type,
+        encoder_model,
+        instruction,
+        template_name,
+        templates,
+        batch_size,
+        testing_mode,
+    ) = args
+
+    try:
+        # Set the GPU for this process
+        torch.cuda.set_device(gpu_id)
+        device = f"cuda:{gpu_id}"
+        logger.info(f"GPU {gpu_id} started processing {len(dataset_shard)} samples")
+
+        # Import the encoder directly using the system path
+        # Standard
+
+        sys.path.append(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                )
+            )
+        )
+
+        # Import the encoder class using string-based absolute import
+
+        module_name = f"sdg.src.instructlab.sdg.encoders.{encoder_type}_encoder"
+        module = importlib.import_module(module_name)
+        encoder_cls = getattr(module, f"{encoder_type.capitalize()}EmbedEncoder")
+
+        # Create encoder instance
+        encoder = encoder_cls(
+            model_name=encoder_model,
+            device=torch.device(device),
+            testing_mode=testing_mode,
+        )
+
+        # Set up Jinja environment for templating
+        env = Environment(loader=BaseLoader())
+        templates_dict = {k: env.from_string(v) for k, v in templates.items()}
+
+        # Create shard-specific output directory
+        shard_dir = os.path.join(output_dir, f"shard_{gpu_id}")
+        os.makedirs(shard_dir, exist_ok=True)
+
+        # Process batches
+        all_embeddings = []
+        batch_texts = []
+
+        # Create progress bar
+        progress_bar = tqdm(
+            desc=f"GPU {gpu_id} generating embeddings",
+            total=len(dataset_shard),
+            unit=" samples",
+            position=gpu_id,  # Stack progress bars
+            leave=True,
+        )
+
+        # Process each example in the shard
+        for example in dataset_shard:
+            # Format the text using the template
+            template = templates_dict.get(template_name)
+            if not template:
+                raise ValueError(f"Unknown format type: {template_name}")
+
+            text = template.render(**example)
+            batch_texts.append(text)
+
+            # Process when batch is full or at the end
+            if len(batch_texts) == batch_size or example == dataset_shard[-1]:
+                # Generate embeddings for this batch
+                with torch.no_grad():
+                    batch_embeddings = (
+                        encoder.encode(
+                            inputs=batch_texts,
+                            instruction=instruction,
+                        )
+                        .cpu()
+                        .numpy()
+                    )
+
+                all_embeddings.append(batch_embeddings)
+                progress_bar.update(len(batch_texts))
+                batch_texts = []
+
+                # Clean up GPU memory
+                torch.cuda.empty_cache()
+
+        progress_bar.close()
+
+        # Concatenate all batches
+        if not all_embeddings:
+            logger.warning(f"No embeddings generated for shard on GPU {gpu_id}")
+            return None
+
+        embeddings = np.concatenate(all_embeddings, axis=0)
+
+        # Save embeddings to file
+        shard_file = os.path.join(shard_dir, f"embeddings_shard_{gpu_id}.h5")
+        with h5py.File(shard_file, "w") as h5f:
+            h5f.create_dataset("embeddings", data=embeddings, dtype="float32")
+
+        logger.info(f"GPU {gpu_id} completed processing. Saved to {shard_file}")
+        return shard_file
+
+    # pylint: disable=broad-exception-caught
+    except Exception as e:
+        logger.error(f"Error processing shard on GPU {gpu_id}: {str(e)}")
+        return None
+
+
+def _merge_shard_files(shard_files, merged_file):
+    """
+    Merge all shard files into a single embeddings file.
+    """
+    logger.info(f"Merging {len(shard_files)} shard files into {merged_file}")
+
+    # Get the shape and type of embeddings from the first shard
+    with h5py.File(shard_files[0], "r") as f:
+        first_embeddings = f["embeddings"]
+        embedding_dim = first_embeddings.shape[1]
+        dtype = first_embeddings.dtype
+
+    # Count total samples across all shards
+    total_samples = 0
+    for shard_file in shard_files:
+        with h5py.File(shard_file, "r") as f:
+            total_samples += f["embeddings"].shape[0]
+
+    # Create the merged file
+    with h5py.File(merged_file, "w") as merged_f:
+        merged_dataset = merged_f.create_dataset(
+            "embeddings", shape=(total_samples, embedding_dim), dtype=dtype
+        )
+
+        # Copy embeddings from each shard
+        start_idx = 0
+        for shard_file in shard_files:
+            with h5py.File(shard_file, "r") as shard_f:
+                embeddings = shard_f["embeddings"][:]
+                end_idx = start_idx + embeddings.shape[0]
+                merged_dataset[start_idx:end_idx] = embeddings
+                start_idx = end_idx
+
+            # Remove shard file after merging
+            os.remove(shard_file)
+            # Remove shard directory if empty
+            shard_dir = os.path.dirname(shard_file)
+            if not os.listdir(shard_dir):
+                os.rmdir(shard_dir)
+
+    logger.info(
+        f"Successfully merged embeddings from {len(shard_files)} GPUs with {total_samples} total samples"
+    )
+
+
 def process_folds_with_gpu(args):
     """
     Process folds on GPU or CPU with support for both percentage and absolute size specifications.
@@ -790,7 +949,7 @@ def process_folds_with_gpu(args):
                     if isinstance(size_spec, float):
                         # Percentage-based selection
                         budget = max(
-                            1, math.ceil((size_spec / 100) * similarity_matrix.shape[0])
+                            1, math.ceil(size_spec * similarity_matrix.shape[0])
                         )
                     else:
                         # Absolute number-based selection

@@ -72,17 +72,22 @@ class ArcticEmbedEncoder:
                 f"Model {model_name} not supported. Supported models: {list(MODEL_CONFIGS.keys())}"
             )
 
-        device = device or torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        num_gpus = torch.cuda.device_count()
-        batch_size = MODEL_CONFIGS[model_name]["batch_size"]
-        batch_size = batch_size * num_gpus if num_gpus > 0 else batch_size
+        # Use the provided device or default to CUDA
+        self.device = device or torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
+        # Get device ID for logging
+        self.device_id = self.device.index if hasattr(self.device, "index") else 0
+
+        # We don't need multi-GPU inside this encoder instance since each instance
+        # will run on a dedicated GPU
         self.cfg = EncoderConfig(
             model_name=model_name,
             model_config=MODEL_CONFIGS[model_name],
-            device=device,
-            num_gpus=num_gpus,
-            batch_size=batch_size,
+            device=self.device,
+            num_gpus=1,  # Only use 1 GPU per encoder instance
+            batch_size=MODEL_CONFIGS[model_name]["batch_size"],
             use_default_instruction=use_default_instruction,
             use_fp16=use_fp16,
             testing_mode=testing_mode,
@@ -91,7 +96,7 @@ class ArcticEmbedEncoder:
         self._initialize_model()
 
     def _initialize_model(self) -> None:
-        """Initialize model."""
+        """Initialize model on the specific GPU."""
         home_dir = os.path.expanduser("~")
         model_path = os.path.join(
             home_dir, ".cache", "instructlab", "models", self.cfg.model_name
@@ -128,11 +133,9 @@ class ArcticEmbedEncoder:
             self.model = self.model.half()
 
         self.model = self.model.to(self.cfg.device)
+        logger.info(f"Model loaded on device: {self.cfg.device}")
 
-        if self.cfg.num_gpus > 1:
-            logger.info(f"Using {self.cfg.num_gpus} GPUs")
-            self.model = torch.nn.DataParallel(self.model)
-
+        # No need for DataParallel since we're running one encoder per GPU
         self.model.eval()
 
     def _prepare_inputs(
