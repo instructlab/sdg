@@ -25,9 +25,10 @@ blocks:
   - name: translation
     type: TranslationBlock
     config:
-      config_path: ../../configs/knowledge/translate.yaml
+      config_path: ../../configs/knowledge/translate_question_response.yaml
       output_cols:
       - question_translated
       - response_translated
       source_lang: "eng_Latn"  # Source language (English)
       target_lang: "hin_Deva"  # Target language (French)
+      trans_model_id: facebook/nllb-200-distilled-600M
