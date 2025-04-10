@@ -1,16 +1,33 @@
 version: "1.0"
 blocks:
   - name: gen_knowledge
-    type: TranslationBlock
+    type: LLMBlock
     config:
       config_path: ../../configs/knowledge/simple_generate_qa.yaml
       output_cols:
-      - output
+      - question
+      - response
       gen_kwargs:
         max_tokens: 2048
         temperature: 0.7
         n: scaled
+      parser_kwargs:
+        parser_name: custom
+        parsing_pattern: '\*\*(?:Question|QUESTION)\:\*\*\s*(.*?)\s*\*\*(?:Answer|ANSWER)\:\*\*\s*(.*?)\s*(?=\*\*(?:Question|QUESTION)\:\*\*|$)'
+        parser_cleanup_tags:
+          - "[END]"
+          - "[End]"
+      gen_kwargs:
+        max_tokens: 2048
+    drop_duplicates:
+      - question
+    model_family: granite
+  - name: translation
+    type: TranslationBlock
+    config:
+      config_path: ../../configs/knowledge/translate.yaml
+      output_cols:
+      - question_translated
+      - response_translated
       source_lang: "eng_Latn"  # Source language (English)
       target_lang: "hin_Deva"  # Target language (French)
-    drop_duplicates:
-    - output

@@ -19,12 +19,15 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_NUM_TOKENS = 8192
 
+
 def template_from_struct_and_config(struct, config):
     # Replace None values with empty strings
     filtered_config = {k: (v if v is not None else "") for k, v in config.items()}
     return PromptRegistry.template_from_string(struct.format(**filtered_config))
 
+
 # This is part of the public API.
+
 
 def _resolve_model_id(model_id, ctx_model_id, block):
     # If a model id was passed in the PipelineContext, use that
@@ -46,6 +49,8 @@ def _resolve_model_family(model_family, ctx_model_family):
     if ctx_model_family:
         return ctx_model_family
     return model_family
+
+
 def server_supports_batched(client, model_id: str) -> bool:
     supported = getattr(client, "server_supports_batched", None)
     if supported is not None:
@@ -80,7 +85,6 @@ def server_supports_batched(client, model_id: str) -> bool:
     return supported
 
 
-
 @BlockRegistry.register("TranslationBlock")
 # pylint: disable=dangerous-default-value
 class TranslationBlock(Block):
@@ -96,20 +100,16 @@ class TranslationBlock(Block):
         model_family=None,
         model_prompt=None,
         trans_model_id=None,
-        trans_model = None,
-        source_lang = "eng_Latn",
-        target_lang = "hin_Deva",
-        # source_lang="en",  # Default source language
-        # target_lang="hi",  # Default target language
+        trans_model=None,
+        source_lang="eng_Latn",
+        target_lang="hin_Deva",
         gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
         super().__init__(ctx, pipe, block_name)
         self.block_config = self._load_config(config_path)
-        self.prompt_struct = (
-            """{system}\n{introduction}\n{principles}\n{examples}\n{generation}"""
-        )
+        self.prompt_struct = """{question}\n{response}"""
         self.prompt_template = template_from_struct_and_config(
             self.prompt_struct, self.block_config
         )
@@ -122,7 +122,7 @@ class TranslationBlock(Block):
         self.target_lang = target_lang
         self.model_prompt = model_prompt
         self.trans_model_id = f"facebook/nllb-200-3.3B"
-        # self.trans_model_id = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}" 
+        # self.trans_model_id = f"Helsinki-NLP/opus-mt-{source_lang}-{target_lang}"
         self.output_cols = output_cols
         self.batch_params = batch_kwargs
         max_num_token_override = ctx.max_num_tokens
@@ -130,10 +130,14 @@ class TranslationBlock(Block):
         self.parsing_pattern = parser_kwargs.get("parsing_pattern", None)
         self.parser_cleanup_tags = parser_kwargs.get("parser_cleanup_tags", None)
 
-         # Load tokenizer and model for translation
+        # Load tokenizer and model for translation
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.trans_model_id,src_lang=self.source_lang)
-            self.trans_model = AutoModelForSeq2SeqLM.from_pretrained(self.trans_model_id).to(DEVICE)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.trans_model_id, src_lang=self.source_lang
+            )
+            self.trans_model = AutoModelForSeq2SeqLM.from_pretrained(
+                self.trans_model_id
+            ).to(DEVICE)
         except Exception as e:
             raise ValueError(f"Error loading TRANSLATOIN model {self.model_id}: {e}")
         # try:
@@ -164,13 +168,21 @@ class TranslationBlock(Block):
     def _translate(self, text: str) -> str:
         """Translates a single string and returns the translated text."""
         logging.debug(f"Translating text using model {self.model_id}")
-        encoded_input = self.tokenizer([text] ,return_tensors="pt").to(DEVICE)
+        encoded_input = self.tokenizer([text], return_tensors="pt").to(DEVICE)
         # encoded_input = self.tokenizer([text], return_tensors="pt", padding=True, truncation=True).to(DEVICE)
         with torch.no_grad():
-            translated_tokens = self.trans_model.generate(**encoded_input,forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(self.target_lang),max_length=1024)
+            translated_tokens = self.trans_model.generate(
+                **encoded_input,
+                forced_bos_token_id=self.tokenizer.convert_tokens_to_ids(
+                    self.target_lang
+                ),
+                max_length=1024,
+            )
             # translated_tokens = self.trans_model.generate(**encoded_input)
 
-        translation = self.tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+        translation = self.tokenizer.batch_decode(
+            translated_tokens, skip_special_tokens=True
+        )[0]
         return translation
 
     # def _translate(self, samples: List[Dict]) -> List[Dict]:
@@ -190,7 +202,6 @@ class TranslationBlock(Block):
     #         {**sample, "translated_output": translation}
     #         for sample, translation in zip(samples, translations)
     #     ]
-
 
     def _parse(self, generated_string) -> dict:
         matches = {}
@@ -229,31 +240,6 @@ class TranslationBlock(Block):
 
         return matches
 
-    # There are three cases to handle for self.model_prompt
-    # 1. None - no model_prompt specified, look one up based on model family
-    # 2. Non-empty string - the pipeline has specified a custom model prompt
-    # 3. Empty string - the pipeline has specified that no model prompt is needed
-    def _format_prompt(self, sample: Dict) -> str:
-        prompt_templated_str = self.prompt_template.render(sample).strip()
-
-        model_prompt = None
-        if self.model_prompt is None:
-            model_prompt = PromptRegistry.get_template(self.model_family)
-        elif self.model_prompt:
-            model_prompt = PromptRegistry.template_from_string(self.model_prompt)
-        else:
-            # Our model prompt is an empty string, which we'll render
-            # verbatim without wrapping in the messages format
-            model_prompt = PromptRegistry.get_template("blank")
-
-        messages = [{"role": "user", "content": prompt_templated_str}]
-
-        return model_prompt.render(
-            messages=messages,
-            prompt=prompt_templated_str,
-            add_generation_prompt=True,
-        ).strip()
-
     def _gen_kwargs(self, max_num_token_override, gen_kwargs, **defaults):
         gen_kwargs = {**defaults, **gen_kwargs}
         if (
@@ -275,7 +261,7 @@ class TranslationBlock(Block):
         return gen_kwargs
 
     def _generate(self, samples) -> list:
-        prompts = [self._format_prompt(sample) for sample in samples]
+        prompts = [sample for sample in samples]
         logger.debug(f"STARTING GENERATION FOR LLMBlock USING PROMPTS: {prompts}")
         logger.debug(f"Generation arguments: {self.gen_kwargs}")
         if self.server_supports_batched:
@@ -305,12 +291,12 @@ class TranslationBlock(Block):
                         q_start = text.find("Question:")
                         a_start = text.find("Answer:")
                         if a_start != -1 and a_start > q_start:
-                            q_part = text[q_start + len("Question:"):a_start].strip()
-                            a_part = text[a_start + len("Answer:"):].strip()
+                            q_part = text[q_start + len("Question:") : a_start].strip()
+                            a_part = text[a_start + len("Answer:") :].strip()
                         else:
-                            q_part = text[q_start + len("Question:"):].strip()
+                            q_part = text[q_start + len("Question:") :].strip()
                     elif "Answer:" in text:
-                        a_part = text[len("Answer:"):].strip()
+                        a_part = text[len("Answer:") :].strip()
 
                     translated_q = self._translate(q_part) if q_part else None
                     translated_a = self._translate(a_part) if a_part else None
@@ -325,13 +311,10 @@ class TranslationBlock(Block):
 
                 print(f"Translated text: {translated_text}")
 
-             
-
                 results.append(translated_text)
                 # logger.debug(f"RESULT: {translated_text}")
                 progress_bar.update(1)
         return results
-
 
     def generate(self, samples: Dataset) -> Dataset:
         """
@@ -346,6 +329,10 @@ class TranslationBlock(Block):
         """
         num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
+
+        import pdb
+
+        pdb.set_trace()
 
         if (num_samples is not None) and ("num_samples" not in samples.column_names):
             samples = samples.add_column("num_samples", [num_samples] * len(samples))
@@ -390,5 +377,3 @@ class TranslationBlock(Block):
                 new_data.append({**sample, **dict(zip(parsed_outputs.keys(), values))})
 
         return Dataset.from_list(new_data)
-
-
