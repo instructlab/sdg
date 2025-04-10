@@ -47,7 +47,7 @@ Blocks can be chained together to form a **Pipeline**. Pipelines enable:
 - Linear or recursive chaining of blocks.
 - Execution of complex workflows by chaining multiple pipelines together.
 
-There are three default pipelines shipped in SDG: `simple`, `full`, and `eval`. Each pipeline requires specific hardware specifications
+There are four default pipelines shipped in SDG: `simple`, `full`, `eval` and `llama`. Each pipeline requires specific hardware specifications.
 
 #### Simple Pipeline
 
@@ -60,6 +60,12 @@ The [full pipeline](src/instructlab/sdg/pipelines/full) is designed to be used w
 #### Eval Pipeline
 
 The [eval pipeline](src/instructlab/sdg/pipelines/eval) is used to generate [MMLU](https://en.wikipedia.org/wiki/MMLU) benchmark data that can be used to later evaluate a trained model on your knowledge dataset. It does not generate data for use during model training.
+
+#### Llama Pipeline
+
+The Llama pipeline is designed for use with the [Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) as the teacher model. Currently, our support for Llama pipelines focuses on generating knowledge pipelines, aimed at producing high-quality, context-aware educational content on higher-end consumer hardware and enterprise systems.
+
+_Note: Support for Llama-based skills pipelines is still under development and will be rolled out in future releases._
 
 ---
 
