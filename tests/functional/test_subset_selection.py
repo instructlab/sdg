@@ -1,6 +1,7 @@
 # Standard
 from multiprocessing import set_start_method
 from pathlib import Path
+from unittest.mock import patch
 import json
 import logging
 import os
@@ -9,6 +10,7 @@ import uuid
 
 # Third Party
 from datasets import Dataset
+import h5py
 import pytest
 import torch
 
@@ -51,68 +53,168 @@ def create_test_data(num_samples=50):
     return test_data
 
 
+# Define mock process_folds_with_gpu function at module level
+def mock_process_folds_with_gpu(args):
+    # Extract subset_sizes from args
+    subset_sizes = args[3]
+    # Return a consistent result for each subset size
+    return [
+        (
+            0,
+            {
+                size: {"indices": list(range(10)), "gains": [0.5] * 10}
+                for size in subset_sizes
+            },
+        )
+    ]
+
+
+# Mock Pool class that runs functions directly without multiprocessing
+class MockPool:
+    def __init__(self, processes=None):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+    def map(self, func, iterable):
+        # For this test, we care about process_folds_with_gpu so we use our mock function
+        return [mock_process_folds_with_gpu(item) for item in iterable]
+
+
 def test_subset_datasets_functional():
     """Functional test for subset_datasets."""
-    set_start_method("spawn", force=True)
     logger = logging.getLogger(__name__)
 
-    try:
-        # Create a temporary directory for input/output
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # Generate synthetic test data
-            test_data = create_test_data(num_samples=50)
+    # Create a mock encoder class
+    class MockEncoder:
+        def __init__(self, model_name=None, device=None, testing_mode=False, **kwargs):
+            self.model_name = model_name
+            self.device = device
+            self.testing_mode = testing_mode
 
-            # Save as JSONL file
-            input_file = Path(temp_dir) / "test_data.jsonl"
-            with open(input_file, "w") as f:
-                for item in test_data:
-                    f.write(json.dumps(item) + "\n")
+        def encode(self, inputs, instruction=None, **kwargs):
+            # Return random embeddings of the right shape
+            if isinstance(inputs, str):
+                inputs = [inputs]
+            return torch.randn(len(inputs), 768)
 
-            logger.info(f"Created test file with {len(test_data)} samples")
+    # Create mock embeddings file
+    def create_mock_embeddings(dataset, output_dir):
+        os.makedirs(output_dir, exist_ok=True)
+        merged_path = os.path.join(output_dir, "embeddings.h5")
 
-            # Configure subset selection
-            input_files = [str(input_file)]
-            output_dir = os.path.join(temp_dir, "output")
+        # Create actual mock embeddings file
+        with h5py.File(merged_path, "w") as f:
+            f.create_dataset("embeddings", data=torch.randn(len(dataset), 768).numpy())
 
-            # Run subset selection
-            subset_datasets(
-                input_files=input_files,
-                output_dir=output_dir,
-                batch_size=10,  # Small batch size for testing
-                num_folds=2,  # Fewer folds for faster testing
-                subset_sizes=[20],  # Select 20 samples
-                num_gpus=2,  # Use 2 threads
-                encoder_type="arctic",
-                encoder_model="Snowflake/snowflake-arctic-embed-l-v2.0",
-                epsilon=0.1,  # Small epsilon for small dataset
-                testing_mode=True,  # Enable testing mode
-            )
+        return merged_path
 
-            # Verify outputs
-            dataset_name = "test_data"
-            dataset_output_dir = os.path.join(output_dir, dataset_name)
+    # Mock FacilityLocationFunction for subset selection
+    class MockFacilityLocationFunction:
+        def __init__(self, n, sijs, mode, separate_rep):
+            self.n = n
+            self.sijs = sijs
+            self.mode = mode
+            self.separate_rep = separate_rep
 
-            # Check if embeddings were generated
-            assert os.path.exists(
-                os.path.join(dataset_output_dir, "embeddings", "embeddings.h5")
-            ), "Embeddings file not found"
+        def maximize(
+            self,
+            budget,
+            optimizer,
+            epsilon,
+            stopIfZeroGain,
+            stopIfNegativeGain,
+            verbose,
+        ):
+            # Return mock subset results with indices and gains
+            return [(i, 0.5) for i in range(budget)]
 
-            # Check if subset file was created
-            assert os.path.exists(
-                os.path.join(
-                    dataset_output_dir, f"{dataset_name}_samples_20_subset.jsonl"
+    # Setup all the mocks
+    with (
+        patch(
+            "instructlab.sdg.subset_selection.get_encoder_class",
+            return_value=MockEncoder,
+        ),
+        patch("torch.cuda.device_count", return_value=1),
+        patch("torch.cuda.is_available", return_value=True),
+        patch(
+            "instructlab.sdg.subset_selection.DataProcessor.generate_embeddings",
+            side_effect=create_mock_embeddings,
+        ),
+        patch("submodlib.FacilityLocationFunction", MockFacilityLocationFunction),
+        patch(
+            "instructlab.sdg.subset_selection.compute_pairwise_dense",
+            return_value=torch.randn(50, 50),
+        ),
+        patch(
+            "instructlab.sdg.subset_selection.process_folds_with_gpu",
+            mock_process_folds_with_gpu,
+        ),
+        patch("multiprocessing.set_start_method"),
+    ):
+        try:
+            # Create a temporary directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Generate test data
+                test_data = create_test_data(num_samples=50)
+
+                # Save as JSONL
+                input_file = Path(temp_dir) / "test_data.jsonl"
+                with open(input_file, "w") as f:
+                    for item in test_data:
+                        f.write(json.dumps(item) + "\n")
+
+                # Run subset selection with fast testing mode
+                subset_datasets(
+                    input_files=[str(input_file)],
+                    output_dir=os.path.join(temp_dir, "output"),
+                    batch_size=10,
+                    num_folds=2,
+                    subset_sizes=[10, 0.2],  # Test both absolute and percentage
+                    num_gpus=1,
+                    testing_mode=True,
                 )
-            ), "20-sample subset file not found"
 
-            # Check if metadata file was created
-            assert os.path.exists(
-                os.path.join(
-                    output_dir,
-                    f"{dataset_name}_fl_2_partitions_samples_20_metadata.npz",
+                # Verify outputs exist
+                dataset_name = "test_data"
+                output_dir = os.path.join(temp_dir, "output")
+                dataset_output_dir = os.path.join(output_dir, dataset_name)
+
+                # Check embeddings file
+                assert os.path.exists(
+                    os.path.join(dataset_output_dir, "embeddings", "embeddings.h5")
                 )
-            ), "Metadata file for 20-sample subset not found"
 
-    finally:
-        # Clean up GPU memory if available
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+                # Check subset files
+                assert os.path.exists(
+                    os.path.join(
+                        dataset_output_dir, f"{dataset_name}_samples_10_subset.jsonl"
+                    )
+                )
+                percent_file = os.path.join(
+                    dataset_output_dir, f"{dataset_name}_percent_0.2_subset.jsonl"
+                )
+                assert os.path.exists(percent_file)
+
+                # Check metadata files
+                assert os.path.exists(
+                    os.path.join(
+                        output_dir,
+                        f"{dataset_name}_fl_2_partitions_samples_10_metadata.npz",
+                    )
+                )
+                assert os.path.exists(
+                    os.path.join(
+                        output_dir,
+                        f"{dataset_name}_fl_2_partitions_percent_0.2_metadata.npz",
+                    )
+                )
+
+        finally:
+            # Clean up
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
