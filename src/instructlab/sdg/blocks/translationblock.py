@@ -201,15 +201,16 @@ class TranslationBlock(Block):
         )
         for sample in samples:
 
-            for _ in range(self.gen_kwargs.get("n", 1)):
-                if len(sample) == 2:
-                    translated_q = self._translate(sample[0]) if sample[0] else None
-                    translated_a = self._translate(sample[1]) if sample[1] else None
-                    translated_text = [translated_q, translated_a]
-                else:
-                    translated_text = self._translate(sample)
+            if len(self.block_config.keys()) > 1:
+                columns_to_translate = [sample[key] for key in self.block_config.keys()]
 
-                results.append(translated_text)
+            for _ in range(self.gen_kwargs.get("n", 1)):
+                translated_texts = []
+
+                for text in columns_to_translate:
+                    translated_texts.append(self._translate(text))
+
+                results.append(translated_texts)
                 progress_bar.update(1)
         return results
 
@@ -235,10 +236,13 @@ class TranslationBlock(Block):
         valid_samples = []
 
         for sample in samples:
-            if len(self.block_config.keys()) > 1:
-                keyList = [sample[key] for key in self.block_config.keys()]
+            is_valid = True
+            for key in self.block_config.keys():
+                if key not in sample:
+                    is_valid = False
 
-            valid_samples.append(keyList)
+            if is_valid:
+                valid_samples.append(sample)
 
         samples = valid_samples
 
@@ -248,10 +252,6 @@ class TranslationBlock(Block):
         # generate the output
 
         outputs = self._generate(samples)
-
-        import pdb
-
-        pdb.set_trace()
 
         num_parallel_samples = self.gen_kwargs.get("n", 1)
         extended_samples = []
@@ -268,7 +268,7 @@ class TranslationBlock(Block):
             translated_data = {}
 
             index = 0
-            for key in self.block_config.keys():
+            for key in self.output_cols:
                 translated_data[key] = output[index]
                 index = index + 1
 
