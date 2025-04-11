@@ -417,7 +417,7 @@ def test_mix_instructlab_07x_precomputed_skills_with_unmask(tmp_path):
     recipe.save_mixed_dataset(output_path, TEST_NUM_PROCS)
 
     # Ensure all the mixed samples have an unmask field
-    mixed_samples = jlload(output_path)
+    mixed_samples = load_dataset("json", data_files=output_path, split="train")
     for sample in mixed_samples:
         assert (
             sample.get("unmask", None) is not None
