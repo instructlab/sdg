@@ -14,9 +14,6 @@ import h5py
 import pytest
 import torch
 
-# First Party
-from instructlab.sdg.subset_selection import subset_datasets
-
 
 def create_test_data(num_samples=50):
     """Create synthetic conversation data similar to the real dataset."""
@@ -85,8 +82,14 @@ class MockPool:
         return [mock_process_folds_with_gpu(item) for item in iterable]
 
 
+@pytest.mark.gpu
 def test_subset_datasets_functional():
     """Functional test for subset_datasets."""
+
+    # Lazy import down here to not trigger the import except when we're running GPU tests
+    # First Party
+    from instructlab.sdg.subset_selection import subset_datasets
+
     logger = logging.getLogger(__name__)
 
     # Create a mock encoder class

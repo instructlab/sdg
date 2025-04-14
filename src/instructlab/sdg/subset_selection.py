@@ -14,7 +14,6 @@ import sys
 # Third Party
 from datasets import concatenate_datasets, load_dataset
 from jinja2 import BaseLoader, Environment
-from submodlib import FacilityLocationFunction
 from tqdm import tqdm
 import h5py
 import numpy as np
@@ -907,6 +906,10 @@ def process_folds_with_gpu(args):
         epsilon,
         testing_mode,
     ) = args
+
+    # Third Party
+    # pylint: disable=import-error, import-outside-toplevel
+    from submodlib import FacilityLocationFunction
 
     try:
         if torch.cuda.is_available():
