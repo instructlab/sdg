@@ -13,7 +13,7 @@ blocks:
   - name: gen_knowledge
     type: LLMBlock
     config:
-      config_path: ../../configs/knowledge/simple_generate_qa.yaml
+      config_path: ../../configs/knowledge/simple_generate_qa_translate.yaml
       output_cols:
       - question
       - response

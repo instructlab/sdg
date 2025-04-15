@@ -30,7 +30,7 @@ examples: |
   Here is the document:
 
   {{document_outline}}
-  {{document}}
+  {{document_translated}}
 
 generation: |
   Provide a single question and answer pair based on the document.
