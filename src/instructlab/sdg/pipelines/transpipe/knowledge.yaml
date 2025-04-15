@@ -1,5 +1,15 @@
 version: "1.0"
 blocks:
+  - name: translation_document
+    type: TranslationBlock
+    config:
+      config_path: ../../configs/knowledge/translate_documents.yaml
+      output_cols:
+      - document_translated
+      source_lang: "hin_Deva"  # Source language (English)
+      target_lang: "eng_Latn"  # Target language (French)
+      trans_model_id: facebook/nllb-200-distilled-600M
+      prompt_struct: "{document}"
   - name: gen_knowledge
     type: LLMBlock
     config:
@@ -13,7 +23,7 @@ blocks:
         n: scaled
       parser_kwargs:
         parser_name: custom
-        parsing_pattern: '\*\*(?:Question|QUESTION)\:\*\*\s*(.*?)\s*\*\*(?:Answer|ANSWER)\:\*\*\s*(.*?)\s*(?=\*\*(?:Question|QUESTION)\:\*\*|$)'
+        parsing_pattern: (?:Question|QUESTION)\:\s*(.*?)\s*(?:Answer|ANSWER)\:\s*(.*)
         parser_cleanup_tags:
           - "[END]"
           - "[End]"
@@ -22,7 +32,7 @@ blocks:
     drop_duplicates:
       - question
     model_family: granite
-  - name: translation
+  - name: translation_qa
     type: TranslationBlock
     config:
       config_path: ../../configs/knowledge/translate_question_response.yaml
@@ -32,3 +42,4 @@ blocks:
       source_lang: "eng_Latn"  # Source language (English)
       target_lang: "hin_Deva"  # Target language (French)
       trans_model_id: facebook/nllb-200-distilled-600M
+      prompt_struct: "{question}\n{response}"

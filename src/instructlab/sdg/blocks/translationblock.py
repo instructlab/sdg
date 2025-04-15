@@ -43,13 +43,14 @@ class TranslationBlock(Block):
         trans_model_id=None,
         source_lang="eng_Latn",
         target_lang="hin_Deva",
+        prompt_struct=None,
         gen_kwargs={},
         parser_kwargs={},
         batch_kwargs={},
     ) -> None:
         super().__init__(ctx, pipe, block_name)
         self.block_config = self._load_config(config_path)
-        self.prompt_struct = """{question}\n{response}"""
+        self.prompt_struct = prompt_struct
         self.prompt_template = template_from_struct_and_config(
             self.prompt_struct, self.block_config
         )
@@ -201,8 +202,7 @@ class TranslationBlock(Block):
         )
         for sample in samples:
 
-            if len(self.block_config.keys()) > 1:
-                columns_to_translate = [sample[key] for key in self.block_config.keys()]
+            columns_to_translate = [sample[key] for key in self.block_config.keys()]
 
             for _ in range(self.gen_kwargs.get("n", 1)):
                 translated_texts = []
@@ -225,6 +225,7 @@ class TranslationBlock(Block):
         Returns:
             The parsed output after generation.
         """
+
         num_samples = self.batch_params.get("num_samples", None)
         logger.debug("Generating outputs for {} samples".format(len(samples)))
 
