@@ -1,0 +1,179 @@
+# version: 3
+# domain: legal
+# created_by: piyushianand
+# seed_examples:
+#   - context: |
+#       Physical altercations, even minor ones, can have legal consequences. If force is used unlawfully,
+#       it may be punishable under the law.
+#     questions_and_answers:
+#       - question: "A man shoved a shopkeeper over pricing. The shopkeeper didn’t retaliate. Was the push illegal?"
+#         answer: "Yes, this is an offense under Section 131, as force was used without grave provocation."
+#       - question: "My neighbor slapped me in a parking dispute. Can I take legal action?"
+#         answer: "Yes, the slap is considered criminal force under Section 131, and legal action can be taken."
+#       - question: "At a wedding, my cousin threw a drink at another guest. Could this lead to legal trouble?"
+#         answer: "Yes, this act falls under Section 131, as it constitutes criminal force."
+#       - question: "I pushed a pedestrian aside while cycling in frustration. Can I face legal trouble?"
+#         answer: "Yes, using force in such a situation can be punishable under Section 131."
+#       - question: "My boss slapped my colleague for an error. Can my colleague file a complaint?"
+#         answer: "Yes, under Section 131, the employer can be charged for using criminal force."
+
+#   - context: |
+#       Public servants, such as police officers and government officials, perform duties involving law
+#       enforcement. Using force against them is a criminal offense.
+#     questions_and_answers:
+#       - question: "I pushed a traffic policeman in anger and drove away. Did I commit a crime?"
+#         answer: "Yes, under Section 132, assaulting a public servant on duty is punishable."
+#       - question: "A shopkeeper grabbed a municipal worker to stop stall removal. Is this legal?"
+#         answer: "No, preventing a public servant from their duty using force is an offense under Section 132."
+#       - question: "People shoved a government officer at a rally. Can they be arrested?"
+#         answer: "Yes, this is an offense under Section 132."
+#       - question: "My friend tried to stop officials from seizing his shop physically. Can he be punished?"
+#         answer: "Yes, his actions violate Section 132 and are punishable."
+#       - question: "Protesters pushed security guards to enter a government office. Is this a crime?"
+#         answer: "Yes, under Section 132, assaulting public servants on duty is a crime."
+
+#   - context: |
+#       In some cases, force is used not to injure but to humiliate or degrade another person. The law
+#       punishes such acts of dishonor.
+#     questions_and_answers:
+#       - question: "A man tore a woman’s scarf during an argument to insult her. Can she take legal action?"
+#         answer: "Yes, this falls under Section 133, as force was used with intent to dishonor."
+#       - question: "A group paraded a man through the village to embarrass him. Is this against the law?"
+#         answer: "Yes, under Section 133, using force to dishonor someone is a criminal offense."
+#       - question: "Someone threw ink on a journalist to shame him. Is this considered a crime?"
+#         answer: "Yes, this act falls under Section 133."
+#       - question: "The groom’s family forced the bride's father to bow before them. Can they be punished?"
+#         answer: "Yes, under Section 133, this is an offense."
+#       - question: "A group dragged a man out of a meeting to embarrass him. Can he file a complaint?"
+#         answer: "Yes, this is punishable under Section 133."
+
+#   - context: |
+#       Theft becomes more serious when force is used. If someone attempts to steal property another person
+#       is carrying and uses force in the process, it is a criminal offense.
+#     questions_and_answers:
+#       - question: "A man snatched my aunt’s handbag and pushed her. What legal action can she take?"
+#         answer: "This falls under Section 134, as force was used in an attempt to commit theft."
+#       - question: "Someone tried to grab my chain and hit me when I resisted. Is this a crime?"
+#         answer: "Yes, this is an offense under Section 134."
+#       - question: "A thief grabbed a cash bag and punched a delivery boy who resisted. Can he be charged?"
+#         answer: "Yes, this is a criminal offense under Section 134."
+#       - question: "Someone snatched a mobile phone at a festival using force. Can this be reported?"
+#         answer: "Yes, this is an offense under Section 134."
+#       - question: "A thief shoved a vendor to take his money. Does this fall under any law?"
+#         answer: "Yes, under Section 134, using force while attempting theft is a punishable crime."
+
+#   - context: |
+#       Confining someone against their will is unlawful. If force is used to restrain or prevent a person
+#       from moving freely, it can be legally punished.
+#     questions_and_answers:
+#       - question: "My landlord locked my brother inside his room over rent. Can we file a complaint?"
+#         answer: "Yes, this is an offense under Section 135."
+#       - question: "A group physically blocked a man from leaving a meeting. Is this legal?"
+#         answer: "No, this is wrongful confinement under Section 135."
+#       - question: "Mall security locked a customer in a room without reason. Can he take legal action?"
+#         answer: "Yes, this falls under Section 135."
+#       - question: "A group blocked my sister from leaving a house by standing in her way. Is this a crime?"
+#         answer: "Yes, under Section 135, wrongful confinement with force is a crime."
+#       - question: "Protesters locked a journalist inside a vehicle to stop reporting. Can this be reported?"
+#         answer: "Yes, this act is punishable under Section 135."
+
+# document_outline: |
+#   This document outlines various legal provisions related to criminal force, explaining relevant statutes
+#   through real-world scenarios. It aims to educate individuals on their rights and the legal consequences
+#   of using force unlawfully.
+
+# document:
+#   repo: https://github.com/piyushianand/taxonomy
+#   commit: b2e743cffa69f398bdfeaa4522de67457bdfa21c
+#   patterns:
+#     - theft.md
+
+version: 3
+domain: legal
+created_by: piyushianand
+seed_examples:
+  - context: |
+      शारीरिक झड़पें, चाहे छोटी ही क्यों न हों, कानूनी परिणाम ला सकती हैं। यदि बल का प्रयोग अवैध रूप से किया जाए,
+      तो यह कानून के तहत दंडनीय हो सकता है।
+    questions_and_answers:
+      - question: "एक आदमी ने कीमत को लेकर एक दुकानदार को धक्का दे दिया। दुकानदार ने प्रतिक्रिया नहीं दी। क्या यह धक्का अवैध था?"
+        answer: "हाँ, यह धारा 131 के तहत अपराध है क्योंकि बिना गंभीर उकसावे के बल का प्रयोग किया गया।"
+      - question: "मेरे पड़ोसी ने पार्किंग विवाद में मुझे थप्पड़ मार दिया। क्या मैं कानूनी कार्रवाई कर सकता हूँ?"
+        answer: "हाँ, यह धारा 131 के तहत आपराधिक बल माना जाता है और कानूनी कार्रवाई की जा सकती है।"
+      - question: "एक शादी में, मेरे चचेरे भाई ने एक अन्य मेहमान पर ड्रिंक फेंक दी। क्या इससे कानूनी परेशानी हो सकती है?"
+        answer: "हाँ, यह कृत्य धारा 131 के अंतर्गत आता है क्योंकि यह आपराधिक बल है।"
+      - question: "मैंने साइकिल चलाते समय गुस्से में एक पैदल यात्री को धक्का दे दिया। क्या मुझे कानूनी परेशानी हो सकती है?"
+        answer: "हाँ, इस स्थिति में बल का प्रयोग करना धारा 131 के तहत दंडनीय है।"
+      - question: "मेरे बॉस ने मेरे सहयोगी को गलती के लिए थप्पड़ मारा। क्या मेरा सहयोगी शिकायत दर्ज कर सकता है?"
+        answer: "हाँ, धारा 131 के तहत नियोक्ता पर आपराधिक बल के लिए आरोप लगाए जा सकते हैं।"
+
+  - context: |
+      सार्वजनिक सेवक, जैसे कि पुलिस अधिकारी और सरकारी कर्मचारी, कानून प्रवर्तन से जुड़ी जिम्मेदारियाँ निभाते हैं।
+      उनके खिलाफ बल का प्रयोग करना एक आपराधिक अपराध है।
+    questions_and_answers:
+      - question: "मैंने गुस्से में एक ट्रैफिक पुलिसकर्मी को धक्का दिया और भाग गया। क्या यह अपराध है?"
+        answer: "हाँ, ड्यूटी पर तैनात सार्वजनिक सेवक पर हमला करना धारा 132 के तहत दंडनीय है।"
+      - question: "एक दुकानदार ने स्टॉल हटाने से रोकने के लिए नगर निगम कर्मचारी को पकड़ लिया। क्या यह कानूनी है?"
+        answer: "नहीं, ड्यूटी पर लगे सार्वजनिक सेवक को बलपूर्वक रोकना धारा 132 के तहत अपराध है।"
+      - question: "लोगों ने एक रैली में सरकारी अधिकारी को धक्का दिया। क्या उन्हें गिरफ्तार किया जा सकता है?"
+        answer: "हाँ, यह धारा 132 के तहत अपराध है।"
+      - question: "मेरे दोस्त ने अधिकारियों को उसकी दुकान जब्त करने से शारीरिक रूप से रोकने की कोशिश की। क्या उसे सजा मिल सकती है?"
+        answer: "हाँ, उसके कार्य धारा 132 का उल्लंघन करते हैं और दंडनीय हैं।"
+      - question: "प्रदर्शनकारियों ने सरकारी कार्यालय में घुसने के लिए सुरक्षाकर्मियों को धक्का दिया। क्या यह अपराध है?"
+        answer: "हाँ, ड्यूटी पर तैनात सार्वजनिक सेवकों पर हमला करना धारा 132 के तहत अपराध है।"
+
+  - context: |
+      कुछ मामलों में बल का प्रयोग चोट पहुँचाने के लिए नहीं बल्कि किसी व्यक्ति को अपमानित या नीचा दिखाने के लिए किया जाता है।
+      कानून ऐसे अपमानजनक कार्यों को दंडित करता है।
+    questions_and_answers:
+      - question: "एक आदमी ने बहस के दौरान एक महिला का दुपट्टा खींच लिया ताकि वह उसे अपमानित कर सके। क्या वह कानूनी कार्रवाई कर सकती है?"
+        answer: "हाँ, यह धारा 133 के अंतर्गत आता है क्योंकि इसका उद्देश्य अपमान करना था।"
+      - question: "एक समूह ने एक आदमी को गाँव में घुमाया ताकि उसे शर्मिंदा किया जा सके। क्या यह कानून के खिलाफ है?"
+        answer: "हाँ, धारा 133 के तहत किसी को अपमानित करने के लिए बल का प्रयोग करना आपराधिक अपराध है।"
+      - question: "किसी ने एक पत्रकार पर स्याही फेंकी ताकि उसे नीचा दिखाया जा सके। क्या यह अपराध है?"
+        answer: "हाँ, यह कृत्य धारा 133 के अंतर्गत आता है।"
+      - question: "दूल्हे के परिवार ने दुल्हन के पिता को उनके सामने झुकने के लिए मजबूर किया। क्या उन्हें सजा मिल सकती है?"
+        answer: "हाँ, यह धारा 133 के तहत अपराध है।"
+      - question: "एक समूह ने एक व्यक्ति को बैठक से बाहर घसीट लिया ताकि उसे शर्मिंदा किया जा सके। क्या वह शिकायत दर्ज कर सकता है?"
+        answer: "हाँ, यह धारा 133 के तहत दंडनीय है।"
+
+  - context: |
+      जब चोरी में बल का प्रयोग होता है तो अपराध और गंभीर हो जाता है। यदि कोई व्यक्ति किसी अन्य के पास मौजूद संपत्ति
+      चुराने का प्रयास करता है और उस प्रक्रिया में बल का प्रयोग करता है, तो यह एक आपराधिक अपराध है।
+    questions_and_answers:
+      - question: "एक आदमी ने मेरी चाची का हैंडबैग छीनते समय उसे धक्का दिया। वह क्या कानूनी कार्रवाई कर सकती हैं?"
+        answer: "यह धारा 134 के तहत आता है क्योंकि चोरी के प्रयास में बल का प्रयोग किया गया।"
+      - question: "किसी ने मेरी चेन छीनने की कोशिश की और विरोध करने पर मुझे मारा। क्या यह अपराध है?"
+        answer: "हाँ, यह धारा 134 के तहत एक अपराध है।"
+      - question: "एक चोर ने कैश बैग पकड़ लिया और विरोध करने पर डिलीवरी बॉय को मारा। क्या उस पर आरोप लग सकता है?"
+        answer: "हाँ, यह धारा 134 के तहत आपराधिक अपराध है।"
+      - question: "किसी ने एक त्योहार में बल का प्रयोग करते हुए मोबाइल फोन छीना। क्या इसे रिपोर्ट किया जा सकता है?"
+        answer: "हाँ, यह धारा 134 के तहत अपराध है।"
+      - question: "एक चोर ने एक विक्रेता को पैसे छीनने के लिए धक्का दिया। क्या यह किसी कानून के तहत आता है?"
+        answer: "हाँ, चोरी के प्रयास में बल का प्रयोग करना धारा 134 के तहत दंडनीय अपराध है।"
+
+  - context: |
+      किसी व्यक्ति को उसकी इच्छा के विरुद्ध रोकना अवैध है। यदि किसी व्यक्ति को जबरदस्ती रोका जाता है
+      या उसकी स्वतंत्रता को बलपूर्वक बाधित किया जाता है, तो वह कानूनी रूप से दंडनीय है।
+    questions_and_answers:
+      - question: "मेरे मकान मालिक ने किराए को लेकर मेरे भाई को उसके कमरे में बंद कर दिया। क्या हम शिकायत दर्ज कर सकते हैं?"
+        answer: "हाँ, यह धारा 135 के तहत अपराध है।"
+      - question: "एक समूह ने एक व्यक्ति को बैठक से बाहर निकलने से शारीरिक रूप से रोका। क्या यह कानूनी है?"
+        answer: "नहीं, यह धारा 135 के तहत गलत तरीके से कैद करना है।"
+      - question: "मॉल के सुरक्षा गार्ड्स ने एक ग्राहक को बिना कारण एक कमरे में बंद कर दिया। क्या वह कानूनी कार्रवाई कर सकता है?"
+        answer: "हाँ, यह धारा 135 के अंतर्गत आता है।"
+      - question: "एक समूह ने मेरी बहन को घर से बाहर निकलने से रोकने के लिए रास्ता रोक लिया। क्या यह अपराध है?"
+        answer: "हाँ, बल के साथ गलत तरीके से रोकना धारा 135 के तहत अपराध है।"
+      - question: "प्रदर्शनकारियों ने एक पत्रकार को रिपोर्टिंग से रोकने के लिए उसे वाहन में बंद कर दिया। क्या इसे रिपोर्ट किया जा सकता है?"
+        answer: "हाँ, यह कार्य धारा 135 के तहत दंडनीय है।"
+
+document_outline: |
+  यह दस्तावेज आपराधिक बल से संबंधित विभिन्न कानूनी प्रावधानों को दर्शाता है, और वास्तविक जीवन के उदाहरणों के माध्यम से
+  संबंधित धाराओं को स्पष्ट करता है। इसका उद्देश्य व्यक्तियों को उनके अधिकारों और अवैध रूप से बल के उपयोग के कानूनी
+  परिणामों के बारे में शिक्षित करना है।
+
+document:
+  repo: https://github.com/piyushianand/taxonomy
+  commit: b2e743cffa69f398bdfeaa4522de67457bdfa21c
+  patterns:
+    - theft.md
