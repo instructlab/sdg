@@ -1,14 +1,17 @@
-import torch
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+# Standard
 from typing import Any, Dict, List
 import logging
 import re
 
+# Third Party
 from datasets import Dataset
 from tqdm import tqdm
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 import httpx
 import openai
+import torch
 
+# Local
 from .. import prompts as default_prompts  # pylint: disable=unused-import
 from ..registry import BlockRegistry, PromptRegistry
 from ..utils import models
@@ -116,61 +119,6 @@ class TranslationBlock(Block):
             translated_tokens, skip_special_tokens=True
         )[0]
         return translation
-
-    # def _translate(self, samples: List[Dict]) -> List[Dict]:
-    #     """Translates a batch of input samples and returns structured output."""
-    #     # prompts = [sample["output"] for sample in samples]'
-    #     logging.debug(f"STARTING TRANSLATION USING MODEL {self.model_id}")
-
-    #     encoded_inputs = self.tokenizer(prompts, return_tensors="pt", padding=True, truncation=True).to(DEVICE)
-
-    #     with torch.no_grad():
-    #         translated_tokens = self.trans_model.generate(**encoded_inputs)
-
-    #     translations = [self.tokenizer.decode(t, skip_special_tokens=True) for t in translated_tokens]
-
-    #     # Attach translations back to inputs (if needed)
-    #     return [
-    #         {**sample, "translated_output": translation}
-    #         for sample, translation in zip(samples, translations)
-    #     ]
-
-    def _parse(self, generated_string) -> dict:
-        matches = {}
-
-        if self.parser_name is not None and self.parser_name == "custom":
-            pattern = re.compile(self.parsing_pattern, re.DOTALL)
-            all_matches = pattern.findall(generated_string)
-            matches = {column_name: [] for column_name in self.output_cols}
-            if all_matches and isinstance(all_matches[0], tuple):
-                for match in all_matches:
-                    for column_name, value in zip(self.output_cols, match):
-                        value = value.strip()
-                        for clean_tag in self.parser_cleanup_tags:
-                            value = value.replace(clean_tag, "")
-                        matches[column_name].append(value)
-            else:
-                matches[self.output_cols[0]] = (
-                    [match.strip() for match in all_matches] if all_matches else []
-                )
-        else:
-            for start_tag, end_tag, output_col in zip(
-                self.block_config.get("start_tags", []),
-                self.block_config.get("end_tags", []),
-                self.output_cols,
-            ):
-                if not start_tag and not end_tag:
-                    matches[output_col] = [
-                        generated_string.strip() if generated_string else None
-                    ]
-                else:
-                    pattern = re.escape(start_tag) + r"(.*?)" + re.escape(end_tag)
-                    all_matches = re.findall(pattern, generated_string, re.DOTALL)
-                    matches[output_col] = (
-                        [match.strip() for match in all_matches] if all_matches else []
-                    )
-
-        return matches
 
     def _gen_kwargs(self, max_num_token_override, gen_kwargs, **defaults):
         gen_kwargs = {**defaults, **gen_kwargs}

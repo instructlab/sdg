@@ -19,8 +19,7 @@ from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
 
 # Local
-from .blocks import llmblock
-from .blocks import translationblock
+from .blocks import llmblock, translationblock
 from .blocks.block import Block
 from .registry import BlockRegistry
 
@@ -346,8 +345,7 @@ from instructlab.sdg.checkpointing import Checkpointer
 from instructlab.sdg.utils import pandas
 
 # Local
-from .blocks import llmblock
-from .blocks import translationblock
+from .blocks import llmblock, translationblock
 from .blocks.block import Block
 from .registry import BlockRegistry
 
