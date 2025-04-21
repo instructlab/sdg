@@ -20,6 +20,7 @@ import numpy as np
 import torch
 
 # Local
+from .encoders import get_encoder_class
 from .utils.subset_selection_utils import (
     compute_pairwise_dense,
     get_default_num_gpus,
@@ -171,19 +172,14 @@ class DataProcessor:
     Enhanced data processor with support for combined files and multiple selection methods.
     """
 
-    def __init__(self, config: ProcessingConfig, encoder_cls):
+    def __init__(self, config: ProcessingConfig):
         """
         Initializes the DataProcessor with the given configuration and encoder class.
 
         Args:
             config (ProcessingConfig): The processing configuration.
-            encoder_cls: The encoder class to use for generating embeddings.
         """
         self.config = config
-        self.encoder = encoder_cls(
-            model_name=config.encoder.encoder_model,
-            testing_mode=config.encoder.testing_mode,
-        )
         self.env = Environment(loader=BaseLoader())
         self.templates = {
             k: self.env.from_string(v) for k, v in config.template.templates.items()
@@ -750,22 +746,7 @@ def _process_dataset_shard(args):
         device = f"cuda:{gpu_id}"
         logger.info(f"GPU {gpu_id} started processing {len(dataset_shard)} samples")
 
-        # Import the encoder directly using the system path
-        # Standard
-
-        sys.path.append(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                )
-            )
-        )
-
-        # Import the encoder class using string-based absolute import
-
-        module_name = f"sdg.src.instructlab.sdg.encoders.{encoder_type}_encoder"
-        module = importlib.import_module(module_name)
-        encoder_cls = getattr(module, f"{encoder_type.capitalize()}EmbedEncoder")
+        encoder_cls = get_encoder_class(encoder_type)
 
         # Create encoder instance
         encoder = encoder_cls(
@@ -845,7 +826,7 @@ def _process_dataset_shard(args):
     # pylint: disable=broad-exception-caught
     except Exception as e:
         logger.error(f"Error processing shard on GPU {gpu_id}: {str(e)}")
-        return None
+        raise
 
 
 def _merge_shard_files(shard_files, merged_file):
@@ -1014,24 +995,6 @@ def get_supported_encoders():
     ]
 
 
-def get_encoder_class(encoder_type: str):
-    """Get the encoder class based on the encoder type."""
-    try:
-        # Convert encoder_type to class name (e.g., 'arctic' -> 'ArcticEmbedEncoder')
-        class_name = f"{encoder_type.capitalize()}EmbedEncoder"
-        # Import the module dynamically
-        module = __import__(
-            f"instructlab.sdg.encoders.{encoder_type}_encoder", fromlist=[class_name]
-        )
-        # Get the class from the module
-        return getattr(module, class_name)
-    except (ImportError, AttributeError) as e:
-        supported_encoders = get_supported_encoders()
-        raise ValueError(
-            f"Unsupported encoder type: '{encoder_type}'. "
-            f"Supported types are: {[f'{t}' for t in supported_encoders]}"
-        ) from e
-
 
 def subset_datasets(
     input_files: List[str],
@@ -1081,9 +1044,7 @@ def subset_datasets(
 
     try:
         logger.info(f"Processing configuration: {config}")
-        processor = DataProcessor(
-            config, get_encoder_class(config.encoder.encoder_type)
-        )
+        processor = DataProcessor(config)
         processor.process_files(input_files, config.basic.output_dir)
 
     except Exception as e:
