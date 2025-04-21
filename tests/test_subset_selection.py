@@ -123,6 +123,7 @@ def test_invalid_subset_sizes(mock_gpu_environment):
             subset_sizes=[-10],
         )
 
+
 def test_generate_embeddings_parallel(mock_gpu_environment, tmp_path, mock_encoder):
     """Test the parallelized embedding generation feature."""
     # Create a sample dataset
