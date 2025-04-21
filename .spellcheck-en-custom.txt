@@ -55,6 +55,7 @@ Splitter
 src
 subdirectory
 subfolder
+submodlib
 Tatsu
 templating
 Tesseract

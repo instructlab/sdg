@@ -1,4 +1,10 @@
-## Upcoming v0.8.x
+## v0.8.1
+
+### Fixes
+
+* Unpin submodlib-py dependency from 0.0.1 so we can pick up newer releases as they come out.
+
+## v0.8.0
 
 ### Features
 
@@ -9,6 +15,14 @@ Each `LLMBlock` in a `Pipeline` can now specify `model_family` or `model_id` in 
 #### Fewer required parameters for `PipelineContext`
 
 The parameters `model_family`, `model_id`, and `num_instructions_to_generate` are no longer required in `PipelineContext` objects. They used to be required, and if passed in will still get used as before. However, they can now be omitted if your `Pipeline` contains no `LLMBlock` entries or if your `LLMBlock` config specifies these values in the `Pipeline` yaml.
+
+### Added Knowledge Prompts and Pipelines for Llama-3.3-70B-Instruct teacher model
+
+There is a new pipeline for knowledge data generation optimized for Llama-3.3-70B-Instruct as the teacher model. It's shipped under a new `llama` pipelines package, and can be activated via `ilab data generate --pipeline llama ...` when using the `ilab` command line interface.
+
+### Added a new preview subset_selection Python API
+
+There's a new `instructlab.sdg.subset_selection` API that can be used to select subsets of larger generated datasets.
 
 ## v0.7.3
 
