@@ -51,7 +51,7 @@ def data_processor(mock_encoder, mock_gpu_environment):
         input_files=["test.jsonl"],
         subset_sizes=[10, 20.5],
     )
-    return DataProcessor(config, mock_encoder)
+    return DataProcessor(config)
 
 
 def test_format_text(data_processor):
@@ -124,22 +124,6 @@ def test_invalid_subset_sizes(mock_gpu_environment):
         )
 
 
-def test_process_batch(mock_gpu_environment, data_processor, tmp_path):
-    """Test batch processing of texts"""
-
-    batch_texts = ["text1", "text2", "text3"]
-    output_file = str(tmp_path / "test_batch.h5")
-
-    embedding_dim = data_processor.process_batch(batch_texts, output_file)
-
-    assert embedding_dim is not None
-    assert os.path.exists(output_file)
-
-    with h5py.File(output_file, "r") as f:
-        embeddings = f["embeddings"][:]
-        assert embeddings.shape == (3, embedding_dim)
-
-
 def test_generate_embeddings_parallel(mock_gpu_environment, tmp_path, mock_encoder):
     """Test the parallelized embedding generation feature."""
     # Create a sample dataset
@@ -165,7 +149,7 @@ def test_generate_embeddings_parallel(mock_gpu_environment, tmp_path, mock_encod
     config.system.num_gpus = 2
 
     # Create processor
-    processor = DataProcessor(config, mock_encoder)
+    processor = DataProcessor(config)
 
     # Test case 1: File exists, should return early
     result_path = processor.generate_embeddings(dataset, output_dir)

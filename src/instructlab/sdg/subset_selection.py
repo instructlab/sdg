@@ -1,15 +1,13 @@
 # Standard
 from dataclasses import dataclass, field
 from multiprocessing import Pool
-from typing import Any, Dict, List, Optional, Tuple, TypedDict, TypeVar, Union
+from typing import Any, Dict, List, TypedDict, TypeVar, Union
 import gc
 import glob
-import importlib
 import logging
 import math
 import os
 import re
-import sys
 
 # Third Party
 from datasets import concatenate_datasets, load_dataset
@@ -20,6 +18,7 @@ import numpy as np
 import torch
 
 # Local
+from .encoders import get_encoder_class
 from .utils.subset_selection_utils import (
     compute_pairwise_dense,
     get_default_num_gpus,
@@ -171,19 +170,14 @@ class DataProcessor:
     Enhanced data processor with support for combined files and multiple selection methods.
     """
 
-    def __init__(self, config: ProcessingConfig, encoder_cls):
+    def __init__(self, config: ProcessingConfig):
         """
         Initializes the DataProcessor with the given configuration and encoder class.
 
         Args:
             config (ProcessingConfig): The processing configuration.
-            encoder_cls: The encoder class to use for generating embeddings.
         """
         self.config = config
-        self.encoder = encoder_cls(
-            model_name=config.encoder.encoder_model,
-            testing_mode=config.encoder.testing_mode,
-        )
         self.env = Environment(loader=BaseLoader())
         self.templates = {
             k: self.env.from_string(v) for k, v in config.template.templates.items()
@@ -282,60 +276,6 @@ class DataProcessor:
             return f"percent_{size_spec:.1f}"
         return f"samples_{actual_size}"
 
-    def get_last_processed_batch(self, output_dir: str) -> Tuple[int, Optional[str]]:
-        """
-        Retrieves the last processed batch number and its file path from the output directory.
-
-        Args:
-            output_dir (str): The directory where batch files are stored.
-
-        Returns:
-            Tuple[int, Optional[str]]: The last batch number and the corresponding batch file path.
-        """
-        batch_files = glob.glob(os.path.join(output_dir, "batch_*.h5"))
-        if not batch_files:
-            return -1, None
-
-        # Sort batch files by batch number
-        batch_files.sort(key=self.extract_batch_number)
-        max_batch_file = batch_files[-1]
-        max_batch_number = self.extract_batch_number(max_batch_file)
-
-        # Return the max batch number and the corresponding batch file path
-        return max_batch_number, max_batch_file
-
-    @retry_on_exception
-    def process_batch(self, batch_texts: List[str], output_file: str) -> Optional[int]:
-        """
-        Processes a batch of texts by generating embeddings and saving them to a file.
-        Returns the embedding dimension or None if no embeddings were generated.
-        """
-        embeddings = (
-            self.encoder.encode(
-                inputs=batch_texts,
-                instruction=self.config.encoder.instruction,
-            )
-            .cpu()
-            .numpy()
-        )
-
-        if embeddings.size == 0:
-            logger.warning(
-                f"No embeddings generated for batch, skipping file {output_file}"
-            )
-            return None
-
-        embedding_dim = int(embeddings.shape[1])  # Cast to int
-        logger.info(f"Embedding dimension for batch: {embedding_dim}")
-
-        with h5py.File(output_file, "w") as h5f:
-            h5f.create_dataset(
-                "embeddings", data=embeddings, dtype="float32", chunks=True
-            )
-            h5f.flush()
-
-        return embedding_dim
-
     @retry_on_exception
     def generate_embeddings(self, dataset, output_dir: str) -> str:
         """
@@ -404,104 +344,6 @@ class DataProcessor:
         _merge_shard_files(shard_files, merged_path)
 
         return merged_path
-
-    def extract_batch_number(self, filename):
-        """
-        Extracts the batch number from the filename.
-        Assumes the filename is in the format 'batch_<number>.h5'.
-
-        Args:
-            filename (str): The filename from which to extract the batch number.
-
-        Returns:
-            int: The batch number extracted from the filename.
-        """
-        basename = os.path.basename(filename)
-        match = re.search(r"batch_(\d+)\.h5$", basename)
-        if match:
-            return int(match.group(1))
-        raise ValueError(f"Filename {filename} does not match expected pattern.")
-
-    def get_embedding_size_dim_from_file(self, batch_file: str) -> Tuple[int, int]:
-        """
-        Reads the batch file to determine the embedding size (number of embeddings) and dimension.
-        """
-        with h5py.File(batch_file, "r") as h5f:
-            if "embeddings" not in h5f:
-                raise ValueError(
-                    f"The file {batch_file} does not contain 'embeddings' dataset."
-                )
-            embeddings = h5f["embeddings"]
-            embedding_size = int(embeddings.shape[0])  # Cast to int
-            embedding_dim = int(embeddings.shape[1])  # Cast to int
-            logger.info(f"Embedding dimension from {batch_file}: {embedding_dim}")
-        return embedding_size, embedding_dim
-
-    def merge_embeddings(self, output_dir, merged_file, total_samples):
-        """
-        Merges all batch embedding files into a single embeddings file.
-
-        Args:
-            output_dir (str): The directory where batch embedding files are stored.
-            merged_file (str): The path to the merged embeddings file.
-            total_samples (int): The total number of samples (embeddings).
-
-        """
-        # Find all batch files
-        batch_files = glob.glob(os.path.join(output_dir, "batch_*.h5"))
-        if not batch_files:
-            logger.warning("No batch files found to merge")
-            return
-
-        # Sort batch files by batch number
-        batch_files.sort(key=self.extract_batch_number)
-
-        # Retrieve embedding_dim from the first batch file
-        _, embedding_dim = self.get_embedding_size_dim_from_file(batch_files[0])
-
-        if os.path.exists(merged_file):
-            logger.info(f"Merged file {merged_file} already exists, skipping merge")
-            return
-
-        logger.info(
-            f"Merging {len(batch_files)} batch files into {merged_file} with {total_samples} samples"
-        )
-
-        with h5py.File(merged_file, "w") as h5f_merged:
-            # Initialize the dataset in the merged file with the retrieved embedding dimension
-            embeddings_ds = h5f_merged.create_dataset(
-                "embeddings", shape=(total_samples, embedding_dim), dtype="float32"
-            )
-
-            start_idx = 0
-            for batch_file in batch_files:
-                with h5py.File(batch_file, "r") as h5f_batch:
-                    if "embeddings" not in h5f_batch:
-                        logger.error(
-                            f"File {batch_file} does not contain 'embeddings' dataset"
-                        )
-                        continue
-
-                    embeddings = h5f_batch["embeddings"][:]
-                    batch_size = embeddings.shape[0]
-                    end_idx = start_idx + batch_size
-
-                    # Check that each file's embedding dimension matches the retrieved embedding_dim
-                    if embeddings.shape[1] != embedding_dim:
-                        logger.error(
-                            f"Embedding dimension mismatch in {batch_file}. Expected {embedding_dim}, got {embeddings.shape[1]}"
-                        )
-                        continue
-
-                    # Copy embeddings into the merged dataset
-                    embeddings_ds[start_idx:end_idx] = embeddings
-                    start_idx = end_idx
-
-                # Remove the batch file after processing
-                os.remove(batch_file)
-                logger.info(f"Processed and removed {batch_file}")
-
-            gc.collect()
 
     def select_subsets(
         self, dataset_name: str, embeddings: torch.Tensor
@@ -750,22 +592,7 @@ def _process_dataset_shard(args):
         device = f"cuda:{gpu_id}"
         logger.info(f"GPU {gpu_id} started processing {len(dataset_shard)} samples")
 
-        # Import the encoder directly using the system path
-        # Standard
-
-        sys.path.append(
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-                )
-            )
-        )
-
-        # Import the encoder class using string-based absolute import
-
-        module_name = f"sdg.src.instructlab.sdg.encoders.{encoder_type}_encoder"
-        module = importlib.import_module(module_name)
-        encoder_cls = getattr(module, f"{encoder_type.capitalize()}EmbedEncoder")
+        encoder_cls = get_encoder_class(encoder_type)
 
         # Create encoder instance
         encoder = encoder_cls(
@@ -845,7 +672,7 @@ def _process_dataset_shard(args):
     # pylint: disable=broad-exception-caught
     except Exception as e:
         logger.error(f"Error processing shard on GPU {gpu_id}: {str(e)}")
-        return None
+        raise
 
 
 def _merge_shard_files(shard_files, merged_file):
@@ -1014,25 +841,6 @@ def get_supported_encoders():
     ]
 
 
-def get_encoder_class(encoder_type: str):
-    """Get the encoder class based on the encoder type."""
-    try:
-        # Convert encoder_type to class name (e.g., 'arctic' -> 'ArcticEmbedEncoder')
-        class_name = f"{encoder_type.capitalize()}EmbedEncoder"
-        # Import the module dynamically
-        module = __import__(
-            f"instructlab.sdg.encoders.{encoder_type}_encoder", fromlist=[class_name]
-        )
-        # Get the class from the module
-        return getattr(module, class_name)
-    except (ImportError, AttributeError) as e:
-        supported_encoders = get_supported_encoders()
-        raise ValueError(
-            f"Unsupported encoder type: '{encoder_type}'. "
-            f"Supported types are: {[f'{t}' for t in supported_encoders]}"
-        ) from e
-
-
 def subset_datasets(
     input_files: List[str],
     subset_sizes: List[Union[int, float]],
@@ -1081,9 +889,7 @@ def subset_datasets(
 
     try:
         logger.info(f"Processing configuration: {config}")
-        processor = DataProcessor(
-            config, get_encoder_class(config.encoder.encoder_type)
-        )
+        processor = DataProcessor(config)
         processor.process_files(input_files, config.basic.output_dir)
 
     except Exception as e:
