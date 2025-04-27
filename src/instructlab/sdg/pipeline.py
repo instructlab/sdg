@@ -170,11 +170,21 @@ class Pipeline:
                 executor.submit(self._generate_single, input_split)
                 for input_split in input_splits
             ]
+            threads_remaining_to_execute = len(futures)
+            logger.info(
+                "Total of %d pipeline threads to execute",
+                len(futures),
+            )
 
             # Collect the results of each batch as they finish. This needs to
             # wait for them all, so the order of waiting doesn't matter
             for future in futures:
                 ds = future.result()
+                threads_remaining_to_execute-=1
+                logger.info(
+                    "Total of %d pipeline threads to check for completion",
+                    threads_remaining_to_execute,
+                )
                 output_splits.append(ds)
                 checkpointer.checkpoint(ds)
         checkpointer.done()
