@@ -179,7 +179,9 @@ class DocumentChunker:  # pylint: disable=too-many-instance-attributes
         all_chunks = []
         for conversion_result in parsed_documents:
             doc = conversion_result.document
-            chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)
+            # max_tokens in HybridChunker is handled by a pydantic validation
+            # hook, and mypy doesn't handle that. So, ignore mypy types here.
+            chunker = HybridChunker(tokenizer=self.tokenizer, max_tokens=500)  # type: ignore
             try:
                 chunk_iter = chunker.chunk(dl_doc=doc)
                 chunks = [chunker.serialize(chunk=chunk) for chunk in chunk_iter]
