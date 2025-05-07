@@ -1,4 +1,4 @@
-# Subset Selection Documentation
+# Subset Selection
 
 ## Overview
 
