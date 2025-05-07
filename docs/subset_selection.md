@@ -47,7 +47,7 @@ This will:
 
 | Argument | Description |
 |----------|-------------|
-| `--input_files` | One or more input files to process (space-separated) Supports: jsonl, json, csv, parquet |
+| `--input_files` | One or more input files to process (space-separated). Supports: jsonl, json, csv, parquet |
 | `--output_dir` | Directory where output files will be saved |
 | `--subset_sizes` | One or more subset sizes (space-separated). Percentages (0-1): e.g., 0.1 for 10%. Absolute counts: e.g., 1000 for 1000 samples |
 
@@ -55,8 +55,7 @@ This will:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--num_folds` | 50 | Number of folds for subset selection |
-For small datasets (<1000), use 1-5 |
+| `--num_folds` | 50 | Number of folds for subset selection | For small datasets (<1000), use 1-5 |
 | `--batch_size` | 100000 | Batch size for processing embeddings |
 | `--epsilon` | 160.0 | Parameter for the optimizer | 
 For small datasets, use smaller values (start from 0.01) |
