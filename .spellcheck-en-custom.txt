@@ -4,6 +4,7 @@
 Backport
 backported
 backporting
+benchmarking
 CHANGELOG
 CLI
 codebase
@@ -11,6 +12,7 @@ Composable
 composable
 config
 configs
+csv
 customizable
 Dataset
 dataset
@@ -18,6 +20,8 @@ datasets
 distractor
 Docling
 docling
+Embeddings
+embeddings
 Eval
 eval
 FIXME
@@ -29,6 +33,7 @@ instructlab
 IterBlock
 Jinja
 JSON
+jsonl
 Langchain's
 LLM
 LLMBlock
@@ -45,6 +50,7 @@ pre
 precomputed
 Pregenerated
 py
+qa
 qna
 quantized
 repo
