@@ -3,6 +3,7 @@
 ## Overview
 
 Subset Selection is a feature in InstructLab - SDG that allows you to reduce the number of samples in your dataset to a representative and diverse subset. This is useful for:
+
 - Making training times manageable in subsequent InstructLab workflow steps after SDG
 - Creating benchmarking subsets that preserve original dataset characteristics
 - Reducing storage and processing requirements while maintaining diversity
@@ -10,16 +11,19 @@ Subset Selection is a feature in InstructLab - SDG that allows you to reduce the
 The feature uses a facility location method to select samples that best represent the full dataset.
 
 ## Prerequisites
+
 Required embedding model must be downloaded before use:
 
 ```shell
 ilab model download -rp Snowflake/snowflake-arctic-embed-l-v2.0
 ```
+
 ## Basic Usage
 
 ```shell
 python -m instructlab.sdg.subset_select --input_files <input_files> --output_dir <output_dir> --subset_sizes <sizes>
 ```
+
 ### Example
 
 ```shell
@@ -28,14 +32,17 @@ python -m instructlab.sdg.subset_select \
     --output_dir output/ \
     --subset_sizes 0.1 1000
 ```
+
 This will:
+
 - Process `data.jsonl` from the local directory
 - Save results to the output/ directory
 - Create two subsets:
-    - One with 10% of the original data
-    - One with 1000 samples
+  - One with 10% of the original data
+  - One with 1000 samples
 
 ## Command Line Arguments
+
 ### Required Arguments
 
 | Argument | Description |
@@ -45,6 +52,7 @@ This will:
 | `--subset_sizes` | One or more subset sizes (space-separated)<br>- Percentages (0-1): e.g., 0.1 for 10%<br>- Absolute counts: e.g., 1000 for 1000 samples |
 
 ### Optional Arguments
+
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--num_folds` | 50 | Number of folds for subset selection<br>For small datasets (<1000), use 1-5 |
@@ -74,7 +82,9 @@ subset_datasets(
     # Any other optional parameters
 )
 ```
+
 ## Implementation Details
+
 - The algorithm uses a facility location method to select diverse samples
 - Embeddings are generated using the specified encoder model
 - For datasets >100k samples, the default parameters are optimized
@@ -82,6 +92,7 @@ subset_datasets(
 - Multi-GPU support provides faster processing for large datasets
 
 ## Known Limitations
+
 - The algorithm may hang if epsilon value and batch_size are not appropriate for the input dataset size
 - Uses a fixed seed for randomization
 - Potential sampling bias for the first 32768 samples in datasets larger than that size
