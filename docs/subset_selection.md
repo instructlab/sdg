@@ -55,10 +55,9 @@ This will:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--num_folds` | 50 | Number of folds for subset selection | For small datasets (<1000), use 1-5 |
+| `--num_folds` | 50 | Number of folds for subset selection. For small datasets (<1000), use 1-5 |
 | `--batch_size` | 100000 | Batch size for processing embeddings |
-| `--epsilon` | 160.0 | Parameter for the optimizer | 
-For small datasets, use smaller values (start from 0.01) |
+| `--epsilon` | 160.0 | Parameter for the optimizer. For small datasets, use smaller values (start from 0.01) |
 | `--num_gpus` | all available | Number of GPUs to use |
 | `--encoder_type` | "arctic" | Type of encoder for generating embeddings |
 | `--encoder_model` | "Snowflake/snowflake-arctic-embed-l-v2.0" | Model to use for embeddings |
