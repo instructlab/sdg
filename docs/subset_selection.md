@@ -47,21 +47,27 @@ This will:
 
 | Argument | Description |
 |----------|-------------|
-| `--input_files` | One or more input files to process (space-separated)<br>Supports: jsonl, json, csv, parquet |
+| `--input_files` | One or more input files to process (space-separated)  
+Supports: jsonl, json, csv, parquet |
 | `--output_dir` | Directory where output files will be saved |
-| `--subset_sizes` | One or more subset sizes (space-separated)<br>- Percentages (0-1): e.g., 0.1 for 10%<br>- Absolute counts: e.g., 1000 for 1000 samples |
+| `--subset_sizes` | One or more subset sizes (space-separated)  
+- Percentages (0-1): e.g., 0.1 for 10%  
+- Absolute counts: e.g., 1000 for 1000 samples |
 
 ### Optional Arguments
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--num_folds` | 50 | Number of folds for subset selection<br>For small datasets (<1000), use 1-5 |
+| `--num_folds` | 50 | Number of folds for subset selection  
+For small datasets (<1000), use 1-5 |
 | `--batch_size` | 100000 | Batch size for processing embeddings |
-| `--epsilon` | 160.0 | Parameter for the optimizer<br>For small datasets, use smaller values (start from 0.01) |
+| `--epsilon` | 160.0 | Parameter for the optimizer  
+For small datasets, use smaller values (start from 0.01) |
 | `--num_gpus` | all available | Number of GPUs to use |
 | `--encoder_type` | "arctic" | Type of encoder for generating embeddings |
 | `--encoder_model` | "Snowflake/snowflake-arctic-embed-l-v2.0" | Model to use for embeddings |
-| `--template_name` | "conversation" | Template for formatting examples<br>Options: default, conversation, qa |
+| `--template_name` | "conversation" | Template for formatting examples  
+Options: default, conversation, qa |
 | `--combine_files` | false | Combines all input files into a single dataset |
 | `--log_dir` | None | Directory to store log files |
 | `--log_level` | "INFO" | Set logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL) |
