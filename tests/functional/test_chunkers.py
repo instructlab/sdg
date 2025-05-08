@@ -147,3 +147,38 @@ def test_chunk_documents(
         assert (
             overlap_count / (len(chunks) - 1) >= 0.3
         ), "Insufficient overlap between consecutive chunks"
+
+
+def test_chunk_documents_chunks_not_mixing(tmp_path, tokenizer_model_name):
+    """
+    Ensure chunks are not mixing together across multiple
+    instances of DocumentChunker even if they are passed the same
+    output directory
+    """
+    doc_path_1 = os.path.join(TEST_DATA_DIR, "sample_documents", "phoenix.md")
+    doc_path_2 = os.path.join(TEST_DATA_DIR, "sample_documents", "moo_deng.md")
+
+    output = os.path.join(tmp_path, "output")
+    os.makedirs(output, exist_ok=True)
+
+    chunker_1 = DocumentChunker(
+        document_paths=[Path(doc_path_1)],
+        output_dir=output,
+        tokenizer_model_name=tokenizer_model_name,
+        server_ctx_size=4096,
+        chunk_word_count=500,
+    )
+    chunks_1 = " ".join(chunker_1.chunk_documents())
+    assert "Phoenix" in chunks_1
+    assert "Moo Deng" not in chunks_1
+
+    chunker_2 = DocumentChunker(
+        document_paths=[Path(doc_path_2)],
+        output_dir=output,
+        tokenizer_model_name=tokenizer_model_name,
+        server_ctx_size=4096,
+        chunk_word_count=500,
+    )
+    chunks_2 = " ".join(chunker_2.chunk_documents())
+    assert "Moo Deng" in chunks_2
+    assert "Phoenix" not in chunks_2
