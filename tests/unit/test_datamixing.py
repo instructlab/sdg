@@ -27,7 +27,7 @@ from instructlab.sdg.utils.json import jldump, jlload
 # We mock out the actual things that use num_procs anyway, but just
 # for a consistent value in the tests...
 TEST_NUM_PROCS = 4
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "testdata")
 TEST_RECIPE_PATH = os.path.join(TEST_DATA_DIR, "relative_path_recipe.yaml")
 TEST_SAMPLES_ABS_PATH = os.path.join(TEST_DATA_DIR, "datasets/samples.jsonl")
 TEST_KNOWLEDGE_PATH = os.path.join(TEST_DATA_DIR, "datasets/knowledge.jsonl")
