@@ -1,10 +1,12 @@
 # make spellcheck-sort
 # Please keep this file sorted:
 # SPDX-License-Identifier: Apache-2.0
+Aakanksha
 Backport
 backported
 backporting
 benchmarking
+BBH
 CHANGELOG
 CLI
 codebase
@@ -20,15 +22,19 @@ datasets
 distractor
 Docling
 docling
+Duggal
 Embeddings
 embeddings
 Eval
 eval
 FIXME
 freeform
+GPQA
 ICL
 icl
 ie
+IFEVAL
+ilab
 instructlab
 IterBlock
 Jinja
@@ -36,6 +42,8 @@ JSON
 json
 jsonl
 Langchain's
+Leaderboard
+lm
 LLM
 LLMBlock
 mbta
@@ -45,6 +53,7 @@ Merlinite
 Mixtral
 MMLU
 multiphase
+Oleg
 Ouput
 Pre
 pre
@@ -58,6 +67,7 @@ repo
 Reusability
 scalable
 sdg
+Silkin
 Splitter
 src
 subdirectory
@@ -75,3 +85,4 @@ UUID
 vLLM
 yaml
 yamls
+Yi
