@@ -5,8 +5,8 @@ Aakanksha
 Backport
 backported
 backporting
-benchmarking
 BBH
+benchmarking
 CHANGELOG
 CLI
 codebase
@@ -43,9 +43,9 @@ json
 jsonl
 Langchain's
 Leaderboard
-lm
 LLM
 LLMBlock
+lm
 mbta
 MCQ
 md
@@ -60,6 +60,7 @@ pre
 precomputed
 Pregenerated
 py
+pytest
 qa
 qna
 quantized
@@ -79,10 +80,14 @@ Tesseract
 TODO
 tokenizer
 tokenizers
+tox
+UI
 unchunked
 upsampled
 UUID
 vLLM
+VRAM
+webhooks
 yaml
 yamls
 Yi

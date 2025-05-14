@@ -115,7 +115,7 @@ jobs:
       - name: Run functional gpu tests with tox
         run: |
           . venv/bin/activate
-          tox -e py3-functional-gpu
+          tox -e functional-gpu
 
       - name: Check disk after tests
         run: |

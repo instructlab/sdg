@@ -19,23 +19,16 @@ Functional tests are designed to test SDG components or features in tandem, but 
 All functional tests currently live in the `tests/functional` directory and are run with [pytest](https://docs.pytest.org/) via [tox](https://tox.wiki/).
 
 We have two types of functional tests - non-GPU and GPU. To run the non-GPU functional tests, you can run `tox -e functional`. To run the GPU functional tests,
-you can run `tox -e py3-functional-gpu`.
+you can run `tox -e functional-gpu`.
 
 In CI, the non-GPU tests are run with Python 3.10 - 3.12 on Ubuntu and MacOS runners - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/test.yml)
 
-The GPU tests are run with Python 3.11 on CentOS runners with access to a single NVIDIA Telsa T4 GPU with 16GB of vRAM - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/functional-gpu-nvidia-t4-x1.yml)
+The GPU tests are run with Python 3.11 on CentOS runners with access to a single NVIDIA Tesla T4 GPU with 16GB of vRAM - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/functional-gpu-nvidia-t4-x1.yml)
 
 ## End-to-end (E2E) tests
 
-InstructLab SDG has several end-to-end jobs that run to ensure compatability with the [InstructLab Core](https://github.com/instructlab/instructlab) project.
-
-There is currently a ["small" t-shirt size E2E job](https://github.com/instructlab/sdg/blob/main/.github/workflows/e2e-nvidia-t4-x1.yml) and a
-["medium" t-shirt size E2E job](https://github.com/instructlab/sdg/blob/main/.github/workflows/e2e-nvidia-l4-x1.yml).
-These jobs runs automatically on all PRs and after commits merge to `main` or release branches. They depend upon the successful completion of any linting type jobs.
-
-There is also a ["large" t-shirt size E2E job](https://github.com/instructlab/sdg/blob/main/.github/workflows/e2e-nvidia-l40s-x4.yml) that can be
-[triggered manually on the actions page](#triggering-an-e2e-job-via-github-web-ui) for the repository.
-It also runs automatically against the `main` branch at 4PM UTC every day.
+InstructLab SDG has several end-to-end jobs that run to ensure compatibility with the [InstructLab Core](https://github.com/instructlab/instructlab) project.
+You can see details about the types of jobs being run in the matrix below.
 
 For more details about the E2E scripts themselves, see [the InstructLab Core documentation](https://github.com/instructlab/instructlab/blob/main/docs/maintainers/ci.md#end-to-end-e2e-tests).
 
@@ -66,3 +59,6 @@ begin and end so it's easier for those involved in the PR to follow the results.
 3. Click on the `Run workflow` button on the right side of the page.
 4. Enter a branch name or a PR number in the input field.
 5. Click the green `Run workflow` button.
+
+> [!NOTE]
+> Only users with "Write" permissions to the repo can run CI jobs manually
