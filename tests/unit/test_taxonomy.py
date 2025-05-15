@@ -14,7 +14,7 @@ from instructlab.sdg.utils import taxonomy
 
 TEST_SEED_EXAMPLE = "Can you help me debug this failing unit test?"
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "testdata")
 
 
 def load_test_skills(skills_file_path) -> Union[Dict[str, Any], None]:

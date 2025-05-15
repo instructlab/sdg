@@ -16,9 +16,9 @@ from instructlab.sdg.utils.chunkers import DocumentChunker, resolve_ocr_options
 from instructlab.sdg.utils.taxonomy import _get_documents
 
 # Local
-from .testdata import testdata
+from ..testdata import testdata
 
-TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "testdata")
+TEST_DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "testdata")
 
 
 @pytest.fixture

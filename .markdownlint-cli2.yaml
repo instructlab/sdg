@@ -8,6 +8,7 @@ config:
   no-duplicate-header: false
   single-trailing-newline: false
   no-duplicate-heading: false
+  descriptive-link-text: false
 globs:
   - "**/*.md"
 ignores:
