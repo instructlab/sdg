@@ -89,6 +89,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           repository: "instructlab/instructlab"
+          ref: "release-v0.26"
           path: "instructlab"
           # https://github.com/actions/checkout/issues/249
           fetch-depth: 0
