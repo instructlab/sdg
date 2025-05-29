@@ -170,3 +170,9 @@ cython_debug/
 
 # SDG examples output
 docs/examples/**/output
+
+# Mac stuff
+**/.DS_Store
+
+# pyenv version
+.python-version
