@@ -103,10 +103,10 @@ jobs:
           python3.11 -m venv --upgrade-deps venv
           . venv/bin/activate
           nvidia-smi
-          python3.11 -m pip install tox tox-gh>=1.2
+          python3.11 -m pip install tox tox-gh>=1.2 -c constraints-dev.txt
           python3.11 -m pip cache remove llama_cpp_python
 
-          CMAKE_ARGS="-DLLAMA_CUDA=on" python3.11 -m pip install -r requirements-dev.txt
+          CMAKE_ARGS="-DLLAMA_CUDA=on" python3.11 -m pip install -r requirements-dev.txt -c constraints-dev.txt
 
       - name: Check disk before tests
         run: |

@@ -101,7 +101,7 @@ jobs:
           path: "instructlab"
           # https://github.com/actions/checkout/issues/249
           fetch-depth: 0
-  
+
       - name: Checkout instructlab/sdg
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -180,8 +180,8 @@ jobs:
         working-directory: ./sdg
         run: |
           . ../instructlab/venv/bin/activate
-          pip install .
-          pip install .[cuda]
+          pip install -v . -c constraints-dev.txt
+          pip install -v .[cuda] -c constraints-dev.txt
 
       - name: Check disk before tests
         run: |

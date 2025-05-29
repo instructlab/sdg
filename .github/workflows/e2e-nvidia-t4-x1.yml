@@ -124,12 +124,13 @@ jobs:
           # install with Torch and build dependencies installed
           python3.11 -m pip install -v packaging wheel setuptools-scm
           python3.11 -m pip install -v .[cuda]
-        
+
       - name: Update instructlab-sdg library
         working-directory: ./sdg
         run: |
           . ../instructlab/venv/bin/activate
-          pip install .
+          pip install -v . -c constraints-dev.txt
+          pip install -v .[cuda] -c constraints-dev.txt
 
       - name: Check disk before tests
         run: |
