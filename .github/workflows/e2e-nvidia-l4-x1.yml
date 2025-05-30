@@ -83,7 +83,20 @@ jobs:
         run: |
           cat /etc/os-release
           mkdir -p "${TMPDIR}"
-          sudo dnf install -y gcc gcc-c++ make git python3.11 python3.11-devel
+          sudo dnf install -y gcc gcc-c++ make git python3.11 python3.11-devel util-linux
+
+      - name: Set XFS retries for root disk
+        run: |
+          # Locate our root block device - typically something like /dev/nvme2n1p2
+          ROOT_DEV="$(findmnt -nvo SOURCE --mountpoint /)"
+          # Strip the lead "/dev/" off this device string
+          ROOT_DEV=${ROOT_DEV#"/dev/"}
+
+          MAX_RETRIES=5
+          RETRY_TIMEOUT_SECONDS=5
+          echo "Setting XFS retries for $ROOT_DEV to $MAX_RETRIES with a timeout of $RETRY_TIMEOUT_SECONDS"
+          echo "$MAX_RETRIES" > "/sys/fs/xfs/$ROOT_DEV/error/metadata/ENOSPC/max_retries"
+          echo "$RETRY_TIMEOUT_SECONDS" > "/sys/fs/xfs/$ROOT_DEV/error/metadata/ENOSPC/retry_timeout_seconds"
 
       - name: Checkout instructlab/instructlab
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
