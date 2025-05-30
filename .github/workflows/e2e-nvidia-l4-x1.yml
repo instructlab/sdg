@@ -141,7 +141,7 @@ jobs:
         working-directory: ./instructlab
         run: |
           . venv/bin/activate
-          ./scripts/e2e-ci.sh -m
+          ./scripts/e2e-ci.sh -m -p
 
       - name: Check disk after tests
         run: |
