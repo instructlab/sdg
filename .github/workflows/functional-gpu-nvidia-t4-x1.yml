@@ -111,6 +111,7 @@ jobs:
       - name: Check disk before tests
         run: |
           df -h
+          df -i
 
       - name: Run functional gpu tests with tox
         run: |
@@ -120,6 +121,7 @@ jobs:
       - name: Check disk after tests
         run: |
           df -h
+          df -i
 
   stop-small-ec2-runner:
     needs:

@@ -136,6 +136,7 @@ jobs:
       - name: Check disk before tests
         run: |
           df -h
+          df -i
   
       - name: Run e2e test
         working-directory: ./instructlab
@@ -146,6 +147,7 @@ jobs:
       - name: Check disk after tests
         run: |
           df -h
+          df -i
 
   stop-medium-ec2-runner:
     needs:
