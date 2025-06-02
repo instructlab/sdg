@@ -180,8 +180,21 @@ jobs:
         working-directory: ./sdg
         run: |
           . ../instructlab/venv/bin/activate
-          pip install -v . -c constraints-dev.txt
-          pip install -v .[cuda] -c constraints-dev.txt
+          # Patch out our own pin from the ilab repo constraints file
+          ilab_constraints=../instructlab/constraints-dev.txt
+          sed -i '/instructlab-sdg==/d' $ilab_constraints
+          # Since we reuse the virtual environment prepared using ilab
+          # constraints, we should stick to the same constraints when
+          # installing latest sdg.
+          #
+          # FIX: this is not ideal; a proper fix would require decoupling the
+          # two repos in CI: either by removing the job completely and relying
+          # on "sdk" (no ilab) test runs; or by preparing a separate
+          # constraints file that would consider both the requirements files
+          # for the sdg library AND for the ilab - so that they are
+          # consistent.
+          pip_install="pip install -c $ilab_constraints"
+          $pip_install .
 
       - name: Check disk before tests
         run: |

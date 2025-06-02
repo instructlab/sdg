@@ -18,7 +18,8 @@ on:
       - "**.py"
       - "pyproject.toml"
       - "requirements**.txt"
-      - 'tox.ini'
+      - "constraints-dev.txt"
+      - "tox.ini"
       - ".github/workflows/functional-gpu-nvidia-t4-x1.yml" # This workflow
 
 concurrency:
