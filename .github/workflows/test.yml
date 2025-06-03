@@ -12,6 +12,7 @@ on:
       - '**.py'
       - 'pyproject.toml'
       - 'requirements*.txt'
+      - 'constraints-dev.txt'
       - 'tox.ini'
       - '.github/workflows/test.yml' # This workflow
   pull_request:
@@ -22,6 +23,7 @@ on:
       - '**.py'
       - 'pyproject.toml'
       - 'requirements*.txt'
+      - 'constraints-dev.txt'
       - 'tox.ini'
       - '.github/workflows/test.yml' # This workflow
 
@@ -101,7 +103,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install tox tox-gh>=1.2
+          python -m pip install tox tox-gh>=1.2 -c constraints-dev.txt
 
       - name: Run unit and functional tests with tox
         run: |
