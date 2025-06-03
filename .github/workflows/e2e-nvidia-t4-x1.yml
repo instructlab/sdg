@@ -5,21 +5,21 @@ name: E2E (NVIDIA Tesla T4 x1)
 on:
   # run against every merge commit to 'main' and release branches
   workflow_dispatch:
-  # push:
-  #   branches:
-  #     - main
-  #     - release-*
-  # # only run on PRs that touch certain regex paths
-  # pull_request_target:
-  #   branches:
-  #     - main
-  #     - release-*
-  #   paths:
-  #     #  note this should match the merging criteria in 'mergify.yml'
-  #     - "**.py"
-  #     - "pyproject.toml"
-  #     - "requirements**.txt"
-  #     - ".github/workflows/e2e-nvidia-t4-x1.yml" # This workflow
+  push:
+    branches:
+      - main
+      - release-*
+  # only run on PRs that touch certain regex paths
+  pull_request_target:
+    branches:
+      - main
+      - release-*
+    paths:
+      #  note this should match the merging criteria in 'mergify.yml'
+      - "**.py"
+      - "pyproject.toml"
+      - "requirements**.txt"
+      - ".github/workflows/e2e-nvidia-t4-x1.yml" # This workflow
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
