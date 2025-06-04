@@ -23,10 +23,12 @@ import yaml
 from instructlab.sdg import LLMBlock, PipelineContext
 from instructlab.sdg.generate_data import (
     _context_init,
+    _gen_train_data,
     _locate_docling_models,
     _sdg_init,
     generate_data,
 )
+from instructlab.sdg.utils.json import jlload
 
 # Local
 from .taxonomy import load_test_skills
@@ -586,3 +588,49 @@ def test_locate_docling_models_config_not_found(testdata_path):
         os.environ["XDG_DATA_HOME"] = str(testdata_path.joinpath("nonexistent_dir"))
         docling_model_path = _locate_docling_models()
         assert docling_model_path is None
+
+
+class TestGenTrainData(unittest.TestCase):
+    """Test the _gen_train_data function with small synthetic examples."""
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.system_prompt = "Test system prompt"
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
+    def test_gen_train_data_with_empty_response(self):
+        """Test _gen_train_data with synthetic examples with blank responses."""
+        # Create mock synthetic examples with blank responses
+        machine_instruction_data = [
+            [
+                {"question": "Q1", "response": "", "context": "C1"},
+                {"question": "Q2", "response": "A2", "context": "C2"},
+            ]
+        ]
+
+        output_file_train = os.path.join(self.test_dir, "train_test.jsonl")
+        output_file_messages = os.path.join(self.test_dir, "messages_test.jsonl")
+
+        # Call the function
+        _gen_train_data(
+            machine_instruction_data,
+            output_file_train,
+            output_file_messages,
+            self.system_prompt,
+        )
+
+        # Verify train file was created and only has a single sample
+        self.assertTrue(os.path.exists(output_file_train))
+        train_data = jlload(output_file_train)
+        self.assertEqual(len(train_data), 1)
+
+        # Check first sample
+        first_sample = train_data[0]
+        self.assertEqual(first_sample["system"], self.system_prompt)
+        self.assertEqual(first_sample["user"], "Q2\nC2")
+        self.assertEqual(first_sample["assistant"], "A2")
+
+        # Verify messages file was created and has correct content
+        self.assertTrue(os.path.exists(output_file_messages))

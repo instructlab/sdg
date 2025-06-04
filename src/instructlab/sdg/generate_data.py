@@ -107,6 +107,10 @@ def _gen_train_data(
             if len(synth_example.get("context", "")) > 0:
                 user += "\n" + synth_example["context"]
             assistant = _unescape(_get_response_hack(synth_example))
+            # filter out any assistant message that is empty
+            if not assistant:
+                continue
+
             train_entry = {
                 "system": system_prompt,
                 "user": _unescape(user),

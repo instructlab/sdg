@@ -422,3 +422,67 @@ def test_mix_instructlab_07x_precomputed_skills_with_unmask(tmp_path):
         assert (
             sample.get("unmask", None) is not None
         ), "Mixed sample does not have unmask"
+
+
+def test_save_mixed_dataset_with_none_content(tmp_path):
+    """
+    Test that we filter out mixed dataset records where any message content is None.
+    """
+
+    # Create a knowledge dataset
+    knowledge_dataset = load_auxiliary_dataset()
+    number_of_records = len(knowledge_dataset)
+    # append a record with content=None and content="", both should be filtered out
+    knowledge_dataset = knowledge_dataset.add_item(
+        {
+            "id": "test_001",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "What is the capital of Ireland?"},
+                {"role": "assistant", "content": None},
+            ],
+        }
+    )
+    knowledge_dataset = knowledge_dataset.add_item(
+        {
+            "id": "test_002",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "What is the capital of Ireland?"},
+                {"role": "assistant", "content": "Dublin"},
+            ],
+        }
+    )
+
+    knowledge_dataset = knowledge_dataset.add_item(
+        {
+            "id": "test_003",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "What is the capital of Ireland?"},
+                {"role": "assistant", "content": ""},
+            ],
+        }
+    )
+
+    knowledge_path = os.path.join(tmp_path, "knowledge.jsonl")
+    jldump(knowledge_dataset, knowledge_path)
+
+    output_path = os.path.join(tmp_path, "output.jsonl")
+    recipe = Recipe()
+    recipe.add_dataset(knowledge_path, 1.0)
+    recipe.save_mixed_dataset(output_path, TEST_NUM_PROCS)
+
+    # Ensure the mixed dataset is saved correctly
+    mixed_samples = load_dataset("json", data_files=output_path, split="train")
+
+    # the row with content=None should have been removed
+    assert (
+        len(mixed_samples) == number_of_records + 1
+    ), f"Expected {number_of_records + 1} records in mixed dataset"
+
+    # None of the mixed samples should have content=None
+    for sample in mixed_samples:
+        assert all(
+            [message.get("content") is not None for message in sample["messages"]]
+        ), "Mixed sample has content=None"
