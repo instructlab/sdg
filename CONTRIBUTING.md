@@ -105,3 +105,7 @@ request. If you're unfamiliar with how to submit a pull request, the
 GitHub documentation on [Collaborating with pull
 requests](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests)
 is a good guide to follow.
+
+## Developer Certificate of Origin
+
+When you make a contribution to InstructLab SDG, you implicitly agree to the Developer Certificate of Origin terms as set in `DCO.txt` at the root of this repository.
