@@ -1,5 +1,5 @@
 aiohappyeyeballs==2.6.1   # via aiohttp
-aiohttp==3.12.4           # via fsspec
+aiohttp==3.12.6           # via fsspec
 aiosignal==1.3.2          # via aiohttp
 annotated-types==0.7.0    # via pydantic
 anyio==4.9.0              # via httpx, openai, sse-starlette, starlette
