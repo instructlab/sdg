@@ -131,7 +131,7 @@ safetensors==0.5.3        # via docling-ibm-models, transformers
 scikit-image==0.25.2      # via easyocr
 scikit-learn==1.6.1       # via submodlib-py
 scipy==1.15.3             # via docling, easyocr, scikit-image, scikit-learn, submodlib-py
-semchunk==2.2.2           # via docling-core
+semchunk==3.2.1           # via docling-core
 sentencepiece==0.2.0      # via -r requirements.txt, gguf
 shapely==2.1.1            # via easyocr
 shellingham==1.5.4        # via typer
