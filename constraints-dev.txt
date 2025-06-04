@@ -155,7 +155,7 @@ torch==2.6.0              # via -c constraints-dev.txt.in, docling-ibm-models, e
 torchvision==0.21.0       # via docling-ibm-models, easyocr
 tox==4.26.0               # via -r requirements-dev.txt
 tqdm==4.67.1              # via datasets, docling, docling-ibm-models, gguf, huggingface-hub, mpire, openai, semchunk, submodlib-py, transformers
-transformers==4.52.3      # via -r requirements.txt, docling-core, docling-ibm-models
+transformers==4.52.4      # via -r requirements.txt, docling-core, docling-ibm-models
 typer==0.15.4             # via docling, docling-core
 typing-extensions==4.13.2  # via anyio, astroid, beautifulsoup4, docling-core, exceptiongroup, fastapi, huggingface-hub, instructlab-schema, langchain-core, llama-cpp-python, multidict, openai, pydantic, pydantic-core, python-docx, python-pptx, referencing, rich, torch, tox, typer, typing-inspection, uvicorn
 typing-inspection==0.4.1  # via pydantic, pydantic-settings
