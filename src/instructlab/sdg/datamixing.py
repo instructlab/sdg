@@ -231,6 +231,16 @@ class Recipe:
         as a jsonl file.
         """
         mixed_ds = self._create_mixed_dataset(num_proc)
+
+        # filter out any records where the any message content is None
+        mixed_ds = mixed_ds.filter(
+            lambda x: all(
+                message.get("content")
+                for message in x["messages"]
+                if message.get("role") != "system"
+            )
+        )
+
         mixed_ds.to_json(output_path, orient="records", lines=True)
         logger.info(f"Mixed Dataset saved to {output_path}")
 
