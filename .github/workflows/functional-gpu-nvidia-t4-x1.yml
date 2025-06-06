@@ -120,6 +120,7 @@ jobs:
           tox -e functional-gpu
 
       - name: Check disk after tests
+        if: ${{ always() }}
         run: |
           df -h
           df -i
