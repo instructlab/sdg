@@ -154,12 +154,10 @@ jobs:
           df -h
           df -i
 
-          # Locate our root block device - typically something like /dev/nvme2n1p2
-          ROOT_DEV="$(findmnt -nvo SOURCE --mountpoint /)"
           # Display xfs info
-          xfs_info "$ROOT_DEV"
+          xfs_info "/"
           # Check for XFS fragmentation
-          xfs_spaceman -c freesp "$ROOT_DEV"
+          xfs_spaceman -c freesp "/"
   
       - name: Run e2e test
         working-directory: ./instructlab
@@ -173,12 +171,10 @@ jobs:
           df -h
           df -i
 
-          # Locate our root block device - typically something like /dev/nvme2n1p2
-          ROOT_DEV="$(findmnt -nvo SOURCE --mountpoint /)"
           # Display xfs info
-          xfs_info "$ROOT_DEV"
+          xfs_info "/"
           # Check for XFS fragmentation
-          xfs_spaceman -c freesp "$ROOT_DEV"
+          xfs_spaceman -c freesp "/"
 
   stop-medium-ec2-runner:
     needs:
