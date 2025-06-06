@@ -598,6 +598,13 @@ def postprocess_taxonomy(
         if leaf_node_type == "knowledge":
             is_knowledge = True
 
+        if is_knowledge:
+            # Filter out rows with no document, they cause errors in the datamixing code
+            for i in range(len(samples) - 1, -1, -1):
+                if not samples[i].get("document"):
+                    logger.warning("Removing sample without document: %s", samples[i])
+                    samples.pop(i)
+
         samples_ds = Dataset.from_list(samples)
         logger.debug("Postprocessing from samples: %s", samples_ds)
         all_generated_data.append(samples_ds)
