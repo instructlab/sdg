@@ -104,6 +104,7 @@ exclude = [
 follow_imports = "silent"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 markers = [
     "gpu: marks tests that should run with gpus (deselect with '-m \"not gpu\"')",
 ]
