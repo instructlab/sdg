@@ -1,10 +1,9 @@
 aiohappyeyeballs==2.6.1   # via aiohttp
-aiohttp==3.12.4           # via fsspec
+aiohttp==3.12.11          # via fsspec
 aiosignal==1.3.2          # via aiohttp
 annotated-types==0.7.0    # via pydantic
 anyio==4.9.0              # via httpx, openai, sse-starlette, starlette
 astroid==3.3.10           # via pylint
-async-timeout==5.0.1      # via aiohttp
 attrs==25.3.0             # via aiohttp, jsonlines, jsonschema, referencing
 beautifulsoup4==4.13.4    # via docling
 cachetools==6.0.0         # via tox
@@ -12,7 +11,7 @@ certifi==2025.4.26        # via docling, httpcore, httpx, requests
 cfgv==3.4.0               # via pre-commit
 chardet==5.2.0            # via tox
 charset-normalizer==3.4.2  # via requests
-click==8.1.8              # via -r requirements.txt, docling, typer, uvicorn
+click==8.2.1              # via typer, uvicorn, -r requirements.txt
 colorama==0.4.6           # via tox
 contourpy==1.3.2          # via matplotlib
 coverage==7.8.2           # via pytest-cov
@@ -22,47 +21,46 @@ dill==0.3.8               # via datasets, multiprocess, pylint
 diskcache==5.6.3          # via llama-cpp-python
 distlib==0.3.9            # via virtualenv
 distro==1.9.0             # via openai
-docling==2.34.0 ; sys_platform == "darwin"  # via -r requirements.txt
-docling-core==2.32.0      # via -r requirements.txt, docling, docling-ibm-models, docling-parse
-docling-ibm-models==3.4.3  # via docling
-docling-parse==4.0.1      # via docling
+docling==2.36.1           # via -r requirements.txt
+docling-core==2.34.1      # via docling, docling-ibm-models, docling-parse, -r requirements.txt
+docling-ibm-models==3.4.4  # via docling
+docling-parse==4.0.3      # via docling
 easyocr==1.7.2            # via docling
 et-xmlfile==2.0.0         # via openpyxl
-exceptiongroup==1.3.0     # via anyio, pytest
 fastapi==0.115.12         # via llama-cpp-python
 filelock==3.18.0          # via datasets, huggingface-hub, torch, tox, transformers, virtualenv
 filetype==1.2.0           # via docling
-fonttools==4.58.1         # via matplotlib
-frozenlist==1.6.0         # via aiohttp, aiosignal
+fonttools==4.58.2         # via matplotlib
+frozenlist==1.6.2         # via aiohttp, aiosignal
 fsspec==2025.3.0          # via datasets, huggingface-hub, torch
 gguf==0.17.0              # via -r requirements.txt
 gitdb==4.0.12             # via gitpython
 gitpython==3.1.44         # via -r requirements.txt
 h11==0.16.0               # via httpcore, uvicorn
-h5py==3.13.0              # via -r requirements.txt
-hf-xet==1.1.2             # via huggingface-hub
+h5py==3.14.0              # via -r requirements.txt
+hf-xet==1.1.3             # via huggingface-hub
 httpcore==1.0.9           # via httpx
-httpx==0.28.1             # via -r requirements.txt, langsmith, openai
-huggingface-hub==0.32.2   # via datasets, docling, docling-ibm-models, tokenizers, transformers
+httpx==0.28.1             # via langsmith, openai, -r requirements.txt
+huggingface-hub==0.32.4   # via datasets, docling, docling-ibm-models, tokenizers, transformers
 identify==2.6.12          # via pre-commit
 idna==3.10                # via anyio, httpx, requests, yarl
 imageio==2.37.0           # via scikit-image
 iniconfig==2.1.0          # via pytest
 instructlab-schema==0.4.2  # via -r requirements.txt
 isort==6.0.1              # via pylint
-jinja2==3.1.6             # via -r requirements.txt, llama-cpp-python, pytest-html, torch
+jinja2==3.1.6             # via llama-cpp-python, pytest-html, torch, -r requirements.txt
 jiter==0.10.0             # via openai
 joblib==1.5.1             # via scikit-learn, submodlib-py
 jsonlines==3.1.0          # via docling-ibm-models
 jsonpatch==1.33           # via langchain-core
 jsonpointer==3.0.0        # via jsonpatch
 jsonref==1.1.0            # via docling-core
-jsonschema==4.24.0        # via -r requirements-dev.txt, docling-core, instructlab-schema
+jsonschema==4.24.0        # via docling-core, instructlab-schema, -r requirements-dev.txt
 jsonschema-specifications==2025.4.1  # via jsonschema
 kiwisolver==1.4.8         # via matplotlib
-langchain-core==0.3.62    # via langchain-text-splitters
+langchain-core==0.3.64    # via langchain-text-splitters
 langchain-text-splitters==0.3.8  # via -r requirements.txt
-langsmith==0.3.43         # via langchain-core
+langsmith==0.3.45         # via langchain-core
 latex2mathml==3.78.0      # via docling-core
 lazy-loader==0.4          # via scikit-image
 llama-cpp-python==0.3.9   # via -r requirements-dev.txt
@@ -78,17 +76,30 @@ mpire==2.10.2             # via semchunk
 mpmath==1.3.0             # via sympy
 multidict==6.4.4          # via aiohttp, yarl
 multiprocess==0.70.16     # via datasets, mpire
-networkx==3.4.2           # via scikit-image, torch
+networkx==3.5             # via scikit-image, torch
 ninja==1.11.1.4           # via easyocr
 nodeenv==1.9.1            # via pre-commit
-numba==0.61.2             # via -r requirements.txt, submodlib-py
+numba==0.61.2             # via submodlib-py, -r requirements.txt
 numpy==2.2.6              # via contourpy, datasets, docling-ibm-models, easyocr, gguf, h5py, imageio, llama-cpp-python, matplotlib, numba, opencv-python-headless, pandas, safetensors, scikit-image, scikit-learn, scipy, shapely, submodlib-py, tifffile, torchvision, transformers
-openai==1.82.1            # via -r requirements.txt
+nvidia-cublas-cu12==12.4.5.8  # via nvidia-cudnn-cu12, nvidia-cusolver-cu12, torch
+nvidia-cuda-cupti-cu12==12.4.127  # via torch
+nvidia-cuda-nvrtc-cu12==12.4.127  # via torch
+nvidia-cuda-runtime-cu12==12.4.127  # via torch
+nvidia-cudnn-cu12==9.1.0.70  # via torch
+nvidia-cufft-cu12==11.2.1.3  # via torch
+nvidia-curand-cu12==10.3.5.147  # via torch
+nvidia-cusolver-cu12==11.6.1.9  # via torch
+nvidia-cusparse-cu12==12.3.1.170  # via nvidia-cusolver-cu12, torch
+nvidia-cusparselt-cu12==0.6.2  # via torch
+nvidia-nccl-cu12==2.21.5  # via torch
+nvidia-nvjitlink-cu12==12.4.127  # via nvidia-cusolver-cu12, nvidia-cusparse-cu12, torch
+nvidia-nvtx-cu12==12.4.127  # via torch
+openai==1.84.0            # via -r requirements.txt
 opencv-python-headless==4.11.0.86  # via docling-ibm-models, easyocr
 openpyxl==3.1.5           # via docling
 orjson==3.10.18           # via langsmith
 packaging==24.2           # via datasets, huggingface-hub, langchain-core, langsmith, lazy-loader, matplotlib, pyproject-api, pytest, scikit-image, tox, transformers
-pandas==2.2.3             # via datasets, docling, docling-core, submodlib-py
+pandas==2.3.0             # via datasets, docling, docling-core, submodlib-py
 pathspec==0.12.1          # via yamllint
 pillow==11.2.1            # via docling, docling-core, docling-ibm-models, docling-parse, easyocr, imageio, matplotlib, python-pptx, scikit-image, torchvision
 platformdirs==4.3.8       # via pylint, tox, virtualenv
@@ -100,15 +111,15 @@ pyclipper==1.3.0.post6    # via easyocr
 pydantic==2.11.5          # via docling, docling-core, docling-ibm-models, docling-parse, fastapi, langchain-core, langsmith, openai, pydantic-settings, pylint-pydantic
 pydantic-core==2.33.2     # via pydantic
 pydantic-settings==2.9.1  # via docling, llama-cpp-python
-pygments==2.19.1          # via mpire, rich
+pygments==2.19.1          # via mpire, pytest, rich
 pylatexenc==2.10          # via docling
-pylint==3.3.7             # via -r requirements-dev.txt, pylint-plugin-utils, pylint-pydantic
+pylint==3.3.7             # via pylint-plugin-utils, pylint-pydantic, -r requirements-dev.txt
 pylint-plugin-utils==0.8.2  # via pylint-pydantic
 pylint-pydantic==0.3.5    # via -r requirements-dev.txt
 pyparsing==3.2.3          # via matplotlib
 pypdfium2==4.30.1         # via docling
 pyproject-api==1.9.0      # via tox
-pytest==8.3.5             # via -r requirements-dev.txt, pytest-asyncio, pytest-cov, pytest-html, pytest-metadata
+pytest==8.4.0             # via pytest-asyncio, pytest-cov, pytest-html, pytest-metadata, -r requirements-dev.txt
 pytest-asyncio==1.0.0     # via -r requirements-dev.txt
 pytest-cov==6.1.1         # via -r requirements-dev.txt
 pytest-html==4.1.1        # via -r requirements-dev.txt
@@ -129,39 +140,40 @@ rpds-py==0.25.1           # via jsonschema, referencing
 rtree==1.4.0              # via docling
 safetensors==0.5.3        # via docling-ibm-models, transformers
 scikit-image==0.25.2      # via easyocr
-scikit-learn==1.6.1       # via submodlib-py
+scikit-learn==1.7.0       # via submodlib-py
 scipy==1.15.3             # via docling, easyocr, scikit-image, scikit-learn, submodlib-py
 semchunk==2.2.2           # via docling-core
-sentencepiece==0.2.0      # via -r requirements.txt, gguf
+sentencepiece==0.2.0      # via gguf, -r requirements.txt
 shapely==2.1.1            # via easyocr
 shellingham==1.5.4        # via typer
 six==1.17.0               # via python-dateutil
 smmap==5.0.2              # via gitdb
 sniffio==1.3.1            # via anyio, openai
 soupsieve==2.7            # via beautifulsoup4
-sse-starlette==2.3.5      # via llama-cpp-python
-starlette==0.46.2         # via -r requirements-dev.txt, fastapi, sse-starlette, starlette-context
+sse-starlette==2.3.6      # via llama-cpp-python
+starlette==0.46.2         # via fastapi, starlette-context, -r requirements-dev.txt
 starlette-context==0.3.6  # via llama-cpp-python
 submodlib-py==0.0.3       # via -r requirements.txt
 sympy==1.13.1             # via torch
-tabulate==0.9.0           # via -r requirements.txt, docling-core, docling-parse
-tenacity==9.1.2           # via -r requirements.txt, langchain-core
+tabulate==0.9.0           # via docling-core, docling-parse, -r requirements.txt
+tenacity==9.1.2           # via langchain-core, -r requirements.txt
+tesserocr==2.8.0          # via docling
 threadpoolctl==3.6.0      # via scikit-learn
-tifffile==2025.5.10       # via scikit-image
+tifffile==2025.6.1        # via scikit-image
 tokenizers==0.21.1        # via transformers
-tomli==2.2.1              # via coverage, pylint, pyproject-api, pytest, tox
-tomlkit==0.13.2           # via pylint
-torch==2.6.0              # via -c constraints-dev.txt.in, docling-ibm-models, easyocr, safetensors, torchvision
+tomlkit==0.13.3           # via pylint
+torch==2.6.0              # via docling-ibm-models, easyocr, safetensors, torchvision, -c constraints-dev.txt.in
 torchvision==0.21.0       # via docling-ibm-models, easyocr
 tox==4.26.0               # via -r requirements-dev.txt
 tqdm==4.67.1              # via datasets, docling, docling-ibm-models, gguf, huggingface-hub, mpire, openai, semchunk, submodlib-py, transformers
-transformers==4.52.3      # via -r requirements.txt, docling-core, docling-ibm-models
-typer==0.15.4             # via docling, docling-core
-typing-extensions==4.13.2  # via anyio, astroid, beautifulsoup4, docling-core, exceptiongroup, fastapi, huggingface-hub, instructlab-schema, langchain-core, llama-cpp-python, multidict, openai, pydantic, pydantic-core, python-docx, python-pptx, referencing, rich, torch, tox, typer, typing-inspection, uvicorn
+transformers==4.52.4      # via docling-core, docling-ibm-models, -r requirements.txt
+triton==3.2.0             # via torch
+typer==0.16.0             # via docling, docling-core
+typing-extensions==4.14.0  # via anyio, beautifulsoup4, docling-core, fastapi, huggingface-hub, instructlab-schema, langchain-core, llama-cpp-python, openai, pydantic, pydantic-core, python-docx, python-pptx, referencing, torch, typer, typing-inspection
 typing-inspection==0.4.1  # via pydantic, pydantic-settings
 tzdata==2025.2            # via pandas
 urllib3==2.4.0            # via requests
-uvicorn==0.34.2           # via llama-cpp-python
+uvicorn==0.34.3           # via llama-cpp-python
 virtualenv==20.31.2       # via pre-commit, tox
 xdg-base-dirs==6.0.2      # via -r requirements.txt
 xlsxwriter==3.2.3         # via python-pptx
