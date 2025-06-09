@@ -92,8 +92,8 @@ jobs:
           # Strip the lead "/dev/" off this device string
           ROOT_DEV=${ROOT_DEV#"/dev/"}
 
-          MAX_RETRIES=5
-          RETRY_TIMEOUT_SECONDS=5
+          MAX_RETRIES=10
+          RETRY_TIMEOUT_SECONDS=10
           echo "Setting XFS retries for $ROOT_DEV to $MAX_RETRIES with a timeout of $RETRY_TIMEOUT_SECONDS"
           echo "$MAX_RETRIES" > "/sys/fs/xfs/$ROOT_DEV/error/metadata/ENOSPC/max_retries"
           echo "$RETRY_TIMEOUT_SECONDS" > "/sys/fs/xfs/$ROOT_DEV/error/metadata/ENOSPC/retry_timeout_seconds"
