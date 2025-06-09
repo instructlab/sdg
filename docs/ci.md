@@ -36,7 +36,6 @@ For more details about the E2E scripts themselves, see [the InstructLab Core doc
 
 | Name | T-Shirt Size | Runner Host | Instance Type | OS | GPU Type | Script | Flags | Runs when? | Discord reporting? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| [`e2e-nvidia-t4-x1.yml`](https://github.com/instructlab/sdg/blob/main/.github/workflows/e2e-nvidia-t4-x1.yml) | Small | AWS | [`g4dn.2xlarge`](https://aws.amazon.com/ec2/instance-types/g4/) | CentOS Stream 9 | 1 x NVIDIA Tesla T4 w/ 16 GB VRAM | `e2e-ci.sh` | `s` | Pull Requests, Push to `main` or `release-*` branch | No |
 | [`e2e-nvidia-l4-x1.yml`](https://github.com/instructlab/sdg/blob/main/.github/workflows/e2e-nvidia-l4-x1.yml) | Medium | AWS |[`g6.8xlarge`](https://aws.amazon.com/ec2/instance-types/g5/) | CentOS Stream 9 | 1 x NVIDIA L4 w/ 24 GB VRAM | `e2e-ci.sh` | `m` | Pull Requests, Push to `main` or `release-*` branch | No |
 | [`e2e-nvidia-l40s-x4.yml`](https://github.com/instructlab/sdg/blob/main/.github/workflows/e2e-nvidia-l40s-x4.yml) | Large | AWS |[`g6e.12xlarge`](https://aws.amazon.com/ec2/instance-types/g6e/) | CentOS Stream 9 | 4 x NVIDIA L40S w/ 48 GB VRAM (192 GB) | `e2e-ci.sh` | `l` | Manually by Maintainers, Automatically against `main` branch at 4PM UTC | Yes |
 
