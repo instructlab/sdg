@@ -21,7 +21,7 @@ jobs:
         with:
           repository: instructlab/ci-actions
           path: ci-actions
-          ref: v0.2.0
+          ref: v0.2.1
           sparse-checkout: |
             actions/update-constraints
 
