@@ -92,8 +92,8 @@ jobs:
               }
             ]
           try_spot_instance_first: false
-          ec2-instance-type: g4dn.2xlarge
-          aws-resource-tags: >
+          ec2_instance_type: g4dn.2xlarge
+          aws_resource_tags: >
             [
               {"Key": "Name", "Value": "instructlab-ci-github-small-runner"},
               {"Key": "GitHubRepository", "Value": "${{ github.repository }}"},
