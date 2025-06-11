@@ -107,6 +107,10 @@ def _gen_train_data(
             if len(synth_example.get("context", "")) > 0:
                 user += "\n" + synth_example["context"]
             assistant = _unescape(_get_response_hack(synth_example))
+            # filter out any assistant message that is empty
+            if not assistant:
+                continue
+
             train_entry = {
                 "system": system_prompt,
                 "user": _unescape(user),
@@ -593,6 +597,13 @@ def postprocess_taxonomy(
         is_knowledge = False
         if leaf_node_type == "knowledge":
             is_knowledge = True
+
+        if is_knowledge:
+            # Filter out rows with no document, they cause errors in the datamixing code
+            for i in range(len(samples) - 1, -1, -1):
+                if not samples[i].get("document"):
+                    logger.warning("Removing sample without document: %s", samples[i])
+                    samples.pop(i)
 
         samples_ds = Dataset.from_list(samples)
         logger.debug("Postprocessing from samples: %s", samples_ds)
