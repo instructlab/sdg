@@ -3,6 +3,8 @@
 name: E2E (NVIDIA L4 x1)
 
 on:
+  schedule:
+    - cron: '0 14 * * 1,2,3,4' # Runs at 2PM UTC every Mon-Thurs
   # run against every merge commit to 'main' and release branches
   push:
     branches:
