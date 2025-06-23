@@ -115,7 +115,7 @@ jobs:
       - name: Install Packages
         run: |
           cat /etc/os-release
-          sudo dnf install -y gcc gcc-c++ make git python3.11 python3.11-devel
+          sudo dnf install -y gcc gcc-c++ make git python3.12 python3.12-devel
 
       - name: Checkout instructlab/sdg
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -133,13 +133,13 @@ jobs:
       - name: Install instructlab/sdg
         run: |
           export PATH="/home/ec2-user/.local/bin:/usr/local/cuda/bin:$PATH"
-          python3.11 -m venv --upgrade-deps venv
+          python3.12 -m venv --upgrade-deps venv
           . venv/bin/activate
           nvidia-smi
-          python3.11 -m pip install tox tox-gh>=1.2 -c constraints-dev.txt
-          python3.11 -m pip cache remove llama_cpp_python
+          python3.12 -m pip install tox tox-gh>=1.2 -c constraints-dev.txt
+          python3.12 -m pip cache remove llama_cpp_python
 
-          CMAKE_ARGS="-DLLAMA_CUDA=on" python3.11 -m pip install -r requirements-dev.txt -c constraints-dev.txt
+          CMAKE_ARGS="-DLLAMA_CUDA=on" python3.12 -m pip install -r requirements-dev.txt -c constraints-dev.txt
 
       - name: Check disk before tests
         run: |

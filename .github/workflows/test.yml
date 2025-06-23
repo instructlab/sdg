@@ -49,11 +49,7 @@ jobs:
           - "3.12"
         platform:
           - "ubuntu-latest"
-        include:
-          - python: "3.11"
-            platform: "macos-latest"
-          - python: "3.12"
-            platform: "macos-latest"
+          - "macos-latest"
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

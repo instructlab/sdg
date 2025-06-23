@@ -90,7 +90,7 @@ from-first = true
 known-local-folder = ["tuning"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 disable_error_code = ["import-not-found", "import-untyped"]
 exclude = [
     "^src/instructlab/sdg/generate_data\\.py$",

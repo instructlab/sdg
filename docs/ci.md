@@ -21,9 +21,9 @@ All functional tests currently live in the `tests/functional` directory and are 
 We have two types of functional tests - non-GPU and GPU. To run the non-GPU functional tests, you can run `tox -e functional`. To run the GPU functional tests,
 you can run `tox -e functional-gpu`.
 
-In CI, the non-GPU tests are run with Python 3.10 - 3.12 on Ubuntu and MacOS runners - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/test.yml)
+In CI, the non-GPU tests are run on Ubuntu and MacOS runners - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/test.yml)
 
-The GPU tests are run with Python 3.11 on CentOS runners with access to a single NVIDIA Tesla T4 GPU with 16GB of vRAM - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/functional-gpu-nvidia-t4-x1.yml)
+The GPU tests are run on CentOS runners with access to a single NVIDIA Tesla T4 GPU with 16GB of vRAM - you can see the details [here](https://github.com/instructlab/sdg/blob/main/.github/workflows/functional-gpu-nvidia-t4-x1.yml)
 
 ## End-to-end (E2E) tests
 

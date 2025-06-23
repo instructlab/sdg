@@ -116,7 +116,7 @@ jobs:
         run: |
           cat /etc/os-release
           mkdir -p /home/tmp
-          sudo dnf install -y gcc gcc-c++ make git-core python3.11 python3.11-devel util-linux
+          sudo dnf install -y gcc gcc-c++ make git-core python3.12 python3.12-devel util-linux
 
       - name: Set XFS retries for root disk
         run: |
@@ -158,7 +158,7 @@ jobs:
       - name: Install ilab
         working-directory: ./instructlab
         run: |
-          PYTHON=python3.11 ./scripts/install-ilab-with-cuda.sh
+          PYTHON=python3.12 ./scripts/install-ilab-with-cuda.sh
 
       - name: Update instructlab-sdg library
         working-directory: ./sdg
