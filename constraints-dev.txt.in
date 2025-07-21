@@ -1,4 +1,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
-# SDG has no specific dev version constraints at this point - if we need to
-# explicitly cap versions in the future, do it here.
+# Datasets 4.x has breaking changes
+datasets<4.0.0
