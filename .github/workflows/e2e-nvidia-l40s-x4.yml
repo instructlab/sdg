@@ -234,7 +234,7 @@ jobs:
 
       - name: Send Discord notification for failure
         if: failure() && steps.check_pr.outputs.is_pr == 'false'
-        uses: sarisia/actions-status-discord@5ddd3b114a98457dd80a39b2f00b6a998cd69008 # v1.15.3
+        uses: sarisia/actions-status-discord@11a0bfe3b50977e38aa2bd4a4ebd296415e83c19 # v1.15.4
         with:
           webhook: ${{ secrets.SON_OF_JEEVES_DISCORD_WEBHOOK }}
           status: ${{ job.status }}
@@ -246,7 +246,7 @@ jobs:
 
       - name: Send Discord notification for success
         if: success() && steps.check_pr.outputs.is_pr == 'false'
-        uses: sarisia/actions-status-discord@5ddd3b114a98457dd80a39b2f00b6a998cd69008 # v1.15.3
+        uses: sarisia/actions-status-discord@11a0bfe3b50977e38aa2bd4a4ebd296415e83c19 # v1.15.4
         with:
           webhook: ${{ secrets.SON_OF_JEEVES_DISCORD_WEBHOOK }}
           status: ${{ job.status }}
