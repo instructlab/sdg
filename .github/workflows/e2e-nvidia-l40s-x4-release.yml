@@ -192,7 +192,7 @@ jobs:
           aws-region: ${{ needs.start-large-ec2-runner.outputs.ec2-instance-region }}
 
       - name: Stop EC2 runner
-        uses: machulav/ec2-github-runner@fb91019e71385fb10dfcbec812b4de8c61589f7b # v2.4.1
+        uses: machulav/ec2-github-runner@a6dbcefcf8a31a861f5e078bb153ed332130c512 # v2.4.3
         with:
           mode: stop
           github-token: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
