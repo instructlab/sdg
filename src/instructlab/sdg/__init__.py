@@ -26,6 +26,7 @@ __all__ = (
     "SamplePopulatorBlock",
     "SelectorBlock",
     "SetToMajorityValueBlock",
+    "SimilarityFilterBlock",
     "FULL_PIPELINES_PACKAGE",
     "SIMPLE_PIPELINES_PACKAGE",
     "LLAMA_PIPELINES_PKG",
@@ -37,6 +38,7 @@ __all__ = (
 from .blocks.block import Block, BlockConfigParserError
 from .blocks.filterblock import FilterByValueBlock, FilterByValueBlockError
 from .blocks.iterblock import IterBlock
+from .blocks.similarityfilterblock import SimilarityFilterBlock
 from .blocks.llmblock import (
     ConditionalLLMBlock,
     LLMBlock,
